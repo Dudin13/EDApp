@@ -73,7 +73,7 @@ def generar_clips_simulados():
                 "jugador": nombre,
                 "dorsal": datos["dorsal"],
                 "equipo": datos["equipo"],
-                "posicion": datos["posicion"],
+                "posicion": datos.get("posicion", ""),
                 "accion": np.random.choice(tipos),
                 "minuto": int(np.random.randint(1, 90)),
                 "zona": np.random.choice(zonas),

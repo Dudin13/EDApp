@@ -69,10 +69,29 @@ def render():
         draw_pitch(ax, color='#2d5a27', line_color='white')
 
         if viz_type == "Heatmap de posiciones":
-            x_pos = np.clip(np.random.normal(65, 15, 200), 0, 105)
-            y_pos = np.clip(np.random.normal(34, 12, 200), 0, 68)
+            # Usar coordenadas reales si están disponibles
+            heatmap_x_raw = st.session_state.get("heatmap_x", [])
+            heatmap_y_raw = st.session_state.get("heatmap_y", [])
+
+            if heatmap_x_raw and len(heatmap_x_raw) > 5:
+                # Convertir píxeles a coordenadas de campo (105x68)
+                h_img_ref = 720  # altura de referencia
+                w_img_ref = 1280
+                x_pos = np.array([x / w_img_ref * 105 for x in heatmap_x_raw])
+                y_pos = np.array([y / h_img_ref * 68 for y in heatmap_y_raw])
+                x_pos = np.clip(x_pos, 0, 105)
+                y_pos = np.clip(y_pos, 0, 68)
+                data_source = f"📡 Datos reales ({len(x_pos):,} detecciones)"
+            else:
+                np.random.seed(42)
+                x_pos = np.clip(np.random.normal(65, 15, 200), 0, 105)
+                y_pos = np.clip(np.random.normal(34, 12, 200), 0, 68)
+                data_source = "📊 Datos de ejemplo (sin análisis real aún)"
+
             ax.hexbin(x_pos, y_pos, gridsize=20, cmap='YlOrRd', alpha=0.6, extent=[0, 105, 0, 68])
-            ax.set_title(f"Heatmap de posiciones — {player}", color='white', fontsize=14, pad=10)
+            ax.set_title(f"Heatmap de posiciones — {player}\n{data_source}",
+                        color='white', fontsize=12, pad=10)
+
 
         elif viz_type in ["Mapa de pases", "Mapa de pases progresivos"]:
             n = 28 if viz_type == "Mapa de pases" else 8
