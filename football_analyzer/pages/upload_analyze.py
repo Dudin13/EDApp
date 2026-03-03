@@ -6,7 +6,6 @@ from pathlib import Path
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Cargar variables de entorno
 try:
     from dotenv import load_dotenv
     load_dotenv(Path(__file__).parent.parent / ".env")
@@ -17,48 +16,82 @@ os.environ.setdefault("ROBOFLOW_API_KEY", os.getenv("ROBOFLOW_API_KEY", ""))
 
 
 def render():
-    st.header("🎬 Subir y Analizar Vídeo")
+    # ── PAGE HEADER ──────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+        <div>
+            <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">Análisis de Vídeo</h2>
+            <p style="margin:2px 0 0;font-size:13px;color:#5a6a7e;">Sube el vídeo del partido y configura el análisis</p>
+        </div>
+        <div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.25);color:#00d4aa;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">
+            Nuevo análisis
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ── BLOQUE 1: VÍDEO ──────────────────────────────────────────
-    st.subheader("1. Vídeo del partido")
-    uploaded_file = st.file_uploader(
-        "Sube el vídeo del partido",
-        type=["mp4", "avi", "mkv", "mov"]
-    )
+    # ── BLOQUE 1: VÍDEO ──────────────────────────────────────────────────────
+    st.markdown('<div class="ws-section-header">01 — Vídeo del partido</div>', unsafe_allow_html=True)
+
+    col_up, col_status = st.columns([2, 1])
+    with col_up:
+        uploaded_file = st.file_uploader(
+            "Arrastra el vídeo aquí o haz clic para seleccionarlo",
+            type=["mp4", "avi", "mkv", "mov"],
+            label_visibility="collapsed"
+        )
+    with col_status:
+        if st.session_state.get("video_name"):
+            st.markdown(f"""
+            <div style="background:#111827;border:1px solid #00d4aa44;border-radius:10px;padding:14px 16px;height:100%;display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#00d4aa;font-weight:600;margin-bottom:4px;">Vídeo cargado</div>
+                <div style="font-size:13px;font-weight:600;color:#fff;word-break:break-all;">{st.session_state['video_name']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background:#111827;border:1px solid #1e2a3a;border-radius:10px;padding:14px 16px;height:100%;display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:4px;">Estado</div>
+                <div style="font-size:13px;color:#5a6a7e;">Sin vídeo cargado</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     if uploaded_file:
-        st.success(f"✅ {uploaded_file.name} ({uploaded_file.size / 1024 / 1024:.1f} MB)")
         video_path = UPLOAD_DIR / uploaded_file.name
         with open(video_path, "wb") as f:
             f.write(uploaded_file.read())
         st.session_state["video_path"] = str(video_path)
         st.session_state["video_name"] = uploaded_file.name
+        st.success(f"✅ **{uploaded_file.name}** cargado correctamente ({uploaded_file.size / 1024 / 1024:.1f} MB)")
 
-    st.markdown("---")
-
-    # ── BLOQUE 2: EQUIPOS Y JUGADORES ────────────────────────────
-    st.subheader("2. Equipos y jugadores convocados")
+    # ── BLOQUE 2: INFO DEL PARTIDO ───────────────────────────────────────────
+    st.markdown('<div class="ws-section-header">02 — Datos del partido</div>', unsafe_allow_html=True)
 
     col_info1, col_info2, col_info3, col_info4 = st.columns(4)
-    team_local = col_info1.text_input("Equipo local", placeholder="Ej: Atletico Sanluqueno")
-    team_visit = col_info2.text_input("Equipo visitante", placeholder="Ej: Real Jaen")
+    team_local = col_info1.text_input("Equipo local", placeholder="Ej: Atlético Sanluqueño")
+    team_visit = col_info2.text_input("Equipo visitante", placeholder="Ej: Real Jaén")
     match_date = col_info3.date_input("Fecha del partido")
-    competition = col_info4.selectbox("Competicion", [
-        "1a Division", "2a Division", "1a RFEF", "2a RFEF", "3a RFEF",
-        "Division de Honor", "1a Andaluza", "2a Andaluza", "Copa del Rey", "Otro"
+    competition = col_info4.selectbox("Competición", [
+        "1ª División", "2ª División", "1ª RFEF", "2ª RFEF", "3ª RFEF",
+        "División de Honor", "1ª Andaluza", "2ª Andaluza", "Copa del Rey", "Otro"
     ])
 
-    st.markdown("####")
-    col_local, col_visit = st.columns(2)
+    # ── BLOQUE 3: JUGADORES ───────────────────────────────────────────────────
+    st.markdown('<div class="ws-section-header">03 — Plantillas convocadas</div>', unsafe_allow_html=True)
 
     POSICIONES = ["", "Portero", "Lateral D", "Lateral I", "Central", "Pivote",
                   "Mediocentro", "Interior D", "Interior I", "Mediapunta",
                   "Extremo D", "Extremo I", "Delantero Centro"]
 
-    # ── EQUIPO LOCAL ──────────────────────────────────────────────
+    col_local, col_visit = st.columns(2)
+
     with col_local:
-        st.markdown(f"### {team_local if team_local else 'Equipo Local'}")
-        st.markdown("**#  &nbsp;&nbsp;&nbsp; Nombre &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Posición**")
+        st.markdown(f"""
+        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:2px;">Local</div>
+            <div style="font-size:16px;font-weight:700;color:#fff;">{team_local or "Equipo Local"}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("**#** &nbsp;&nbsp; **Nombre** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **Posición**")
         jugadores_local = []
         for i in range(20):
             c1, c2, c3 = st.columns([1, 3, 2])
@@ -68,15 +101,17 @@ def render():
                                    key=f"local_nombre_{i}", label_visibility="collapsed")
             posicion = c3.selectbox("Pos", POSICIONES,
                                     key=f"local_pos_{i}", label_visibility="collapsed")
-            jugadores_local.append({
-                "dorsal": dorsal, "nombre": nombre,
-                "equipo": team_local, "posicion": posicion
-            })
+            jugadores_local.append({"dorsal": dorsal, "nombre": nombre,
+                                    "equipo": team_local, "posicion": posicion})
 
-    # ── EQUIPO VISITANTE ──────────────────────────────────────────
     with col_visit:
-        st.markdown(f"### {team_visit if team_visit else 'Equipo Visitante'}")
-        st.markdown("**#  &nbsp;&nbsp;&nbsp; Nombre &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Posición**")
+        st.markdown(f"""
+        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:2px;">Visitante</div>
+            <div style="font-size:16px;font-weight:700;color:#fff;">{team_visit or "Equipo Visitante"}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("**#** &nbsp;&nbsp; **Nombre** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **Posición**")
         jugadores_visit = []
         for i in range(20):
             c1, c2, c3 = st.columns([1, 3, 2])
@@ -86,15 +121,13 @@ def render():
                                    key=f"visit_nombre_{i}", label_visibility="collapsed")
             posicion = c3.selectbox("Pos", POSICIONES,
                                     key=f"visit_pos_{i}", label_visibility="collapsed")
-            jugadores_visit.append({
-                "dorsal": dorsal, "nombre": nombre,
-                "equipo": team_visit, "posicion": posicion
-            })
+            jugadores_visit.append({"dorsal": dorsal, "nombre": nombre,
+                                    "equipo": team_visit, "posicion": posicion})
 
-    st.markdown("---")
+    # ── BLOQUE 4: OPCIONES DE ANÁLISIS ───────────────────────────────────────
+    st.markdown('<div class="ws-section-header">04 — Configuración del análisis</div>', unsafe_allow_html=True)
 
-    # ── OPCIONES DE ANÁLISIS ──────────────────────────────────────
-    with st.expander("⚙️ Opciones de análisis"):
+    with st.expander("⚙️ Opciones avanzadas", expanded=False):
         col_opt1, col_opt2, col_opt3 = st.columns(3)
         detection_mode = col_opt1.selectbox(
             "Motor de detección",
@@ -103,35 +136,28 @@ def render():
         )
         if detection_mode == "yolo (local)":
             detection_mode = "yolo"
-        elif detection_mode == "auto":
-            detection_mode = "auto"
 
-        sample_rate = col_opt2.slider(
-            "Analizar 1 frame cada (segundos)", 1, 10, 3,
-            help="Menor = más preciso pero más lento y más llamadas a la API"
-        )
-        confidence = col_opt3.slider("Confianza de detección", 20, 80, 40)
+        sample_rate = col_opt2.slider("Analizar 1 frame cada (seg)", 1, 10, 3,
+                                      help="Menor = más preciso pero más lento")
+        confidence = col_opt3.slider("Confianza de detección (%)", 20, 80, 40)
 
-    # ── BOTÓN ANALIZAR ────────────────────────────────────────────
-    col_btn = st.columns([2, 1, 2])[1]
+    # ── BOTÓN ANALIZAR ───────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    _, col_btn, _ = st.columns([2, 1, 2])
     with col_btn:
         analizar = st.button("🚀 Iniciar Análisis", type="primary", use_container_width=True)
 
     if analizar:
         if not st.session_state.get("video_path"):
-            st.error("Primero sube un vídeo")
+            st.error("❌ Primero sube un vídeo")
         elif not team_local or not team_visit:
-            st.error("Introduce los nombres de los dos equipos")
+            st.error("❌ Introduce los nombres de los dos equipos")
         else:
             config = {
-                "team": team_local,
-                "rival": team_visit,
-                "match_date": str(match_date),
-                "competition": competition,
-                "jugadores_local": jugadores_local,
-                "jugadores_visit": jugadores_visit,
-                "sample_rate": sample_rate,
-                "detection_mode": detection_mode,
+                "team": team_local, "rival": team_visit,
+                "match_date": str(match_date), "competition": competition,
+                "jugadores_local": jugadores_local, "jugadores_visit": jugadores_visit,
+                "sample_rate": sample_rate, "detection_mode": detection_mode,
                 "confidence": confidence,
             }
             st.session_state["analysis_config"] = config
@@ -141,13 +167,9 @@ def render():
 
 
 def run_analysis_real(config: dict):
-    """Pipeline de análisis real usando VideoProcessor."""
-    st.markdown("---")
-    st.subheader("Progreso del análisis")
-
+    st.markdown('<div class="ws-section-header">Progreso del análisis</div>', unsafe_allow_html=True)
     progress_bar = st.progress(0)
     status_box = st.empty()
-    info_box = st.empty()
 
     video_path = st.session_state.get("video_path", "")
     if not video_path or not os.path.exists(video_path):
@@ -157,15 +179,18 @@ def run_analysis_real(config: dict):
     try:
         from modules.video_processor import VideoProcessor
         processor = VideoProcessor(video_path, config)
-
         resultados_finales = {}
+
         for progreso, estado, resultados in processor.process():
             progress_bar.progress(int(progreso))
-            status_box.info(f"**{estado}**")
+            status_box.markdown(f"""
+            <div style="background:#111827;border:1px solid #1e2a3a;border-radius:8px;padding:10px 16px;font-size:13px;color:#e8eaed;">
+                {estado}
+            </div>
+            """, unsafe_allow_html=True)
             if resultados:
                 resultados_finales = resultados
 
-        # Guardar en session_state
         if resultados_finales:
             st.session_state["analysis_done"] = True
             st.session_state["mock_results"] = resultados_finales.get("mock_results", {})
@@ -176,34 +201,26 @@ def run_analysis_real(config: dict):
             st.session_state["ball_events"] = resultados_finales.get("ball_events", [])
             st.session_state["total_detecciones"] = resultados_finales.get("total_detecciones", 0)
             st.session_state["frames_analizados"] = resultados_finales.get("frames_analizados", 0)
-            # video_path ya esta en session_state desde la subida, pero lo confirmamos
             if not st.session_state.get("video_path"):
                 st.session_state["video_path"] = video_path
 
-            team_local = config.get("team", "")
-            team_visit = config.get("rival", "")
             total = resultados_finales.get("total_detecciones", 0)
             frames = resultados_finales.get("frames_analizados", 0)
             ball_evs = len(resultados_finales.get("ball_events", []))
 
-            st.success(f"✅ Análisis **{team_local} vs {team_visit}** completado — "
-                       f"{total:,} detecciones en {frames} frames")
-
-            # Resumen rápido
-            resultados_jug = resultados_finales.get("resultados_jugadores", {})
-            if resultados_jug:
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("Jugadores detectados", len(resultados_jug))
-                col2.metric("Total detecciones", f"{total:,}")
-                col3.metric("Frames analizados", frames)
-                col4.metric("⚽ Acciones con balón", ball_evs)
+            # Resumen con tarjetas
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.success(f"✅ Análisis **{config.get('team')} vs {config.get('rival')}** completado")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Jugadores detectados", len(resultados_finales.get("resultados_jugadores", {})))
+            c2.metric("Total detecciones", f"{total:,}")
+            c3.metric("Frames analizados", frames)
+            c4.metric("⚽ Acciones con balón", ball_evs)
         else:
-            st.warning("⚠️ El análisis terminó pero no se generaron resultados. "
-                       "Comprueba que el vídeo contiene el partido.")
+            st.warning("⚠️ El análisis terminó sin resultados. Comprueba que el vídeo contiene el partido.")
 
     except ImportError as e:
         st.error(f"❌ Dependencia no instalada: {e}")
-        st.info("Instala las dependencias con: `pip install roboflow ultralytics opencv-python`")
     except Exception as e:
         st.error(f"❌ Error durante el análisis: {e}")
         import traceback

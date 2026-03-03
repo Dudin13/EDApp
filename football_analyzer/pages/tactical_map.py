@@ -5,133 +5,177 @@ import matplotlib.patches as patches
 from matplotlib.patches import Arc, Circle
 import io
 
-def draw_pitch(ax, color='green', line_color='white'):
-    ax.set_facecolor(color)
-    ax.set_xlim(0, 105)
-    ax.set_ylim(0, 68)
+
+def draw_pitch(ax, bg_color='#0a3d1f', line_color='#ffffff'):
+    """Dibuja un campo de fútbol estilo Wyscout (verde oscuro, líneas blancas)."""
+    ax.set_facecolor(bg_color)
+    ax.set_xlim(-3, 108)
+    ax.set_ylim(-2, 70)
     ax.set_aspect('equal')
     ax.axis('off')
 
     lw = 1.5
     lc = line_color
 
-    rect = patches.Rectangle((0, 0), 105, 68, linewidth=lw, edgecolor=lc, facecolor='none')
-    ax.add_patch(rect)
-    ax.plot([52.5, 52.5], [0, 68], color=lc, linewidth=lw)
-    circle = Circle((52.5, 34), 9.15, color=lc, fill=False, linewidth=lw)
-    ax.add_patch(circle)
-    ax.scatter([52.5], [34], color=lc, s=20)
+    # Campo exterior
+    ax.add_patch(patches.Rectangle((0, 0), 105, 68, lw=lw, edgecolor=lc, facecolor='none'))
+    # Línea central
+    ax.plot([52.5, 52.5], [0, 68], color=lc, lw=lw)
+    # Círculo central
+    ax.add_patch(Circle((52.5, 34), 9.15, color=lc, fill=False, lw=lw))
+    ax.scatter([52.5], [34], color=lc, s=15, zorder=5)
 
-    ax.add_patch(patches.Rectangle((0, 13.84), 16.5, 40.32, linewidth=lw, edgecolor=lc, facecolor='none'))
-    ax.add_patch(patches.Rectangle((0, 24.84), 5.5, 18.32, linewidth=lw, edgecolor=lc, facecolor='none'))
-    ax.scatter([11], [34], color=lc, s=20)
-    ax.add_patch(Arc((11, 34), 18.3, 18.3, angle=0, theta1=308, theta2=52, color=lc, linewidth=lw))
+    # Área grande izquierda
+    ax.add_patch(patches.Rectangle((0, 13.84), 16.5, 40.32, lw=lw, edgecolor=lc, facecolor='none'))
+    ax.add_patch(patches.Rectangle((0, 24.84), 5.5, 18.32, lw=lw, edgecolor=lc, facecolor='none'))
+    ax.scatter([11], [34], color=lc, s=15, zorder=5)
+    ax.add_patch(Arc((11, 34), 18.3, 18.3, angle=0, theta1=308, theta2=52, color=lc, lw=lw))
 
-    ax.add_patch(patches.Rectangle((88.5, 13.84), 16.5, 40.32, linewidth=lw, edgecolor=lc, facecolor='none'))
-    ax.add_patch(patches.Rectangle((99.5, 24.84), 5.5, 18.32, linewidth=lw, edgecolor=lc, facecolor='none'))
-    ax.scatter([94], [34], color=lc, s=20)
-    ax.add_patch(Arc((94, 34), 18.3, 18.3, angle=0, theta1=128, theta2=232, color=lc, linewidth=lw))
+    # Área grande derecha
+    ax.add_patch(patches.Rectangle((88.5, 13.84), 16.5, 40.32, lw=lw, edgecolor=lc, facecolor='none'))
+    ax.add_patch(patches.Rectangle((99.5, 24.84), 5.5, 18.32, lw=lw, edgecolor=lc, facecolor='none'))
+    ax.scatter([94], [34], color=lc, s=15, zorder=5)
+    ax.add_patch(Arc((94, 34), 18.3, 18.3, angle=0, theta1=128, theta2=232, color=lc, lw=lw))
 
-    ax.add_patch(patches.Rectangle((-2, 30.34), 2, 7.32, linewidth=lw, edgecolor=lc, facecolor='none'))
-    ax.add_patch(patches.Rectangle((105, 30.34), 2, 7.32, linewidth=lw, edgecolor=lc, facecolor='none'))
+    # Porterías
+    ax.add_patch(patches.Rectangle((-2, 30.34), 2, 7.32, lw=lw, edgecolor=lc, facecolor='none'))
+    ax.add_patch(patches.Rectangle((105, 30.34), 2, 7.32, lw=lw, edgecolor=lc, facecolor='none'))
+
+    # Líneas decorativas del césped (bandas)
+    for x_start in range(0, 106, 10):
+        ax.add_patch(patches.Rectangle((x_start, 0), 5, 68, facecolor='#0d4a25', edgecolor='none', alpha=0.3))
 
     return ax
 
 
 def render():
-    st.header("🗺️ Mapa Táctico")
+    st.markdown("""
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+        <div>
+            <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">Mapa Táctico</h2>
+            <p style="margin:2px 0 0;font-size:13px;color:#5a6a7e;">Visualización de posiciones, pases y acciones en el campo</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     if not st.session_state.get("analysis_done"):
-        st.info("⚠️ Primero realiza un análisis en la sección 'Subir y Analizar Vídeo'")
+        st.markdown("""
+        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:12px;padding:32px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:12px;">🗺️</div>
+            <div style="font-size:16px;font-weight:600;color:#fff;margin-bottom:8px;">Sin datos de análisis</div>
+            <div style="font-size:13px;color:#5a6a7e;">Primero realiza un análisis en "Análisis de Vídeo"</div>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     results = st.session_state.get("mock_results", {})
-    player = results.get("player_name", "Jugador")
 
-    viz_type = st.selectbox("Tipo de visualización", [
-        "Heatmap de posiciones",
-        "Mapa de pases",
-        "Mapa de pases progresivos",
-        "Zonas de recuperación",
-        "Zonas de pérdida",
-        "Tiros"
-    ])
+    # ── Controles ─────────────────────────────────────────────────────────────
+    col_ctrl, col_map = st.columns([1, 3])
 
-    col1, col2 = st.columns([3, 1])
+    with col_ctrl:
+        st.markdown('<div class="ws-section-header" style="margin-top:0">Visualización</div>', unsafe_allow_html=True)
+        viz_type = st.radio("Tipo", [
+            "Heatmap",
+            "Mapa de pases",
+            "Pases progresivos",
+            "Zonas de recuperación",
+            "Zonas de pérdida",
+            "Tiros"
+        ], label_visibility="collapsed")
 
-    with col2:
-        st.subheader("Opciones")
+        st.markdown('<div class="ws-section-header">Opciones</div>', unsafe_allow_html=True)
         show_zones = st.checkbox("Mostrar zonas del campo", value=True)
+        show_grid = st.checkbox("Cuadrícula de referencia", value=False)
 
-    with col1:
+        # Leyenda de colores
+        color_map = {
+            "Heatmap": "#ff6b35",
+            "Mapa de pases": "#00d4aa",
+            "Pases progresivos": "#FFD700",
+            "Zonas de recuperación": "#00d4aa",
+            "Zonas de pérdida": "#ff4d6d",
+            "Tiros": "#ff4d6d",
+        }
+        accent = color_map.get(viz_type, "#00d4aa")
+        st.markdown(f"""
+        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:8px;padding:12px;margin-top:8px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:8px;">Leyenda</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <div style="width:12px;height:12px;border-radius:3px;background:{accent};"></div>
+                <span style="font-size:12px;color:#8899aa;">{viz_type}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:12px;height:2px;background:#5a6a7e;opacity:0.5;"></div>
+                <span style="font-size:12px;color:#8899aa;">Líneas de campo</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_map:
         np.random.seed(42)
-        fig, ax = plt.subplots(figsize=(12, 8))
-        draw_pitch(ax, color='#2d5a27', line_color='white')
+        fig, ax = plt.subplots(figsize=(13, 8.5))
+        fig.patch.set_facecolor('#0e1420')
+        draw_pitch(ax, bg_color='#0a3d1f', line_color='rgba(255,255,255,0.7)')
 
-        if viz_type == "Heatmap de posiciones":
-            # Usar coordenadas reales si están disponibles
-            heatmap_x_raw = st.session_state.get("heatmap_x", [])
-            heatmap_y_raw = st.session_state.get("heatmap_y", [])
-
-            if heatmap_x_raw and len(heatmap_x_raw) > 5:
-                # Convertir píxeles a coordenadas de campo (105x68)
-                h_img_ref = 720  # altura de referencia
-                w_img_ref = 1280
-                x_pos = np.array([x / w_img_ref * 105 for x in heatmap_x_raw])
-                y_pos = np.array([y / h_img_ref * 68 for y in heatmap_y_raw])
-                x_pos = np.clip(x_pos, 0, 105)
-                y_pos = np.clip(y_pos, 0, 68)
-                data_source = f"📡 Datos reales ({len(x_pos):,} detecciones)"
+        if viz_type == "Heatmap":
+            hx = st.session_state.get("heatmap_x", [])
+            hy = st.session_state.get("heatmap_y", [])
+            if hx and len(hx) > 5:
+                x_pos = np.clip(np.array(hx) / 1280 * 105, 0, 105)
+                y_pos = np.clip(np.array(hy) / 720 * 68, 0, 68)
+                data_src = f"{len(x_pos):,} detecciones reales"
             else:
-                np.random.seed(42)
-                x_pos = np.clip(np.random.normal(65, 15, 200), 0, 105)
-                y_pos = np.clip(np.random.normal(34, 12, 200), 0, 68)
-                data_source = "📊 Datos de ejemplo (sin análisis real aún)"
+                x_pos = np.clip(np.random.normal(60, 18, 300), 0, 105)
+                y_pos = np.clip(np.random.normal(34, 14, 300), 0, 68)
+                data_src = "datos de ejemplo"
+            hb = ax.hexbin(x_pos, y_pos, gridsize=22, cmap='YlOrRd', alpha=0.75, extent=[0, 105, 0, 68])
+            ax.set_title(f"Heatmap de posiciones · {data_src}", color='#8899aa', fontsize=11, pad=12)
 
-            ax.hexbin(x_pos, y_pos, gridsize=20, cmap='YlOrRd', alpha=0.6, extent=[0, 105, 0, 68])
-            ax.set_title(f"Heatmap de posiciones — {player}\n{data_source}",
-                        color='white', fontsize=12, pad=10)
-
-
-        elif viz_type in ["Mapa de pases", "Mapa de pases progresivos"]:
-            n = 28 if viz_type == "Mapa de pases" else 8
-            x_start = np.random.normal(60, 12, n)
-            y_start = np.random.normal(34, 10, n)
-            x_end = x_start + np.random.normal(8, 5, n)
-            y_end = y_start + np.random.normal(0, 6, n)
-            color = '#FFD700' if viz_type == "Mapa de pases progresivos" else 'lightblue'
+        elif viz_type in ["Mapa de pases", "Pases progresivos"]:
+            n = 30 if viz_type == "Mapa de pases" else 9
+            x_s = np.random.normal(55, 15, n); y_s = np.random.normal(34, 12, n)
+            x_e = x_s + np.random.normal(9, 5, n); y_e = y_s + np.random.normal(0, 7, n)
+            col_arr = accent
             for i in range(n):
-                ax.annotate("", xy=(x_end[i], y_end[i]), xytext=(x_start[i], y_start[i]),
-                    arrowprops=dict(arrowstyle='->', color=color, lw=1.5))
-            ax.scatter(x_start, y_start, color='white', s=30, zorder=5)
-            ax.set_title(f"{viz_type} — {player}", color='white', fontsize=14, pad=10)
+                alpha = 0.85 if viz_type == "Pases progresivos" else 0.6
+                ax.annotate("", xy=(x_e[i], y_e[i]), xytext=(x_s[i], y_s[i]),
+                            arrowprops=dict(arrowstyle='->', color=col_arr, lw=1.8, alpha=alpha))
+            ax.scatter(x_s, y_s, color='white', s=25, zorder=5, alpha=0.8)
+            ax.set_title(f"{viz_type} · {n} acciones", color='#8899aa', fontsize=11, pad=12)
 
         elif viz_type == "Tiros":
-            shot_x = np.random.uniform(80, 103, results["shots"])
-            shot_y = np.random.uniform(20, 48, results["shots"])
-            ax.scatter(shot_x, shot_y, color='red', s=200, zorder=5, marker='*')
-            ax.set_title(f"Tiros — {player}", color='white', fontsize=14, pad=10)
+            n_shots = max(results.get("shots", 3), 1)
+            sx = np.random.uniform(78, 103, n_shots)
+            sy = np.random.uniform(20, 48, n_shots)
+            on_target = np.random.choice([True, False], n_shots, p=[0.4, 0.6])
+            for i in range(n_shots):
+                c = '#00d4aa' if on_target[i] else '#ff4d6d'
+                ax.scatter(sx[i], sy[i], color=c, s=200, zorder=5, marker='*', edgecolors='white', linewidths=0.5)
+            ax.set_title(f"Tiros · {n_shots} intentos", color='#8899aa', fontsize=11, pad=12)
 
         elif viz_type in ["Zonas de recuperación", "Zonas de pérdida"]:
-            color = '#00FF00' if "recuperación" in viz_type.lower() else '#FF4444'
-            n_events = results["recoveries"] if "recuperación" in viz_type.lower() else results["losses"]
-            x_ev = np.random.normal(55, 15, n_events)
-            y_ev = np.random.normal(34, 12, n_events)
-            ax.scatter(x_ev, y_ev, color=color, s=150, zorder=5, edgecolors='white', linewidth=1.5)
-            ax.set_title(f"{viz_type} — {player}", color='white', fontsize=14, pad=10)
+            key = "recoveries" if "recuperación" in viz_type.lower() else "losses"
+            n_ev = max(results.get(key, 5), 1)
+            col_sc = '#00d4aa' if "recuperación" in viz_type.lower() else '#ff4d6d'
+            x_ev = np.random.normal(52, 18, n_ev); y_ev = np.random.normal(34, 13, n_ev)
+            ax.scatter(np.clip(x_ev, 0, 105), np.clip(y_ev, 0, 68),
+                       color=col_sc, s=160, zorder=5, edgecolors='white', linewidths=0.8, alpha=0.85)
+            ax.set_title(f"{viz_type} · {n_ev} acciones", color='#8899aa', fontsize=11, pad=12)
 
+        # Zonas verticales
         if show_zones:
             for x in [35, 70]:
-                ax.axvline(x, color='white', alpha=0.3, linestyle='--', linewidth=1)
-            ax.text(17.5, 66, 'Zona defensiva', color='white', alpha=0.5, ha='center', fontsize=9)
-            ax.text(52.5, 66, 'Zona media', color='white', alpha=0.5, ha='center', fontsize=9)
-            ax.text(87.5, 66, 'Zona ofensiva', color='white', alpha=0.5, ha='center', fontsize=9)
+                ax.axvline(x, color='white', alpha=0.2, linestyle='--', lw=1)
+            for txt, xc in [('Défensiva', 17.5), ('Mediocampo', 52.5), ('Ofensiva', 87.5)]:
+                ax.text(xc, 66.5, txt, color='white', alpha=0.35, ha='center', fontsize=9, style='italic')
 
-        fig.patch.set_facecolor('#1a1a2e')
-        plt.tight_layout()
+        if show_grid:
+            ax.grid(color='white', alpha=0.08, linestyle=':', lw=0.8)
 
+        plt.tight_layout(pad=0.5)
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='#1a1a2e')
+        plt.savefig(buf, format='png', dpi=160, bbox_inches='tight', facecolor='#0e1420')
         buf.seek(0)
-        st.image(buf, use_column_width=True)
         plt.close()
+        st.image(buf, use_container_width=True)

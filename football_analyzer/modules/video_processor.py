@@ -146,7 +146,8 @@ class VideoProcessor:
                     closest_tid = None
                     for tid, track in tracks.items():
                         if track.frames_lost == 0 and track.clase != "referee":
-                            dist = ((track.x - bx) ** 2 + (track.y - by) ** 2) ** 0.5
+                            tx, ty = track.last_box[0], track.last_box[1]
+                            dist = ((tx - bx) ** 2 + (ty - by) ** 2) ** 0.5
                             if dist < min_dist:
                                 min_dist = dist
                                 closest_tid = tid
