@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Entornos virtuales
+ED/
+venv/
+.venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Vídeos y archivos pesados
+uploads/
+*.mp4
+*.avi
+*.mkv
+*.mov
+
+# Modelos entrenados (pesados)
+*.pth
+*.pt
+runs/
+
+# Frames extraídos y anotados (se regeneran)
+frames_etiquetado/
+frames_anotados/
+
+# Archivos temporales
+*.tmp
+*.log
+output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
