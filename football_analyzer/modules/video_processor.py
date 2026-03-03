@@ -87,9 +87,10 @@ class VideoProcessor:
 
         # ── Fase 2: Análisis frame a frame ──────────────────────────────────
         detecciones_por_minuto = defaultdict(list)   # minuto → lista detecciones
+        ball_events = []  # lista de eventos con balón: {track_id, video_second, minute, equipo}
         track_stats = defaultdict(lambda: {
             "positions_x": [], "positions_y": [], "minutes": [],
-            "equipo": -1, "clase": "player", "count": 0
+            "equipo": -1, "clase": "player", "count": 0, "ball_contacts": 0
         })
 
         frame_count = 0
@@ -111,14 +112,18 @@ class VideoProcessor:
             try:
                 dets = detect_frame(frame, mode=self.detection_mode, confidence=self.confidence)
 
-                # Clasificar equipos
+                # Separar balón de jugadores
+                ball_dets = [d for d in dets if d["clase"] == "ball"]
+                player_dets = [d for d in dets if d["clase"] != "ball"]
+
+                # Clasificar equipos (solo jugadores)
                 equipo_list = []
-                for det in dets:
+                for det in player_dets:
                     eq = classify_team(frame, det, team_colors)
                     equipo_list.append(eq)
 
-                # Actualizar tracker
-                tracks = self.tracker.update(dets, equipo_list, minute=minute)
+                # Actualizar tracker (solo con jugadores)
+                tracks = self.tracker.update(player_dets, equipo_list, minute=minute)
 
                 # Guardar estadísticas por track
                 for tid, track in tracks.items():
@@ -130,10 +135,44 @@ class VideoProcessor:
                         track_stats[tid]["clase"] = track.clase
                         track_stats[tid]["count"] += 1
 
-                # Guardar detecciones por minuto
+                # ── Detección de contacto balón-jugador ────────────────
+                if ball_dets:
+                    ball = ball_dets[0]  # tomar el balón más confiable
+                    bx, by = ball["x"], ball["y"]
+                    video_second = frame_pos / fps  # segundo real en el vídeo
+
+                    # Comprobar qué jugador está más cerca del balón
+                    min_dist = float("inf")
+                    closest_tid = None
+                    for tid, track in tracks.items():
+                        if track.frames_lost == 0 and track.clase != "referee":
+                            dist = ((track.x - bx) ** 2 + (track.y - by) ** 2) ** 0.5
+                            if dist < min_dist:
+                                min_dist = dist
+                                closest_tid = tid
+
+                    # Si hay un jugador a menos de 100px del balón = contacto
+                    CONTACT_RADIUS = 100  # píxeles
+                    if closest_tid is not None and min_dist < CONTACT_RADIUS:
+                        track_stats[closest_tid]["ball_contacts"] += 1
+                        # Registrar evento (evitar duplicados en segundos consecutivos)
+                        last_event_second = next(
+                            (e["video_second"] for e in reversed(ball_events)
+                             if e["track_id"] == closest_tid), -999
+                        )
+                        if video_second - last_event_second > self.sample_rate * 0.8:
+                            ball_events.append({
+                                "track_id": closest_tid,
+                                "video_second": video_second,
+                                "minute": minute,
+                                "equipo": track_stats[closest_tid]["equipo"],
+                                "ball_pos": (bx, by),
+                            })
+
+                # Guardar detecciones por minuto (jugadores)
                 minuto_key = int(minute)
                 detecciones_por_minuto[minuto_key].extend([
-                    {**det, "equipo": eq} for det, eq in zip(dets, equipo_list)
+                    {**det, "equipo": eq} for det, eq in zip(player_dets, equipo_list)
                 ])
 
             except Exception as e:
@@ -151,11 +190,14 @@ class VideoProcessor:
 
         yield 100, "✅ Análisis completado", resultados
 
-    def _build_results(self, track_stats: dict, det_por_minuto: dict) -> dict:
+    def _build_results(self, track_stats: dict, det_por_minuto: dict, ball_events: list = None) -> dict:
         """
         Construye el dict de resultados compatible con session_state de la app.
-        Asocia tracks con jugadores conocidos según equipo.
+        Asocia tracks con jugadores conocidos. Si no hay nombres, genera anónimos.
+        ball_events: lista de {track_id, video_second, minute, equipo}
         """
+        if ball_events is None:
+            ball_events = []
         team_local = self.config.get("team", "Local")
         team_visit = self.config.get("rival", "Visitante")
 
@@ -173,6 +215,19 @@ class VideoProcessor:
         )
 
         resultados_jugadores = {}
+        # Mapa track_id -> nombre (para enriquecer ball_events)
+        track_id_to_name = {}
+        track_id_to_equipo_nombre = {}
+
+        # Construir mapa de track_id para asignacion nominal
+        tracks_eq0_ids = sorted(
+            [(tid, s) for tid, s in track_stats.items() if s["equipo"] == 0],
+            key=lambda x: -x[1]["count"]
+        )
+        tracks_eq1_ids = sorted(
+            [(tid, s) for tid, s in track_stats.items() if s["equipo"] == 1],
+            key=lambda x: -x[1]["count"]
+        )
 
         # Asignar jugadores locales a tracks del equipo 0
         for i, jugador in enumerate(jugadores_local):
@@ -180,6 +235,10 @@ class VideoProcessor:
             resultados_jugadores[jugador["nombre"]] = self._player_stats(
                 jugador, team_local, track_data
             )
+            if i < len(tracks_eq0_ids):
+                tid = tracks_eq0_ids[i][0]
+                track_id_to_name[tid] = jugador["nombre"]
+                track_id_to_equipo_nombre[tid] = team_local
 
         # Asignar jugadores visitantes a tracks del equipo 1
         for i, jugador in enumerate(jugadores_visit):
@@ -187,6 +246,10 @@ class VideoProcessor:
             resultados_jugadores[jugador["nombre"]] = self._player_stats(
                 jugador, team_visit, track_data
             )
+            if i < len(tracks_eq1_ids):
+                tid = tracks_eq1_ids[i][0]
+                track_id_to_name[tid] = jugador["nombre"]
+                track_id_to_equipo_nombre[tid] = team_visit
 
         # ── Fallback: tracks detectados sin jugador asignado ──────────
         # Si no hay nombres, o hay más tracks que jugadores, generar anónimos
@@ -212,8 +275,18 @@ class VideoProcessor:
                 key = f"{team_visit} T{n_visit+i+1}"
                 j_anon = {"nombre": key, "dorsal": n_visit+i+1, "equipo": team_visit, "posicion": ""}
                 resultados_jugadores[key] = self._player_stats(j_anon, team_visit, td)
+        # ── Enriquecer ball_events con nombres ────────────────────────
+        eq_idx_to_nombre = {0: team_local, 1: team_visit, 2: "Arbitro", -1: "Desconocido"}
+        for ev in ball_events:
+            tid = ev.get("track_id")
+            if tid not in track_id_to_name:
+                # Generar nombre anónimo para este track
+                eq_n = eq_idx_to_nombre.get(ev.get("equipo", -1), "Desconocido")
+                track_id_to_name[tid] = f"{eq_n} T{tid}"
+                track_id_to_equipo_nombre[tid] = eq_n
+            ev["nombre_jugador"] = track_id_to_name[tid]
+            ev["nombre_equipo"] = track_id_to_equipo_nombre.get(tid, "—")
 
-        # ── Heatmap global ──────────────────────────────────────────
         all_x, all_y = [], []
         for s in track_stats.values():
             all_x.extend(s["positions_x"])
@@ -231,6 +304,7 @@ class VideoProcessor:
             "total_detecciones": total_dets,
             "frames_analizados": total_frames_with_dets,
             "team_colors_detected": True,
+            "ball_events": ball_events,
             "mock_results": {
                 "player_name": "Análisis completo",
                 "player_number": 0,

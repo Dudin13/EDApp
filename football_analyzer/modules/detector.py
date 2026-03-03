@@ -24,7 +24,8 @@ ROBOFLOW_VERSION = 1
 YOLO_MODEL_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
 YOLO_COCO_MODEL = "yolov8n.pt"   # modelo base COCO, detecta 'person' sin entrenamiento
 
-VALID_CLASSES = {"player", "goalkeeper", "referee"}
+VALID_CLASSES = {"player", "goalkeeper", "referee", "ball"}
+
 
 # ── Carga de modelos ───────────────────────────────────────────────────────
 
