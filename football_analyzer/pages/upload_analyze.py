@@ -173,11 +173,18 @@ def run_analysis_real(config: dict):
             st.session_state["heatmap_x"] = resultados_finales.get("heatmap_x", [])
             st.session_state["heatmap_y"] = resultados_finales.get("heatmap_y", [])
             st.session_state["detecciones_por_minuto"] = resultados_finales.get("detecciones_por_minuto", {})
+            st.session_state["ball_events"] = resultados_finales.get("ball_events", [])
+            st.session_state["total_detecciones"] = resultados_finales.get("total_detecciones", 0)
+            st.session_state["frames_analizados"] = resultados_finales.get("frames_analizados", 0)
+            # video_path ya esta en session_state desde la subida, pero lo confirmamos
+            if not st.session_state.get("video_path"):
+                st.session_state["video_path"] = video_path
 
             team_local = config.get("team", "")
             team_visit = config.get("rival", "")
             total = resultados_finales.get("total_detecciones", 0)
             frames = resultados_finales.get("frames_analizados", 0)
+            ball_evs = len(resultados_finales.get("ball_events", []))
 
             st.success(f"✅ Análisis **{team_local} vs {team_visit}** completado — "
                        f"{total:,} detecciones en {frames} frames")
@@ -185,10 +192,11 @@ def run_analysis_real(config: dict):
             # Resumen rápido
             resultados_jug = resultados_finales.get("resultados_jugadores", {})
             if resultados_jug:
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 col1.metric("Jugadores detectados", len(resultados_jug))
                 col2.metric("Total detecciones", f"{total:,}")
                 col3.metric("Frames analizados", frames)
+                col4.metric("⚽ Acciones con balón", ball_evs)
         else:
             st.warning("⚠️ El análisis terminó pero no se generaron resultados. "
                        "Comprueba que el vídeo contiene el partido.")

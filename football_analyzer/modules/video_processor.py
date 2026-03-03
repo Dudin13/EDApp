@@ -151,16 +151,17 @@ class VideoProcessor:
                                 min_dist = dist
                                 closest_tid = tid
 
-                    # Si hay un jugador a menos de 100px del balón = contacto
-                    CONTACT_RADIUS = 100  # píxeles
+                    # Solo si hay un jugador a menos de 60px del balón = contacto real
+                    CONTACT_RADIUS = 60  # píxeles — más estricto para evitar falsos positivos
+                    MIN_GAP_SECONDS = 8  # mínimo 8s entre eventos del mismo jugador
                     if closest_tid is not None and min_dist < CONTACT_RADIUS:
                         track_stats[closest_tid]["ball_contacts"] += 1
-                        # Registrar evento (evitar duplicados en segundos consecutivos)
+                        # Evitar múltiples eventos del mismo jugador en pocos segundos
                         last_event_second = next(
                             (e["video_second"] for e in reversed(ball_events)
                              if e["track_id"] == closest_tid), -999
                         )
-                        if video_second - last_event_second > self.sample_rate * 0.8:
+                        if video_second - last_event_second > MIN_GAP_SECONDS:
                             ball_events.append({
                                 "track_id": closest_tid,
                                 "video_second": video_second,
