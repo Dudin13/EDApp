@@ -9,7 +9,11 @@ Incluye clasificación de equipos por color HSV.
 import cv2
 import numpy as np
 import os
+import tempfile
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ── Configuración ──────────────────────────────────────────────────────────
 ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "")
@@ -72,14 +76,25 @@ def detect_frame_roboflow(frame: np.ndarray, confidence: int = 40, overlap: int 
     mitad_der = zona[:, w_zona // 2:]
 
     # Guardar temporalmente para enviar a Roboflow (API no acepta arrays directamente)
-    tmp_izq = "/tmp/_det_izq.jpg"
-    tmp_der = "/tmp/_det_der.jpg"
-    cv2.imwrite(tmp_izq, mitad_izq)
-    cv2.imwrite(tmp_der, mitad_der)
+    # Usar tempfile para compatibilidad Windows/Linux/Mac
+    tmp_dir = tempfile.gettempdir()
+    tmp_izq = os.path.join(tmp_dir, "_ed_det_izq.jpg")
+    tmp_der = os.path.join(tmp_dir, "_ed_det_der.jpg")
 
-    model = _load_roboflow()
-    result_izq = model.predict(tmp_izq, confidence=confidence, overlap=overlap)
-    result_der = model.predict(tmp_der, confidence=confidence, overlap=overlap)
+    if not cv2.imwrite(tmp_izq, mitad_izq):
+        logger.error(f"No se pudo escribir imagen temporal: {tmp_izq}")
+        return []
+    if not cv2.imwrite(tmp_der, mitad_der):
+        logger.error(f"No se pudo escribir imagen temporal: {tmp_der}")
+        return []
+
+    try:
+        model = _load_roboflow()
+        result_izq = model.predict(tmp_izq, confidence=confidence, overlap=overlap)
+        result_der = model.predict(tmp_der, confidence=confidence, overlap=overlap)
+    except Exception as e:
+        logger.error(f"Error Roboflow API: {e}")
+        return []
 
     detecciones = []
 
