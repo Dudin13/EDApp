@@ -188,14 +188,38 @@ class VideoProcessor:
                 jugador, team_visit, track_data
             )
 
-        # Heatmap global (posiciones de todos los jugadores)
-        all_x = []
-        all_y = []
+        # ── Fallback: tracks detectados sin jugador asignado ──────────
+        # Si no hay nombres, o hay más tracks que jugadores, generar anónimos
+        n_local = len(jugadores_local)
+        n_visit = len(jugadores_visit)
+
+        if n_local == 0 and n_visit == 0:
+            # Sin ningún nombre: generar todos los tracks como anónimos
+            all_tracks = sorted(track_stats.items(), key=lambda x: -x[1]["count"])
+            for i, (tid, td) in enumerate(all_tracks):
+                eq_idx = td.get("equipo", 0)
+                eq_nombre = team_local if eq_idx == 0 else (team_visit if eq_idx == 1 else "Arbitro")
+                key = f"{eq_nombre} T{i+1}"
+                j_anon = {"nombre": key, "dorsal": i+1, "equipo": eq_nombre, "posicion": td.get("clase", "player")}
+                resultados_jugadores[key] = self._player_stats(j_anon, eq_nombre, td)
+        else:
+            # Hay algunos nombres — añadir anónimos solo para los tracks sobrantes
+            for i, td in enumerate(tracks_eq0[n_local:]):
+                key = f"{team_local} T{n_local+i+1}"
+                j_anon = {"nombre": key, "dorsal": n_local+i+1, "equipo": team_local, "posicion": ""}
+                resultados_jugadores[key] = self._player_stats(j_anon, team_local, td)
+            for i, td in enumerate(tracks_eq1[n_visit:]):
+                key = f"{team_visit} T{n_visit+i+1}"
+                j_anon = {"nombre": key, "dorsal": n_visit+i+1, "equipo": team_visit, "posicion": ""}
+                resultados_jugadores[key] = self._player_stats(j_anon, team_visit, td)
+
+        # ── Heatmap global ──────────────────────────────────────────
+        all_x, all_y = [], []
         for s in track_stats.values():
             all_x.extend(s["positions_x"])
             all_y.extend(s["positions_y"])
 
-        # Estadísticas del partido
+        # ── Estadísticas globales ─────────────────────────────────
         total_dets = sum(len(v) for v in det_por_minuto.values())
         total_frames_with_dets = len([m for m, v in det_por_minuto.items() if len(v) > 0])
 
