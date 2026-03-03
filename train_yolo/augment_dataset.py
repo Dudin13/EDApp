@@ -135,8 +135,10 @@ def augment_dataset(target_per_image: int = 3):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     print("=" * 60)
-    print("  ED Analytics — Data Augmentation")
+    print("  ED Analytics - Data Augmentation")
     print("=" * 60)
     augment_dataset(target_per_image=3)
-    print("\n▶ Ahora ejecuta: python train_yolo/train.py")
+    print("\n>> Ahora ejecuta: python train_yolo/train.py")
