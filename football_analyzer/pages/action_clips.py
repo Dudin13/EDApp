@@ -57,9 +57,17 @@ def clip_card(clip, key):
 def generar_clips_simulados():
     config = st.session_state.get("analysis_config", {})
     resultados = st.session_state.get("resultados_jugadores", {})
+    frames_analizados = st.session_state.get("frames_analizados", 0)
 
     if not resultados:
         return []
+
+    # Estimar duración del vídeo analizado en minutos
+    sample_rate = config.get("sample_rate", 3)
+    duracion_min = max(1, (frames_analizados * sample_rate) / 60)
+
+    # Límite realista: ~2-3 acciones significativas por jugador cada 10 min
+    max_clips_por_jugador = max(2, int(duracion_min * 0.4))
 
     np.random.seed(42)
     clips = []
@@ -67,7 +75,12 @@ def generar_clips_simulados():
     zonas = ["Zona defensiva", "Zona media", "Zona ofensiva"]
 
     for nombre, datos in resultados.items():
-        n = datos["total_actions"]
+        frames_det = datos.get("frames_detectado", 0)
+        # Solo jugadores detectados de verdad
+        if frames_det == 0:
+            continue
+        # Clips proporcionales a detecciones, con tope realista
+        n = min(max_clips_por_jugador, max(1, frames_det // 5))
         for _ in range(n):
             clips.append({
                 "jugador": nombre,
@@ -75,13 +88,14 @@ def generar_clips_simulados():
                 "equipo": datos["equipo"],
                 "posicion": datos.get("posicion", ""),
                 "accion": np.random.choice(tipos),
-                "minuto": int(np.random.randint(1, 90)),
+                "minuto": int(np.random.randint(1, max(2, int(duracion_min)))),
                 "zona": np.random.choice(zonas),
                 "resultado": np.random.choice(["Exitosa", "Fallida"], p=[0.7, 0.3]),
                 "duracion": int(np.random.randint(8, 15)),
             })
 
     return sorted(clips, key=lambda x: x["minuto"])
+
 
 
 def render():
