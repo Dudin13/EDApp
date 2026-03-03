@@ -22,6 +22,7 @@ ROBOFLOW_PROJECT = "football-players-detection-3zvbc"
 ROBOFLOW_VERSION = 1
 
 YOLO_MODEL_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
+YOLO_COCO_MODEL = "yolov8n.pt"   # modelo base COCO, detecta 'person' sin entrenamiento
 
 VALID_CLASSES = {"player", "goalkeeper", "referee"}
 
@@ -29,6 +30,7 @@ VALID_CLASSES = {"player", "goalkeeper", "referee"}
 
 _roboflow_model = None
 _yolo_model = None
+_yolo_coco_model = None
 
 
 def _load_roboflow():
@@ -45,8 +47,22 @@ def _load_yolo():
     global _yolo_model
     if _yolo_model is None:
         from ultralytics import YOLO
-        _yolo_model = YOLO(str(YOLO_MODEL_PATH))
+        if YOLO_MODEL_PATH.exists():
+            _yolo_model = YOLO(str(YOLO_MODEL_PATH))
+        else:
+            # Fallback al modelo COCO base
+            logger.warning(f"Modelo entrenado no encontrado, usando YOLOv8n COCO: {YOLO_COCO_MODEL}")
+            _yolo_model = YOLO(YOLO_COCO_MODEL)
     return _yolo_model
+
+
+def _load_yolo_coco():
+    """Carga YOLOv8n entrenado en COCO (detecta 'person' sin API key)."""
+    global _yolo_coco_model
+    if _yolo_coco_model is None:
+        from ultralytics import YOLO
+        _yolo_coco_model = YOLO(YOLO_COCO_MODEL)
+    return _yolo_coco_model
 
 
 def yolo_model_available() -> bool:
@@ -154,15 +170,52 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
     return detecciones
 
 
+def detect_frame_coco(frame: np.ndarray, confidence: float = 0.35) -> list:
+    """
+    Detecta personas usando YOLOv8n entrenado en COCO (clase 0 = person).
+    Fallback cuando Roboflow no está disponible.
+    No requiere API key ni modelo entrenado propio.
+    """
+    model = _load_yolo_coco()
+    results = model(frame, conf=confidence, classes=[0], verbose=False)  # clase 0 = person
+
+    detecciones = []
+    for r in results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            w = x2 - x1
+            h = y2 - y1
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            # Filtrar por tamaño (evitar detecciones muy pequeñas)
+            if w * h < 800:
+                continue
+            detecciones.append({
+                "x": cx, "y": cy,
+                "w": w, "h": h,
+                "clase": "player",   # COCO solo detecta personas, las tratamos como players
+                "confianza": round(float(box.conf[0]), 3),
+            })
+    return detecciones
+
+
 def detect_frame(frame: np.ndarray, mode: str = "auto", confidence=40) -> list:
     """
     Fachada principal de detección.
-    mode: 'auto' (usa YOLO si disponible, sino Roboflow), 'roboflow', 'yolo'
+    mode: 'auto' (usa YOLO si disponible, sino Roboflow, sino COCO), 'roboflow', 'yolo'
     """
     if mode == "yolo" or (mode == "auto" and yolo_model_available()):
         return detect_frame_yolo(frame, confidence=confidence / 100 if isinstance(confidence, int) else confidence)
-    else:
-        return detect_frame_roboflow(frame, confidence=int(confidence))
+
+    if mode == "roboflow" or mode == "auto":
+        result = detect_frame_roboflow(frame, confidence=int(confidence))
+        if result is not None:   # None = error de API
+            return result
+        # Fallback a COCO si Roboflow falla
+        logger.warning("Roboflow no disponible, usando YOLOv8n COCO como fallback")
+        return detect_frame_coco(frame, confidence=confidence / 100 if isinstance(confidence, int) else confidence)
+
+    return detect_frame_coco(frame)
 
 
 # ── Clasificación de equipos ───────────────────────────────────────────────
