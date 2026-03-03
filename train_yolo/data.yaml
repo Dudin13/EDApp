@@ -1,7 +1,8 @@
-# YOLOv8 Dataset Config — Fútbol ED Analytics
-path: C:/apped
-train: frames_etiquetado
-val: frames_etiquetado
+# YOLOv8 Dataset Config — Futbol ED Analytics
+# Estructura: dataset/images/train/ + dataset/labels/train/
+path: C:/apped/dataset
+train: images/train
+val: images/train
 
 nc: 4
 names:
