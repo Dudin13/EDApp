@@ -34,11 +34,24 @@ def render():
 
     col_up, col_status = st.columns([2, 1])
     with col_up:
+        # Option 1: Upload
         uploaded_file = st.file_uploader(
-            "Arrastra el vídeo aquí o haz clic para seleccionarlo",
+            "Sube un nuevo vídeo",
             type=["mp4", "avi", "mkv", "mov"],
             label_visibility="collapsed"
         )
+        
+        # Option 2: Select from 'videos/' folder
+        VIDEO_DIR = Path("videos")
+        VIDEO_DIR.mkdir(exist_ok=True)
+        local_videos = [f.name for f in VIDEO_DIR.glob("*") if f.suffix.lower() in [".mp4", ".avi", ".mkv", ".mov"]]
+        
+        if local_videos:
+            selected_local = st.selectbox("O selecciona un vídeo ya existente:", [""] + local_videos)
+            if selected_local:
+                st.session_state["video_path"] = str(VIDEO_DIR / selected_local)
+                st.session_state["video_name"] = selected_local
+
     with col_status:
         if st.session_state.get("video_name"):
             st.markdown(f"""
@@ -61,7 +74,7 @@ def render():
             f.write(uploaded_file.read())
         st.session_state["video_path"] = str(video_path)
         st.session_state["video_name"] = uploaded_file.name
-        st.success(f"✅ **{uploaded_file.name}** cargado correctamente ({uploaded_file.size / 1024 / 1024:.1f} MB)")
+        st.success(f"✅ **{uploaded_file.name}** cargado correctamente")
 
     # ── BLOQUE 2: INFO DEL PARTIDO ───────────────────────────────────────────
     st.markdown('<div class="ws-section-header">02 — Datos del partido</div>', unsafe_allow_html=True)
