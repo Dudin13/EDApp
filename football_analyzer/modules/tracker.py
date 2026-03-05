@@ -55,8 +55,9 @@ class SimpleTracker:
     Mantiene tracks activos durante MAX_LOST frames sin detección.
     """
 
-    MAX_LOST = 5       # frames sin detección antes de eliminar el track
-    IOU_THRESHOLD = 0.25
+    MAX_LOST = 3       # frames sin deteccion antes de eliminar el track
+    IOU_THRESHOLD = 0.10  # umbral bajo porque entre frames de 2s los jugadores se mueven mucho
+    MAX_DIST_PX = 200     # distancia maxima de centroide como fallback
 
     def __init__(self):
         self._next_id = 1

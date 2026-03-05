@@ -94,7 +94,7 @@ class VideoProcessor:
         })
 
         frame_count = 0
-        start_frame = int(fps * 60)  # empezar en min 1
+        start_frame = 0  # empezar desde el primer frame del clip
 
         frame_pos = start_frame
         while frame_pos < total_frames:
@@ -189,7 +189,7 @@ class VideoProcessor:
         yield 91, "📊 Calculando estadísticas de jugadores...", {}
 
         # ── Fase 3: Generar resultados ───────────────────────────────────────
-        resultados = self._build_results(track_stats, detecciones_por_minuto)
+        resultados = self._build_results(track_stats, detecciones_por_minuto, ball_events=ball_events)
 
         yield 100, "✅ Análisis completado", resultados
 

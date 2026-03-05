@@ -21,7 +21,10 @@ ROBOFLOW_WORKSPACE = "roboflow-jvuqo"
 ROBOFLOW_PROJECT = "football-players-detection-3zvbc"
 ROBOFLOW_VERSION = 1
 
-YOLO_MODEL_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
+# Preferir el modelo de segmentación si existe, si no usar el de detección
+_SEG_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "segment" / "train" / "weights" / "best.pt"
+_DET_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
+YOLO_MODEL_PATH = _SEG_PATH if _SEG_PATH.exists() else _DET_PATH
 YOLO_COCO_MODEL = "yolov8n.pt"   # modelo base COCO, detecta 'person' sin entrenamiento
 
 VALID_CLASSES = {"player", "goalkeeper", "referee", "ball"}
@@ -149,7 +152,8 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
     # PREDECIMOS CON CONFIANZA BAJA para no perder el balón en la red neuronal
     results = model(frame, conf=0.01, verbose=False)
 
-    class_names = {0: "player", 1: "goalkeeper", 2: "referee", 3: "ball"}
+    # Clases del modelo seg entrenado: {0:Goalkeeper, 1:Player, 2:ball, 3:referee}
+    class_names = {0: "goalkeeper", 1: "player", 2: "ball", 3: "referee"}
     detecciones = []
 
     for r in results:
@@ -162,9 +166,9 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
         for i, box in enumerate(boxes):
             cls = int(box.cls[0])
             clase = class_names.get(cls, "player")
-            # Confianza dinámica: el balón suele tener mucha menos confianza por ser pequeño
             box_conf = float(box.conf[0])
-            if clase == "ball" and box_conf < 0.05:
+            # Umbral dinamico: el balon tiene confianza muy baja por ser pequeno
+            if clase == "ball" and box_conf < 0.01:
                 continue
             elif clase != "ball" and box_conf < confidence:
                 continue
