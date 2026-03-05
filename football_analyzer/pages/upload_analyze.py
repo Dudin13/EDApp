@@ -15,6 +15,163 @@ except Exception:
 os.environ.setdefault("ROBOFLOW_API_KEY", os.getenv("ROBOFLOW_API_KEY", ""))
 
 
+def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: int):
+    """Muestra que detecta el modelo en un frame de muestra del video cargado."""
+    import cv2
+    import numpy as np
+    from pathlib import Path
+
+    # Estado del modelo
+    try:
+        from modules.detector import yolo_model_available, detect_frame, classify_team
+        from modules.detector import YOLO_MODEL_PATH
+        yolo_ok = yolo_model_available()
+    except Exception as e:
+        st.error(f"Error cargando detector: {e}")
+        return
+
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        if yolo_ok:
+            st.markdown(f"""
+            <div style="background:#0d1f14;border:1px solid #00d4aa44;border-radius:8px;padding:12px 16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#00d4aa;font-weight:600;">
+                    Modelo YOLO activo
+                </div>
+                <div style="font-size:12px;color:#8899aa;margin-top:4px;">
+                    {Path(str(YOLO_MODEL_PATH)).name}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background:#1e1220;border:1px solid #ff4d6d44;border-radius:8px;padding:12px 16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#ff4d6d;font-weight:600;">
+                    Sin modelo YOLO local
+                </div>
+                <div style="font-size:12px;color:#8899aa;margin-top:4px;">Usando Roboflow</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    with col_m2:
+        st.markdown(f"""
+        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:8px;padding:12px 16px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;">
+                Motor seleccionado
+            </div>
+            <div style="font-size:13px;color:#fff;margin-top:4px;font-weight:600;">{detection_mode.upper()}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if not video_path or not Path(video_path).exists():
+        st.info("Carga un vídeo para ver el diagnóstico del modelo.")
+        return
+
+    if st.button("🔍 Analizar frame de muestra", key="btn_diag_frame"):
+        cap = cv2.VideoCapture(video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # Saltar al minuto 3 del vídeo (o al 20% si es más corto)
+        target_second = min(180, total_frames / fps * 0.2) if fps > 0 else 0
+        target_frame = int(target_second * fps)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret:
+            st.error("No se pudo leer el frame de muestra.")
+            return
+
+        # Detección raw con conf muy baja para diagnóstico
+        with st.spinner("Ejecutando detección..."):
+            try:
+                dets = detect_frame(frame, mode=detection_mode, confidence=confidence / 100)
+            except Exception as e:
+                st.error(f"Error en detección: {e}")
+                return
+
+        # Dibujar detecciones sobre el frame
+        CLASS_COLORS = {
+            "ball":       (0, 255, 255),   # Amarillo
+            "player":     (0, 212, 170),   # Teal
+            "goalkeeper": (255, 200, 0),   # Naranja
+            "referee":    (0, 0, 255),     # Rojo
+        }
+        vis_frame = frame.copy()
+        for det in dets:
+            x, y, w, h = det["x"], det["y"], det["w"], det["h"]
+            clase = det.get("clase", "player")
+            conf = det.get("confianza", 0)
+            color = CLASS_COLORS.get(clase, (200, 200, 200))
+
+            # Dibujar bounding box
+            cv2.rectangle(vis_frame,
+                          (x - w//2, y - h//2),
+                          (x + w//2, y + h//2),
+                          color, 2)
+            # Etiqueta
+            label = f"{clase} {conf:.2f}"
+            cv2.putText(vis_frame, label, (x - w//2, y - h//2 - 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+
+        # Convertir BGR → RGB para Streamlit
+        vis_rgb = cv2.cvtColor(vis_frame, cv2.COLOR_BGR2RGB)
+        st.image(vis_rgb, caption=f"Frame ~{target_second:.0f}s | {len(dets)} detecciones", use_container_width=True)
+
+        # Tabla resumen por clase
+        if dets:
+            import pandas as pd
+            resumen = {}
+            for det in dets:
+                clase = det.get("clase", "player")
+                conf = det.get("confianza", 0)
+                if clase not in resumen:
+                    resumen[clase] = {"count": 0, "max_conf": 0.0, "min_conf": 1.0}
+                resumen[clase]["count"] += 1
+                resumen[clase]["max_conf"] = max(resumen[clase]["max_conf"], conf)
+                resumen[clase]["min_conf"] = min(resumen[clase]["min_conf"], conf)
+
+            rows = []
+            class_icons = {"ball": "⚽", "player": "👤", "goalkeeper": "🧤", "referee": "🟨"}
+            for clase, stats in sorted(resumen.items()):
+                rows.append({
+                    "Clase": f"{class_icons.get(clase, '•')} {clase}",
+                    "Detectados": stats["count"],
+                    "Conf. máx.": f"{stats['max_conf']:.3f}",
+                    "Conf. mín.": f"{stats['min_conf']:.3f}",
+                })
+            df = pd.DataFrame(rows)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Alerta si no se detecta el balón
+            clases_detectadas = set(d.get("clase") for d in dets)
+            if "ball" not in clases_detectadas:
+                st.markdown("""
+                <div style="background:#1e1220;border:1px solid #ff6b3544;border-radius:8px;padding:10px 14px;font-size:12px;color:#ff6b35;margin-top:8px;">
+                    ⚠️ <strong>Balón no detectado</strong> en este frame.
+                    El modelo necesita más entrenamiento para detectar el balón de forma consistente.
+                    Prueba a bajar la confianza mínima o selecciona un frame donde el balón sea visible.
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                ball_dets = [d for d in dets if d.get("clase") == "ball"]
+                max_ball_conf = max(d.get("confianza", 0) for d in ball_dets)
+                if max_ball_conf < 0.1:
+                    st.markdown(f"""
+                    <div style="background:#1e1a10;border:1px solid #FFD70044;border-radius:8px;padding:10px 14px;font-size:12px;color:#FFD700;margin-top:8px;">
+                        ⚠️ <strong>Balón detectado pero con baja confianza</strong> (máx: {max_ball_conf:.3f}).
+                        Se recomienda continuar entrenando el modelo para mejorar la detección del balón.
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.success(f"✅ Balón detectado con confianza {max_ball_conf:.3f}")
+        else:
+            st.warning("No se detectó nada en este frame. Prueba otro vídeo o baja el umbral de confianza.")
+
+
 def render():
     # ── PAGE HEADER ──────────────────────────────────────────────────────────
     st.markdown("""
@@ -144,15 +301,21 @@ def render():
         col_opt1, col_opt2, col_opt3 = st.columns(3)
         detection_mode = col_opt1.selectbox(
             "Motor de detección",
-            ["roboflow", "yolo (local)", "auto"],
+            ["yolo (local)", "roboflow", "auto"],
             help="'auto' usa YOLOv8 si está entrenado, sino Roboflow"
         )
         if detection_mode == "yolo (local)":
             detection_mode = "yolo"
 
-        sample_rate = col_opt2.slider("Analizar 1 frame cada (seg)", 1, 10, 3,
+        sample_rate = col_opt2.slider("Analizar 1 frame cada (seg)", 1, 10, 2,
                                       help="Menor = más preciso pero más lento")
-        confidence = col_opt3.slider("Confianza de detección (%)", 20, 80, 40)
+        confidence = col_opt3.slider("Confianza de detección (%)", 5, 80, 30)
+
+    # ── BLOQUE 5: DIAGNÓSTICO DEL MODELO ─────────────────────────────────────
+    st.markdown('<div class="ws-section-header">05 — Diagnóstico del modelo</div>', unsafe_allow_html=True)
+
+    with st.expander("🔬 Ver qué detecta el modelo en el vídeo actual", expanded=False):
+        _render_model_diagnostics(st.session_state.get("video_path"), detection_mode, confidence)
 
     # ── BOTÓN ANALIZAR ───────────────────────────────────────────────────────
     st.markdown("<br>", unsafe_allow_html=True)
