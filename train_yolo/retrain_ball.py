@@ -13,9 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 TRAIN_DIR = Path(__file__).parent
-# Dataset hibrido: 1682 imgs train (1070 poligono + 612 bbox) + 209 valid
-# YOLOv8-seg entrena deteccion con TODOS y segmentacion solo con los de poligono
-DATA_YAML = ROOT / "hybrid_dataset" / "data.yaml"
+# Dataset de Roboflow puro (poligonos correctos, funciona sin crash)
+# El hybrid_dataset crashea por SemanticSeg con mascaras vacias en bbox labels
+DATA_YAML = ROOT / "roboflow_dataset" / "data.yaml"
 OUTPUT_DIR = TRAIN_DIR / "runs"
 
 def main():
@@ -45,7 +45,8 @@ def main():
         epochs=150,
         imgsz=640,
         batch=16,
-        workers=0,  # 0 evita crash DataLoader con mezcla seg+bbox
+        workers=0,
+        auto_augment="",  # desactivado: randaugment activa SemanticSeg que crashea con bbox labels
         project=str(OUTPUT_DIR / "segment"),
         name="train",
         exist_ok=True,

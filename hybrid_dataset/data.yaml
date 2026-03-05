@@ -1,0 +1,13 @@
+# Dataset hibrido: segmentacion (poligono) + detection (bbox)
+# YOLOv8-seg entrena ambas cabezas con los datos que tienen mascara,
+# y solo la cabeza de deteccion con los que solo tienen bbox.
+path: C:/apped/hybrid_dataset
+train: train/images
+val: valid/images
+
+nc: 4
+names:
+  0: Goalkeeper
+  1: Player
+  2: ball
+  3: referee
