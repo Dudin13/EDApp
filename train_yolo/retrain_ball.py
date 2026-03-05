@@ -45,7 +45,7 @@ def main():
         epochs=150,
         imgsz=640,
         batch=16,
-        workers=2,
+        workers=0,  # 0 evita crash DataLoader con mezcla seg+bbox
         project=str(OUTPUT_DIR / "segment"),
         name="train",
         exist_ok=True,
@@ -63,7 +63,7 @@ def main():
         flipud=0.05,
         fliplr=0.5,
         mosaic=1.0,
-        mixup=0.15,
+        mixup=0.0,   # desactivado: causa IndexError con mascaras vacias
         copy_paste=0.0,  # desactivado: causa IndexError con mascaras vacias
 
         # Regularizacion / optimizacion

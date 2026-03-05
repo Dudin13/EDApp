@@ -149,8 +149,10 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
     Extrae tanto el bounding box como el polígono de segmentación (máscara).
     """
     model = _load_yolo()
-    # PREDECIMOS CON CONFIANZA BAJA para no perder el balón en la red neuronal
-    results = model(frame, conf=0.01, verbose=False)
+    h_frame, w_frame = frame.shape[:2]
+
+    # Predecimos con conf=0.10 para capturar el balón sin exceso de falsos positivos
+    results = model(frame, conf=0.10, verbose=False)
 
     # Clases del modelo seg entrenado: {0:Goalkeeper, 1:Player, 2:ball, 3:referee}
     class_names = {0: "goalkeeper", 1: "player", 2: "ball", 3: "referee"}
@@ -167,25 +169,40 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
             cls = int(box.cls[0])
             clase = class_names.get(cls, "player")
             box_conf = float(box.conf[0])
-            # Umbral dinamico: el balon tiene confianza muy baja por ser pequeno
-            if clase == "ball" and box_conf < 0.01:
-                continue
-            elif clase != "ball" and box_conf < confidence:
-                continue
 
-            # Bounding box clásico
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            cx = (x1 + x2) // 2
-            cy = (y1 + y2) // 2
             w = x2 - x1
             h = y2 - y1
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+
+            if clase == "ball":
+                # ── Filtros específicos del balón ─────────────────────────
+                # 1. Confianza mínima más alta que el resto
+                if box_conf < 0.25:
+                    continue
+                # 2. Aspect ratio: balón real ≈ redondo. Jugadores son altos (h >> w)
+                #    Si h/w > 2.0 es casi seguro un jugador, no un balón
+                if h > 0 and (h / max(w, 1)) > 2.0:
+                    continue
+                # 3. Tamaño máximo: un balón pequeño no ocupa más del 6% del ancho del frame
+                max_ball_size = int(w_frame * 0.06)
+                if w > max_ball_size or h > max_ball_size:
+                    continue
+                # 4. Zona vertical: ignorar el tercio superior del frame (cielo, postes, vallas)
+                #    El balón casi nunca está en la zona del paisaje de fondo
+                if cy < h_frame * 0.30:
+                    continue
+
+            elif box_conf < confidence:
+                continue
 
             det = {
                 "x": cx, "y": cy,
                 "w": w, "h": h,
                 "clase": clase,
                 "confianza": round(float(box.conf[0]), 3),
-                "mask": None  # Por defecto sin máscara
+                "mask": None
             }
 
             # Si hay máscaras de segmentación, obtener el polígono
@@ -197,6 +214,7 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
             detecciones.append(det)
 
     return detecciones
+
 
 
 def detect_frame_coco(frame: np.ndarray, confidence: float = 0.35) -> list:
