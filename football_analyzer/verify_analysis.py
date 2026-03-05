@@ -4,11 +4,11 @@ from pathlib import Path
 from modules.video_processor import VideoProcessor
 
 # Configuración de prueba
-VIDEO_PATH = "videos/test_match.mp4"
+VIDEO_PATH = r"C:\apped\dataset\test_segmentation_video.mp4"
 CONFIG = {
-    "sample_rate": 5,      # cada 5 segundos para que sea rápido
+    "sample_rate": 0.25,      # 4 frames por segundo reales
     "detection_mode": "yolo",
-    "confidence": 40,
+    "confidence": 15,
     "team": "Mirandilla",
     "rival": "CCCFB",
     "jugadores_local": [{"dorsal": 1, "nombre": "Jugador 1", "equipo": "Mirandilla"}],

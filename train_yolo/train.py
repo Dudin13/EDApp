@@ -21,9 +21,9 @@ from pathlib import Path
 # ── Rutas ──────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).parent.parent          # C:/apped
 TRAIN_DIR = Path(__file__).parent           # C:/apped/train_yolo
-IMAGES_DIR = ROOT / "frames_etiquetado"
-LABELS_DIR = ROOT / "labels_yolo"
-DATA_YAML = TRAIN_DIR / "data.yaml"
+IMAGES_DIR = ROOT / "combined_dataset" / "train" / "images"
+LABELS_DIR = ROOT / "combined_dataset" / "train" / "labels"
+DATA_YAML = ROOT / "combined_dataset" / "data.yaml"
 OUTPUT_DIR = TRAIN_DIR / "runs"
 
 # ── Verificación ───────────────────────────────────────────────────────────
@@ -51,21 +51,10 @@ def check_dataset():
 
 
 def prepare_data_yaml():
-    """Crea/actualiza el data.yaml con las rutas absolutas correctas."""
-    content = f"""# YOLOv8 Dataset Config — Fútbol ED Analytics
-path: {ROOT.as_posix()}
-train: frames_etiquetado
-val: frames_etiquetado
-
-nc: 4
-names:
-  0: player
-  1: goalkeeper
-  2: referee
-  3: ball
-"""
-    DATA_YAML.write_text(content, encoding="utf-8")
-    print(f"✓ data.yaml escrito en {DATA_YAML}")
+    """Usamos el data.yaml generado por combine_datasets.py"""
+    if not DATA_YAML.exists():
+        print(f"❌ {DATA_YAML} no existe. Ejecuta combine_datasets.py primero.")
+        sys.exit(1)
 
 
 def train(
@@ -96,7 +85,7 @@ def train(
         imgsz=imgsz,
         batch=batch,
         workers=workers,
-        project=str(OUTPUT_DIR / "detect"),
+        project=str(OUTPUT_DIR / "segment"),
         name="train",
         exist_ok=True,
 
@@ -123,7 +112,7 @@ def train(
         verbose=True,
     )
 
-    best_model = OUTPUT_DIR / "detect" / "train" / "weights" / "best.pt"
+    best_model = OUTPUT_DIR / "segment" / "train" / "weights" / "best.pt"
     if best_model.exists():
         size_mb = best_model.stat().st_size / 1024 / 1024
         print(f"\n✅ Entrenamiento completado!")
@@ -144,7 +133,7 @@ def validate(model_path: str = None):
         return
 
     if model_path is None:
-        model_path = str(OUTPUT_DIR / "detect" / "train" / "weights" / "best.pt")
+        model_path = str(OUTPUT_DIR / "segment" / "train" / "weights" / "best.pt")
 
     if not Path(model_path).exists():
         print(f"❌ Modelo no encontrado: {model_path}")
@@ -172,16 +161,17 @@ if __name__ == "__main__":
         print("   Continuando de todas formas...\n")
 
     # Ajustar epochs según cantidad de datos
-    epochs = min(150, max(50, n_imgs * 2))
-    batch = 4 if n_imgs < 30 else 8
+    epochs = 50
+    batch = 16  # Aumentado para aprovechar RTX 2070 (8GB VRAM)
 
-    print(f"\n📐 Configuración automática: epochs={epochs}, batch={batch}")
+    print(f"\n📐 Configuración: epochs={epochs}, batch={batch}, model=yolov8s-seg")
 
     train(
-        model_size="n",   # nano: rápido, suficiente para este dataset
+        model_size="s-seg",   # small-segmentation: Para siluetas precisas de jugadores
         epochs=epochs,
         imgsz=640,
         batch=batch,
+        workers=4,        # Aumentado para acelerar la carga de datos
     )
 
     print("\n🎯 Ejecutando validación final...")

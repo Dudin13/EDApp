@@ -142,31 +142,55 @@ def detect_frame_roboflow(frame: np.ndarray, confidence: int = 40, overlap: int 
 
 def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
     """
-    Detecta jugadores usando YOLOv8 entrenado localmente.
+    Detecta jugadores usando YOLOv8-seg entrenado localmente.
+    Extrae tanto el bounding box como el polígono de segmentación (máscara).
     """
     model = _load_yolo()
-    results = model(frame, conf=confidence, verbose=False)
+    # PREDECIMOS CON CONFIANZA BAJA para no perder el balón en la red neuronal
+    results = model(frame, conf=0.01, verbose=False)
 
     class_names = {0: "player", 1: "goalkeeper", 2: "referee", 3: "ball"}
     detecciones = []
 
     for r in results:
-        for box in r.boxes:
+        boxes = r.boxes
+        masks = r.masks
+
+        if boxes is None:
+            continue
+
+        for i, box in enumerate(boxes):
             cls = int(box.cls[0])
             clase = class_names.get(cls, "player")
-            if clase not in VALID_CLASSES:
+            # Confianza dinámica: el balón suele tener mucha menos confianza por ser pequeño
+            box_conf = float(box.conf[0])
+            if clase == "ball" and box_conf < 0.05:
                 continue
+            elif clase != "ball" and box_conf < confidence:
+                continue
+
+            # Bounding box clásico
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             cx = (x1 + x2) // 2
             cy = (y1 + y2) // 2
             w = x2 - x1
             h = y2 - y1
-            detecciones.append({
+
+            det = {
                 "x": cx, "y": cy,
                 "w": w, "h": h,
                 "clase": clase,
                 "confianza": round(float(box.conf[0]), 3),
-            })
+                "mask": None  # Por defecto sin máscara
+            }
+
+            # Si hay máscaras de segmentación, obtener el polígono
+            if masks is not None and i < len(masks.xy):
+                polygon = masks.xy[i]
+                if len(polygon) > 0:
+                    det["mask"] = polygon.astype(np.int32)
+
+            detecciones.append(det)
 
     return detecciones
 

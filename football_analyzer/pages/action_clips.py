@@ -7,7 +7,14 @@ import streamlit as st
 import subprocess
 import os
 import tempfile
+import cv2
+import numpy as np
 from pathlib import Path
+
+try:
+    from modules.detector import detect_frame, classify_team, auto_detect_team_colors, yolo_model_available
+except ImportError:
+    pass
 
 ACTION_COLORS = {
     "Pase": "#00d4aa",
@@ -67,6 +74,90 @@ def _cortar_clip(video_path: str, video_second: float, clip_key: str) -> str | N
     except Exception:
         pass
     return None
+
+
+def _pintar_clip(in_path: str, out_path: str, team_colors: dict) -> bool:
+    """Procesa el clip cortado frame a frame para pintar los polígonos de segmentación"""
+    if not yolo_model_available():
+        return False # Si no hay modelo entrenado, no pintamos nada.
+        
+    cap = cv2.VideoCapture(in_path)
+    if not cap.isOpened():
+        return False
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    
+    out = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Usar siempre yolo local para obtener poligonos (masks)
+        detecciones = detect_frame(frame, mode="yolo")
+        
+        # Crear un overlay para dibujar formas semitransparentes
+        overlay = frame.copy()
+
+        for det in detecciones:
+            mask = det.get("mask")
+            clase = det.get("clase")
+            
+            # Decidir el color
+            color_bgr = (200, 200, 200) # por defecto gris claro
+            
+            if clase == "ball":
+                color_bgr = (0, 255, 255) # Amarillo para balón
+            elif clase == "referee":
+                color_bgr = (0, 0, 255) # Rojo para árbitro
+            elif clase in ("player", "goalkeeper"):
+                eq_idx = classify_team(frame, det, team_colors)
+                if eq_idx == 0:
+                    color_bgr = (170, 212, 0) # team_local (teal BGR)
+                elif eq_idx == 1:
+                    color_bgr = (255, 159, 77) # team_visit (naranja BGR)
+
+            # Dibujar el polígono si existe, si no, fallback a la caja
+            if mask is not None and len(mask) > 0:
+                # fillPoly pinta el area interior
+                cv2.fillPoly(overlay, [mask], color_bgr)
+                # polylines dibuja el borde más fuerte
+                cv2.polylines(frame, [mask], isClosed=True, color=color_bgr, thickness=2)
+            else:
+                x, y, w_box, h_box = det["x"], det["y"], det["w"], det["h"]
+                cv2.rectangle(overlay, (x - w_box//2, y - h_box//2), (x + w_box//2, y + h_box//2), color_bgr, -1)
+
+        # Aplicar transparencia (70% frame original, 30% overlay de color)
+        cv2.addWeighted(overlay, 0.4, frame, 0.6, 0, frame)
+        
+        out.write(frame)
+
+    cap.release()
+    out.release()
+    return True
+
+
+def _cortar_y_pintar_clip(video_path: str, video_second: float, clip_key: str, team_colors: dict) -> str | None:
+    """Corta el clip original y luego lo procesa frame a frame con IA"""
+    base_clip = _cortar_clip(video_path, video_second, clip_key)
+    if not base_clip:
+        return None
+        
+    if not yolo_model_available():
+        return base_clip # Skip paint si no hay IA
+        
+    painted_path = str(CLIPS_DIR / f"painted_{clip_key}.mp4")
+    if Path(painted_path).exists():
+        return painted_path
+        
+    exito = _pintar_clip(base_clip, painted_path, team_colors)
+    if exito:
+        return painted_path
+    return base_clip
 
 
 def render():
@@ -192,8 +283,10 @@ def render():
             if ffmpeg_ok:
                 if st.button(f"▶  Ver clip  ({CLIP_ANTES + CLIP_DESPUES}s)", key=f"btn_clip_{i}",
                              type="primary"):
-                    with st.spinner("Generando clip…"):
-                        clip_path = _cortar_clip(video_path, seg, clip_key)
+                    with st.spinner("Generando clip (IA dibujando jugadores...)"):
+                        # Obtener paleta de colores si existe en la sesión
+                        team_colors = st.session_state.get("team_colors", {})
+                        clip_path = _cortar_y_pintar_clip(video_path, seg, clip_key, team_colors)
 
                     if clip_path:
                         st.video(clip_path)

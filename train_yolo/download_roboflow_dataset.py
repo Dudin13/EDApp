@@ -37,25 +37,34 @@ def main():
     from roboflow import Roboflow
     rf = Roboflow(api_key=api_key)
 
-    # Dataset publico con +1000 imagenes
-    project = rf.workspace("roboflow-jvuqo").project("football-players-detection-3zvbc")
+    # Dataset publico con anotaciones de SEGMENTACION (poligonos)
+    # Buscamos un buen dataset de futbol con segmentacion
+    # Proyecto de ejemplo encontrado con segmentacion de instancias de futbol
+    # usaremos uno de la busqueda: workspace='wisd' project='instance-segmentation-football'
+    project = rf.workspace("eduardos-workspace-nfw58").project("instance-segmentation-football-pqine")
+    # Idealmente deberiamos usar un projecto especifico de "Instance Segmentation"
     dataset_path = ROOT / "roboflow_dataset"
 
-    print(f"\nDescargando en: {dataset_path}")
+    # Obtener la ultima version disponible
+    versions = project.versions()
+    latest_version = versions[-1].version if versions else 1
+
+    print(f"\nDescargando en: {dataset_path} (Version: {latest_version})")
     print("(Puede tardar 1-2 minutos segun la conexion)\n")
 
-    dataset = project.version(1).download(
-        model_format="yolov8",
-        location=str(dataset_path),
-        overwrite=True
-    )
+    # COMENTADO: No descargamos para evitar sobreescribir los datos ya limpios
+    # dataset = project.version(latest_version).download(
+    #     model_format="yolov8", # Roboflow usa 'yolov8' incluso para segmentation
+    #     location=str(dataset_path),
+    #     overwrite=True
+    # )
 
-    print(f"\nDataset descargado en: {dataset.location}")
+    print(f"\nUsando dataset existente en: {dataset_path}")
 
     # Contar imagenes descargadas
-    yaml_path = Path(dataset.location) / "data.yaml"
-    imgs_train = list((Path(dataset.location) / "train" / "images").glob("*.jpg"))
-    imgs_valid = list((Path(dataset.location) / "valid" / "images").glob("*.jpg"))
+    yaml_path = dataset_path / "data.yaml"
+    imgs_train = list((dataset_path / "train" / "images").glob("*.jpg"))
+    imgs_valid = list((dataset_path / "valid" / "images").glob("*.jpg"))
 
     print(f"  Imagenes train: {len(imgs_train)}")
     print(f"  Imagenes valid: {len(imgs_valid)}")
@@ -69,41 +78,42 @@ def main():
             print("ERROR: No se encontro data.yaml")
             sys.exit(1)
 
-    # ── Entrenamiento con dataset grande ─────────────────────────
+    # ── Entrenamiento con dataset grande (SEGMENTACION) ──────────
     print("\n" + "=" * 60)
-    print("  Iniciando entrenamiento YOLOv8s con dataset Roboflow")
+    print("  Iniciando entrenamiento YOLOv8s-seg con dataset Roboflow")
     print("=" * 60)
 
     from ultralytics import YOLO
 
     # Limpiar runs anteriores
-    output_dir = ROOT / "train_yolo" / "runs" / "detect" / "train"
+    output_dir = ROOT / "train_yolo" / "runs" / "segment" / "train"
     if output_dir.exists():
         import shutil
         shutil.rmtree(output_dir)
         print("Cache anterior limpiado")
 
-    model = YOLO("yolov8s.pt")  # small: mejor balance precision/velocidad
+    # Cambio CRITICO: usarmos el modelo de segmentacion (-seg)
+    model = YOLO("yolov8s-seg.pt")  
 
     print(f"\nDataset: {yaml_path}")
     print(f"Imagenes train: {len(imgs_train)} | valid: {len(imgs_valid)}")
-    print(f"Modelo base: YOLOv8s (transfer learning desde COCO)\n")
+    print(f"Modelo base: YOLOv8s-seg (Segmentacion)\n")
 
     results = model.train(
         data=str(yaml_path),
-        epochs=50,              # Con 1000+ imgs, 50 epochs suele ser suficiente
+        epochs=50,              
         imgsz=640,
-        batch=8,
-        workers=2,
-        project=str(ROOT / "train_yolo" / "runs" / "detect"),
+        batch=16,               # Optimizado para RTX 2070
+        workers=4,              # Optimizado para carga
+        project=str(ROOT / "train_yolo" / "runs" / "segment"),
         name="train",
         exist_ok=True,
-        patience=10,            # Early stopping agresivo
+        patience=10,            
         save=True,
-        save_period=10,         # Guardar cada 10 epochs
+        save_period=10,         
         plots=True,
         verbose=True,
-        # Augmentacion moderada (el dataset ya es variado)
+        # Augmentacion moderada 
         augment=True,
         fliplr=0.5,
         mosaic=0.8,
@@ -112,7 +122,7 @@ def main():
         degrees=5,
     )
 
-    best = ROOT / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
+    best = ROOT / "train_yolo" / "runs" / "segment" / "train" / "weights" / "best.pt"
     if best.exists():
         size_mb = best.stat().st_size / 1024 / 1024
         print(f"\n{'='*60}")

@@ -152,9 +152,10 @@ class VideoProcessor:
                                 min_dist = dist
                                 closest_tid = tid
 
-                    # Solo si hay un jugador a menos de 60px del balón = contacto real
-                    CONTACT_RADIUS = 60  # píxeles — más estricto para evitar falsos positivos
-                    MIN_GAP_SECONDS = 8  # mínimo 8s entre eventos del mismo jugador
+                    # Relajamos los filtros temporalmente para la demo: 
+                    # Consideramos contacto si está cerca (90px) y reducimos el cooldown a 2s
+                    CONTACT_RADIUS = 90  # píxeles
+                    MIN_GAP_SECONDS = 2  # mínimo 2s entre eventos del mismo jugador
                     if closest_tid is not None and min_dist < CONTACT_RADIUS:
                         track_stats[closest_tid]["ball_contacts"] += 1
                         # Evitar múltiples eventos del mismo jugador en pocos segundos
