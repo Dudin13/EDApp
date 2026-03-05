@@ -199,7 +199,7 @@ def render():
         )
         
         # Option 2: Select from 'videos/' folder
-        VIDEO_DIR = Path("videos")
+        VIDEO_DIR = Path(__file__).parent.parent / "videos"
         VIDEO_DIR.mkdir(exist_ok=True)
         local_videos = [f.name for f in VIDEO_DIR.glob("*") if f.suffix.lower() in [".mp4", ".avi", ".mkv", ".mov"]]
         
@@ -208,6 +208,7 @@ def render():
             if selected_local:
                 st.session_state["video_path"] = str(VIDEO_DIR / selected_local)
                 st.session_state["video_name"] = selected_local
+
 
     with col_status:
         if st.session_state.get("video_name"):
