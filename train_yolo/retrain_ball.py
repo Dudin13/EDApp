@@ -13,7 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 TRAIN_DIR = Path(__file__).parent
-DATA_YAML = ROOT / "combined_dataset" / "data.yaml"
+# Dataset hibrido: 1682 imgs train (1070 poligono + 612 bbox) + 209 valid
+# YOLOv8-seg entrena deteccion con TODOS y segmentacion solo con los de poligono
+DATA_YAML = ROOT / "hybrid_dataset" / "data.yaml"
 OUTPUT_DIR = TRAIN_DIR / "runs"
 
 def main():
@@ -43,7 +45,7 @@ def main():
         epochs=150,
         imgsz=640,
         batch=16,
-        workers=4,
+        workers=2,
         project=str(OUTPUT_DIR / "segment"),
         name="train",
         exist_ok=True,
@@ -55,18 +57,18 @@ def main():
         hsv_v=0.5,
         degrees=5,
         translate=0.1,
-        scale=0.6,      # zoom variado para simular distancias al balon
+        scale=0.6,
         shear=2.0,
         perspective=0.0005,
         flipud=0.05,
         fliplr=0.5,
         mosaic=1.0,
         mixup=0.15,
-        copy_paste=0.2,  # mas copy-paste para crear instancias sinteticas del balon
+        copy_paste=0.0,  # desactivado: causa IndexError con mascaras vacias
 
         # Regularizacion / optimizacion
         patience=30,
-        lr0=0.005,       # LR inicial reducido para fine-tuning
+        lr0=0.005,
         lrf=0.01,
         momentum=0.937,
         weight_decay=0.0005,
@@ -74,11 +76,11 @@ def main():
 
         # Guardado
         save=True,
-        save_period=10,  # guardar checkpoint cada 10 epochs
+        save_period=10,
         plots=True,
         verbose=True,
 
-        # Foco en objetos pequenos
+        # Segmentacion
         overlap_mask=True,
         mask_ratio=4,
         retina_masks=False,

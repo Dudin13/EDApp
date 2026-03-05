@@ -33,8 +33,9 @@ ACTION_COLORS = {
 
 CLIP_ANTES = 3
 CLIP_DESPUES = 7
-CLIPS_DIR = Path(tempfile.gettempdir()) / "ed_analytics_clips"
-CLIPS_DIR.mkdir(exist_ok=True)
+# Carpeta persistente — NO se borra al reiniciar el PC
+CLIPS_DIR = Path(__file__).parent.parent / "output" / "clips"
+CLIPS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _get_ffmpeg_path() -> str:
