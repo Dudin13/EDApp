@@ -20,7 +20,14 @@ def save_config(cfg: dict):
 
 
 def render():
-    st.header("⚙️ Configuración del sistema")
+    st.markdown("""
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+        <div>
+            <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">⚙️ Configuración del Sistema</h2>
+            <p style="margin:2px 0 0;font-size:13px;color:#5a6a7e;">Control de motores IA, credenciales y parámetros de vídeo</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     saved = load_config()
 
@@ -53,13 +60,18 @@ def render():
         sample_rate = col2.slider("Intervalo entre frames analizados (segundos)", 1, 10,
                                   saved.get("sample_rate", 3))
 
-        st.markdown("---")
-        st.subheader("Clips de vídeo")
+        st.markdown(f"""
+        <div style="background:rgba(17, 24, 39, 0.4);border:1px solid rgba(0, 212, 170, 0.15);
+                    border-radius:12px;padding:20px;margin:20px 0;">
+            <div style="font-size:12px;font-weight:700;color:#00d4aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Parámetros de Clips</div>
+            <div id="settings_clips"></div>
+        </div>
+        """, unsafe_allow_html=True)
         col3, col4 = st.columns(2)
         clip_before = col3.slider("Segundos antes de la acción", 2, 10,
-                                  saved.get("clip_before", 5))
+                                  saved.get("clip_before", 5), key="set_clip_b")
         clip_after = col4.slider("Segundos después de la acción", 2, 10,
-                                 saved.get("clip_after", 5))
+                                 saved.get("clip_after", 5), key="set_clip_a")
 
         st.markdown("---")
         st.subheader("Credenciales")

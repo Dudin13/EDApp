@@ -1,0 +1,6 @@
+
+train: c:/apped/football_analyzer/dataset_pro/train/images
+val: c:/apped/football_analyzer/dataset_pro/val/images
+
+nc: 4
+names: ['goalkeeper', 'player', 'ball', 'referee']

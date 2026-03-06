@@ -17,10 +17,15 @@ def render():
 
     if not st.session_state.get("analysis_done"):
         st.markdown("""
-        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:12px;padding:32px;text-align:center;">
-            <div style="font-size:36px;margin-bottom:12px;">👤</div>
-            <div style="font-size:16px;font-weight:600;color:#fff;margin-bottom:8px;">Sin datos de análisis</div>
-            <div style="font-size:13px;color:#5a6a7e;">Primero realiza un análisis en "Análisis de Vídeo"</div>
+        <div style="background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(12px);
+                    border:1px solid rgba(0, 212, 170, 0.2);border-radius:16px;
+                    padding:48px;text-align:center;box-shadow:0 8px 32px 0 rgba(0,0,0,0.37);">
+            <div style="font-size:48px;margin-bottom:16px;filter:drop-shadow(0 0 10px rgba(0,212,170,0.4));">👤</div>
+            <div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:0.5px;">SIN DATOS DE ANÁLISIS</div>
+            <div style="font-size:14px;color:#8899aa;line-height:1.6;">
+                Primero realiza un análisis en la sección <b>"Análisis de Vídeo"</b><br>
+                para desbloquear el seguimiento detallado de los jugadores.
+            </div>
         </div>
         """, unsafe_allow_html=True)
         return
@@ -49,13 +54,22 @@ def render():
 
     # ── Player header ─────────────────────────────────────────────────────────
     st.markdown(f"""
-    <div class="ws-player-header">
-        <div class="ws-player-number">#{dorsal}</div>
-        <div>
-            <div class="ws-player-name">{player_sel}</div>
-            <div class="ws-player-meta">{equipo} vs {rival} · {match_date} · {competition}</div>
+    <div style="display:flex;align-items:center;gap:18px;padding:16px 24px;
+                background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(12px);
+                border:1px solid rgba(0, 212, 170, 0.25);border-radius:14px;margin-bottom:24px;
+                box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+        <div style="font-size:42px;font-weight:900;color:#00d4aa;text-shadow:0 0 15px rgba(0,212,170,0.4);min-width:60px;">#{dorsal}</div>
+        <div style="flex:1;">
+            <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:0.5px;">{player_sel}</div>
+            <div style="font-size:12px;color:#8899aa;font-weight:500;">
+                <span style="color:#00d4aa;">{equipo}</span> vs {rival} · {match_date} · {competition}
+            </div>
         </div>
-        <div class="ws-player-pos">{posicion if posicion else "—"}</div>
+        <div style="background:rgba(0,212,170,0.15);border:1px solid rgba(0,212,170,0.3);
+                    color:#00d4aa;padding:6px 20px;border-radius:24px;font-size:12px;
+                    font-weight:700;text-transform:uppercase;letter-spacing:1.2px;">
+            {posicion if posicion else "JUGADOR"}
+        </div>
     </div>
     """, unsafe_allow_html=True)
 

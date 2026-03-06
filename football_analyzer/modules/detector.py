@@ -21,10 +21,8 @@ ROBOFLOW_WORKSPACE = "roboflow-jvuqo"
 ROBOFLOW_PROJECT = "football-players-detection-3zvbc"
 ROBOFLOW_VERSION = 1
 
-# Preferir el modelo de segmentación si existe, si no usar el de detección
-_SEG_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "segment" / "train" / "weights" / "best.pt"
-_DET_PATH = Path(__file__).parent.parent / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
-YOLO_MODEL_PATH = _SEG_PATH if _SEG_PATH.exists() else _DET_PATH
+# Modelo entrenado localmente (YOLOv8 segmentación)
+YOLO_MODEL_PATH = Path(__file__).parent / "best_football_seg.pt"
 YOLO_COCO_MODEL = "yolov8n.pt"   # modelo base COCO, detecta 'person' sin entrenamiento
 
 VALID_CLASSES = {"player", "goalkeeper", "referee", "ball"}
@@ -127,6 +125,7 @@ def detect_frame_roboflow(frame: np.ndarray, confidence: int = 40, overlap: int 
                 "h": int(pred["height"]),
                 "clase": pred["class"],
                 "confianza": round(pred["confidence"], 3),
+                "torso_color": get_torso_color(frame, int(pred["x"]) + x_min, int(pred["y"]) + y_min, int(pred["width"]), int(pred["height"]))
             })
 
     for pred in result_der.predictions:
@@ -178,31 +177,52 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
 
             if clase == "ball":
                 # ── Filtros específicos del balón ─────────────────────────
-                # 1. Confianza mínima más alta que el resto
-                if box_conf < 0.25:
+                # 1. Confianza mínima más baja para no perderlo si hay movimiento
+                if box_conf < 0.15:
                     continue
-                # 2. Aspect ratio: balón real ≈ redondo. Jugadores son altos (h >> w)
-                #    Si h/w > 2.0 es casi seguro un jugador, no un balón
-                if h > 0 and (h / max(w, 1)) > 2.0:
+                # 2. Aspect ratio: Permitimos un poco más de deformación (motion blur)
+                if h > 0 and (h / max(w, 1)) > 3.0:
                     continue
                 # 3. Tamaño máximo: un balón pequeño no ocupa más del 6% del ancho del frame
                 max_ball_size = int(w_frame * 0.06)
                 if w > max_ball_size or h > max_ball_size:
                     continue
                 # 4. Zona vertical: ignorar el tercio superior del frame (cielo, postes, vallas)
-                #    El balón casi nunca está en la zona del paisaje de fondo
                 if cy < h_frame * 0.30:
                     continue
 
-            elif box_conf < confidence:
-                continue
+            elif clase in ("player", "goalkeeper", "referee"):
+                # ── Filtros específicos de sujetos ────────────────────────
+                # 1. Confianza según slider (por defecto aprox 0.25 en UI)
+                if box_conf < confidence:
+                    continue
+                
+                # 2. Filtro de "Posición Background" (feedback usuario: "el foco")
+                # En planos generales de fútbol, los jugadores no suelen estar en el 20-25% superior
+                # donde están los focos, vallas publicitarias lejanas y cielo.
+                if cy < h_frame * 0.22:
+                    continue
+                
+                # 3. Filtro de forma: un jugador suele tener un ratio H/W aprox 2-4.
+                # Un poste o foco suele ser extremadamente delgado (ratio > 5-6).
+                if h > 0 and (h / max(w, 1)) > 6.5:
+                    continue
+
+                # 4. Filtro de tamaño mínimo para evitar ruido en el horizonte
+                if w * h < 500:
+                    continue
+
+            else:
+                if box_conf < confidence:
+                    continue
 
             det = {
                 "x": cx, "y": cy,
                 "w": w, "h": h,
                 "clase": clase,
                 "confianza": round(float(box.conf[0]), 3),
-                "mask": None
+                "mask": None,
+                "torso_color": get_torso_color(frame, cx, cy, w, h)
             }
 
             # Si hay máscaras de segmentación, obtener el polígono

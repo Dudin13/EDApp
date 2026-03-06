@@ -91,71 +91,98 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
 /* ── METRICS ── */
 [data-testid="metric-container"] {
-    background: #111827 !important; border: 1px solid #1e2a3a !important;
-    border-radius: 10px !important; padding: 16px 20px !important; transition: border-color 0.2s;
+    background: rgba(17, 24, 39, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(0, 212, 170, 0.2) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    border-radius: 12px !important;
+    padding: 16px 20px !important;
+    transition: all 0.3s ease;
 }
-[data-testid="metric-container"]:hover { border-color: #00d4aa44 !important; }
-[data-testid="stMetricLabel"] { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 1px !important; color: #5a6a7e !important; font-weight: 600 !important; }
-[data-testid="stMetricValue"] { font-size: 26px !important; font-weight: 700 !important; color: #fff !important; }
+[data-testid="metric-container"]:hover {
+    border-color: rgba(0, 212, 170, 0.6) !important;
+    box-shadow: 0 0 20px rgba(0, 212, 170, 0.2) !important;
+    transform: translateY(-2px);
+}
+[data-testid="stMetricLabel"] { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 1.2px !important; color: #8899aa !important; font-weight: 700 !important; }
+[data-testid="stMetricValue"] { font-size: 28px !important; font-weight: 800 !important; color: #fff !important; text-shadow: 0 0 10px rgba(0, 212, 170, 0.3); }
 
 /* ── BUTTONS ── */
 .stButton > button {
-    background: linear-gradient(135deg, #00d4aa, #0099cc) !important;
+    background: linear-gradient(135deg, #00d4aa 0%, #0077ff 100%) !important;
     color: #000 !important; border: none !important; border-radius: 8px !important;
-    font-weight: 600 !important; font-size: 13px !important; padding: 10px 20px !important;
-    transition: all 0.2s !important;
+    font-weight: 700 !important; font-size: 13px !important; padding: 10px 24px !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    text-transform: uppercase; letter-spacing: 0.5px;
 }
-.stButton > button:hover { opacity: 0.85 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 15px rgba(0,212,170,0.3) !important; }
-.stButton > button[kind="secondary"] { background: #111827 !important; color: #8899aa !important; border: 1px solid #1e2a3a !important; }
+.stButton > button:hover {
+    opacity: 1 !important;
+    transform: scale(1.02) !important;
+    box-shadow: 0 0 25px rgba(0, 212, 170, 0.5) !important;
+}
+.stButton > button[kind="secondary"] {
+    background: rgba(30, 42, 58, 0.3) !important;
+    backdrop-filter: blur(8px);
+    color: #e8eaed !important;
+    border: 1px solid rgba(0, 212, 170, 0.3) !important;
+}
 
 /* ── TABS ── */
-.stTabs [data-baseweb="tab-list"] { background: transparent; border-bottom: 1px solid #1e2a3a; gap: 0; }
-.stTabs [data-baseweb="tab"] { background: transparent; color: #5a6a7e; font-size: 13px; font-weight: 500; padding: 10px 20px; border-bottom: 2px solid transparent; }
-.stTabs [aria-selected="true"] { background: transparent !important; color: #00d4aa !important; border-bottom: 2px solid #00d4aa !important; }
-
-/* ── TABLES ── */
-[data-testid="stDataFrame"] { background: #111827 !important; border: 1px solid #1e2a3a !important; border-radius: 10px !important; }
+.stTabs [data-baseweb="tab-list"] { background: transparent; border-bottom: 2px solid rgba(30, 42, 58, 0.5); gap: 10px; }
+.stTabs [data-baseweb="tab"] {
+    background: transparent; color: #5a6a7e; font-size: 14px; font-weight: 600;
+    padding: 12px 24px; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0;
+}
+.stTabs [aria-selected="true"] {
+    background: rgba(0, 212, 170, 0.05) !important;
+    color: #00d4aa !important;
+    border-bottom: 3px solid #00d4aa !important;
+}
 
 /* ── INPUTS ── */
 [data-testid="stSelectbox"] > div > div,
-[data-testid="stMultiSelect"] > div > div {
-    background: #111827 !important; border-color: #1e2a3a !important; border-radius: 8px !important; color: #e8eaed !important;
-}
+[data-testid="stMultiSelect"] > div > div,
 .stTextInput > div > div > input, .stNumberInput > div > div > input {
-    background: #111827 !important; border-color: #1e2a3a !important; border-radius: 8px !important; color: #e8eaed !important;
+    background: rgba(17, 24, 39, 0.6) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(30, 42, 58, 0.8) !important;
+    border-radius: 10px !important;
+    color: #e8eaed !important;
+    padding: 8px 12px !important;
 }
-.stTextInput > div > div > input:focus { border-color: #00d4aa !important; box-shadow: 0 0 0 1px #00d4aa44 !important; }
-
-/* ── PROGRESS ── */
-[data-testid="stProgress"] > div > div { background: linear-gradient(90deg, #00d4aa, #0077ff) !important; border-radius: 4px !important; }
+.stTextInput > div > div > input:focus {
+    border-color: #00d4aa !important;
+    box-shadow: 0 0 10px rgba(0, 212, 170, 0.2) !important;
+}
 
 /* ── EXPANDER ── */
-[data-testid="stExpander"] { background: #111827 !important; border: 1px solid #1e2a3a !important; border-radius: 10px !important; }
-[data-testid="stExpander"]:hover { border-color: #00d4aa44 !important; }
-
-/* ── FILE UPLOADER ── */
-[data-testid="stFileUploaderDropzone"] { background: #111827 !important; border: 2px dashed #1e2a3a !important; border-radius: 12px !important; }
-[data-testid="stFileUploaderDropzone"]:hover { border-color: #00d4aa66 !important; }
-
-/* ── MISC ── */
-hr { border: none !important; border-top: 1px solid #1e2a3a !important; margin: 20px 0 !important; }
-h2, h3 { color: #ffffff !important; font-weight: 600 !important; }
-h1 { color: #ffffff !important; font-weight: 700 !important; }
+[data-testid="stExpander"] {
+    background: rgba(17, 24, 39, 0.4) !important;
+    backdrop-filter: blur(15px) !important;
+    border: 1px solid rgba(30, 42, 58, 0.6) !important;
+    border-radius: 14px !important;
+}
 
 /* ── REUSABLE COMPONENTS ── */
 .ws-player-header {
-    background: linear-gradient(135deg, #111827 0%, #0d1f35 100%);
-    border: 1px solid #1e2a3a; border-left: 4px solid #00d4aa;
-    border-radius: 12px; padding: 20px 28px; display: flex;
-    align-items: center; gap: 20px; margin-bottom: 24px;
+    background: rgba(17, 24, 39, 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 212, 170, 0.2);
+    border-left: 5px solid #00d4aa;
+    border-radius: 16px; padding: 24px 32px; display: flex;
+    align-items: center; gap: 24px; margin-bottom: 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
-.ws-player-number { font-size: 48px; font-weight: 800; color: #00d4aa; line-height: 1; min-width: 60px; }
-.ws-player-name { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.ws-player-meta { font-size: 13px; color: #5a6a7e; }
-.ws-player-pos { margin-left: auto; background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.25); color: #00d4aa; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+.ws-player-number { font-size: 56px; font-weight: 900; color: #00d4aa; line-height: 1; min-width: 70px; text-shadow: 0 0 15px rgba(0, 212, 170, 0.4); }
+.ws-player-name { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.ws-player-meta { font-size: 14px; color: #8899aa; }
 
-.ws-section-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #5a6a7e; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
-.ws-section-header::after { content: ''; flex: 1; height: 1px; background: #1e2a3a; }
+.ws-section-header {
+    font-size: 12px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 2px; color: #00d4aa; margin: 30px 0 15px;
+    display: flex; align-items: center; gap: 12px;
+}
+.ws-section-header::after { content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, rgba(0, 212, 170, 0.3), transparent); }
 
 /* ── LOGIN ── */
 </style>
@@ -257,42 +284,35 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # Usuario
-    usr = st.session_state.get("usuario", "Scout")
-    st.markdown(f"""
-    <div class="sidebar-user">
-        <div class="sidebar-avatar">{usr[0].upper()}</div>
-        <div>
-            <div class="sidebar-user-name">{usr}</div>
-            <div class="sidebar-user-role">Scout</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
     # ── EQUIPO ──
     st.markdown('<div class="nav-group-label">EQUIPO</div>', unsafe_allow_html=True)
-    if st.button("🏆  Mi Equipo", key="nav_equipo", use_container_width=True):
+    if st.button("Mi Equipo", key="nav_equipo", use_container_width=True):
         st.session_state["page"] = "equipo_config"
+        st.rerun()
+    
+    # Nuevo botón Modo Analista bajo Mi Equipo
+    if st.button("Modo Analista", key="nav_analista", use_container_width=True):
+        st.session_state["page"] = "scout"
         st.rerun()
 
     # ── PARTIDOS ──
     st.markdown('<div class="nav-group-label">PARTIDOS</div>', unsafe_allow_html=True)
-    if st.button("🎬  Nuevo Análisis", key="nav_partido_nuevo", use_container_width=True):
+    if st.button("Nuevo Análisis", key="nav_partido_nuevo", use_container_width=True):
         st.session_state["page"] = "partido_nuevo"
         st.rerun()
-    if st.button("✂️  Clips de Acción", key="nav_partido_clips", use_container_width=True):
+    if st.button("Clips de Acción", key="nav_partido_clips", use_container_width=True):
         st.session_state["page"] = "partido_clips"
         st.rerun()
 
     # ── DATOS (dos sub-items directos) ──
     st.markdown('<div class="nav-group-label">DATOS</div>', unsafe_allow_html=True)
 
-    if st.button("👤  Datos Jugadores", key="nav_datos_jugadores", use_container_width=True):
+    if st.button("Datos Jugadores", key="nav_datos_jugadores", use_container_width=True):
         st.session_state["page"] = "datos_jugadores"
         st.session_state["squad_selected_player"] = None
         st.rerun()
 
-    if st.button("📊  Datos Colectivos", key="nav_datos_colectivos", use_container_width=True):
+    if st.button("Datos Colectivos", key="nav_datos_colectivos", use_container_width=True):
         st.session_state["page"] = "datos_colectivos"
         st.rerun()
 
@@ -345,6 +365,10 @@ elif page == "datos_jugadores":
 
 elif page == "datos_colectivos":
     from pages.collective_dashboard import render
+    render()
+
+elif page == "scout":
+    from pages.scout import render
     render()
 
 # Compatibilidad con rutas antiguas

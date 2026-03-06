@@ -21,9 +21,9 @@ from pathlib import Path
 
 # ── Partidos de ejemplo (se van acumulando con análisis reales) ───────────────
 PARTIDOS_MOCK = [
-    {"id": 1, "local": "ED Atl. Sanluqueño", "visitante": "Real Jaén",      "fecha": "01/03/2026", "comp": "3ª RFEF", "resultado": "2–1"},
-    {"id": 2, "local": "ED Atl. Sanluqueño", "visitante": "Lucena CF",      "fecha": "22/02/2026", "comp": "3ª RFEF", "resultado": "0–0"},
-    {"id": 3, "local": "Pozoblanco",         "visitante": "ED Atl. Sanluqueño","fecha":"15/02/2026","comp":"3ª RFEF", "resultado": "1–2"},
+    {"id": 1, "local": "Cadiz CF", "visitante": "Real Jaén",      "fecha": "01/03/2026", "comp": "3ª RFEF", "resultado": "2–1"},
+    {"id": 2, "local": "Cadiz CF", "visitante": "Lucena CF",      "fecha": "22/02/2026", "comp": "3ª RFEF", "resultado": "0–0"},
+    {"id": 3, "local": "Pozoblanco",         "visitante": "Cadiz CF","fecha":"15/02/2026","comp":"3ª RFEF", "resultado": "1–2"},
 ]
 
 
@@ -47,10 +47,11 @@ def _draw_pitch_mini(ax, bg='#0a3d1f', lc=(1,1,1,0.75)):
 def _metric_row(label, value, unit="", color="#00d4aa"):
     st.markdown(f"""
     <div style="display:flex;justify-content:space-between;align-items:center;
-                padding:9px 12px;border-bottom:1px solid #1e2a3a;">
-        <span style="font-size:12px;color:#8899aa;">{label}</span>
-        <span style="font-size:13px;font-weight:700;color:{color};">{value}
-            <span style="font-size:10px;color:#5a6a7e;font-weight:400;margin-left:2px;">{unit}</span>
+                padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:8px;
+                margin-bottom:6px;border-left:2px solid {color}44;">
+        <span style="font-size:12px;color:#8899aa;font-weight:600;letter-spacing:0.3px;">{label}</span>
+        <span style="font-size:14px;font-weight:800;color:{color};text-shadow:0 0 8px {color}33;">{value}
+            <span style="font-size:10px;color:#5a6a7e;font-weight:500;margin-left:2px;">{unit}</span>
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -96,16 +97,18 @@ def render():
             label_color = "#00d4aa" if is_sel else "#fff"
             res_color = "#00d4aa" if is_sel else "#8899aa"
             st.markdown(f"""
-            <div style="background:{bg_color};border:1px solid {border_color};border-radius:10px;
-                        padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:4px;">
-                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;
-                            color:#5a6a7e;font-weight:600;margin-bottom:4px;">{p['comp']} · {p['fecha']}</div>
-                <div style="font-size:13px;font-weight:700;color:{label_color};white-space:nowrap;
-                            overflow:hidden;text-overflow:ellipsis;">{p['local']}</div>
-                <div style="font-size:11px;color:#5a6a7e;margin:2px 0;">vs</div>
-                <div style="font-size:13px;font-weight:700;color:{label_color};white-space:nowrap;
-                            overflow:hidden;text-overflow:ellipsis;">{p['visitante']}</div>
-                <div style="font-size:20px;font-weight:800;color:{res_color};margin-top:6px;text-align:center;">
+            <div style="background:{bg_color};backdrop-filter:blur(8px);border:1px solid {border_color};
+                        border-radius:12px;padding:16px;cursor:pointer;transition:all 0.3s ease;
+                        margin-bottom:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;
+                            color:#8899aa;font-weight:700;margin-bottom:6px;opacity:0.8;">{p['comp']} · {p['fecha']}</div>
+                <div style="font-size:14px;font-weight:800;color:{label_color};white-space:nowrap;
+                            overflow:hidden;text-overflow:ellipsis;letter-spacing:0.3px;">{p['local']}</div>
+                <div style="font-size:11px;color:#5a6a7e;margin:2px 0;font-weight:600;">vs</div>
+                <div style="font-size:14px;font-weight:800;color:{label_color};white-space:nowrap;
+                            overflow:hidden;text-overflow:ellipsis;letter-spacing:0.3px;">{p['visitante']}</div>
+                <div style="font-size:24px;font-weight:900;color:{res_color};margin-top:12px;text-align:center;
+                            text-shadow:0 0 10px {res_color}33;">
                     {p['resultado']}
                 </div>
             </div>
@@ -134,36 +137,72 @@ def render():
 
         # ── TAB KPIs ──────────────────────────────────────────────────────────
         with tab_kpis:
-            np.random.seed(partido_idx * 7 + 42)
-
-            # KPI cards 3+3
-            st.markdown("<br>", unsafe_allow_html=True)
-            k1, k2, k3 = st.columns(3)
-            k1.metric("Posesión", f"{np.random.randint(42,65)}%", f"{np.random.randint(-5,8)}%")
-            k2.metric("Tiros totales", np.random.randint(8,18), np.random.randint(-3,5))
-            k3.metric("Tiros a puerta", np.random.randint(3,9), np.random.randint(-2,4))
-            k4, k5, k6 = st.columns(3)
-            k4.metric("Pases completados", f"{np.random.randint(300,550)}", "")
-            k5.metric("Precisión de pase", f"{np.random.randint(72,89)}%", "")
-            k6.metric("Duelos ganados", f"{np.random.randint(40,65)}%", "")
+            # Si es el partido analizado, usar datos reales
+            is_analysis = (partido_idx == 0 and st.session_state.get("analysis_done"))
+            results = st.session_state.get("analysis_results", {})
+            b_events = st.session_state.get("ball_events", [])
+            
+            if is_analysis:
+                # Calcular KPIs reales
+                count_0 = len([e for e in b_events if e.get("equipo") == 0])
+                count_1 = len([e for e in b_events if e.get("equipo") == 1])
+                total_c = max(1, count_0 + count_1)
+                pos_local = int(count_0 / total_c * 100)
+                
+                shots = len([e for e in b_events if e.get("action") == "Tiro"])
+                res_jugadores = results.get("resultados_jugadores", {})
+                passes = sum(p.get("passes", 0) for p in res_jugadores.values())
+                recoveries = sum(p.get("recoveries", 0) for p in res_jugadores.values())
+                dist_total = sum(p.get("distance_km", 0) for p in res_jugadores.values())
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Posesión", f"{pos_local}%", f"{pos_local-50}%")
+                k2.metric("Tiros totales", shots, "")
+                k3.metric("Recuperaciones", recoveries, "")
+                k4, k5, k6 = st.columns(3)
+                k4.metric("Pases (detección)", passes, "")
+                k5.metric("Distancia Equipo", f"{dist_total:.1f} km", "")
+                k6.metric("Detecciones IA", results.get("total_detecciones", 0), "")
+            else:
+                np.random.seed(partido_idx * 7 + 42)
+                # KPI cards 3+3 (Mock)
+                st.markdown("<br>", unsafe_allow_html=True)
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Posesión", f"{np.random.randint(42,65)}%", f"{np.random.randint(-5,8)}%")
+                k2.metric("Tiros totales", np.random.randint(8,18), np.random.randint(-3,5))
+                k3.metric("Tiros a puerta", np.random.randint(3,9), np.random.randint(-2,4))
+                k4, k5, k6 = st.columns(3)
+                k4.metric("Pases completados", f"{np.random.randint(300,550)}", "")
+                k5.metric("Precisión de pase", f"{np.random.randint(72,89)}%", "")
+                k6.metric("Duelos ganados", f"{np.random.randint(40,65)}%", "")
 
             st.markdown('<div class="ws-section-header">Estadísticas avanzadas</div>', unsafe_allow_html=True)
 
             col_s1, col_s2 = st.columns(2)
-            with col_s1:
-                _metric_row("xG (goles esperados)", f"{np.random.uniform(0.8,2.5):.2f}")
-                _metric_row("xGA (goles esperados concedidos)", f"{np.random.uniform(0.4,1.8):.2f}", color="#ff4d6d")
-                _metric_row("Presiones en campo rival", np.random.randint(25,55))
-                _metric_row("Presiones exitosas", f"{np.random.randint(30,55)}%", color="#00d4aa")
-                _metric_row("Corners a favor", np.random.randint(2,8))
-                _metric_row("Faltas recibidas", np.random.randint(8,18))
-            with col_s2:
-                _metric_row("Recuperaciones", np.random.randint(20,45))
-                _metric_row("Pérdidas de balón", np.random.randint(10,25), color="#ff4d6d")
-                _metric_row("Línea defensiva media", f"{np.random.randint(35,52)} m")
-                _metric_row("Amplitud media ataque", f"{np.random.randint(38,58)} m")
-                _metric_row("Sprints del equipo", np.random.randint(80,160))
-                _metric_row("Distancia total", f"{np.random.uniform(95,115):.1f} km")
+            if is_analysis:
+                with col_s1:
+                    _metric_row("Eventos analizados", len(b_events))
+                    _metric_row("Frames con detección", results.get("frames_analizados", 0))
+                with col_s2:
+                    n_jug = len(results.get("resultados_jugadores", {}))
+                    _metric_row("Distancia media", f"{dist_total/max(1, n_jug):.2f} km")
+                    _metric_row("Dorsales identificados", n_jug)
+            else:
+                with col_s1:
+                    _metric_row("xG (goles esperados)", f"{np.random.uniform(0.8,2.5):.2f}")
+                    _metric_row("xGA (goles esperados concedidos)", f"{np.random.uniform(0.4,1.8):.2f}", color="#ff4d6d")
+                    _metric_row("Presiones en campo rival", np.random.randint(25,55))
+                    _metric_row("Presiones exitosas", f"{np.random.randint(30,55)}%", color="#00d4aa")
+                    _metric_row("Corners a favor", np.random.randint(2,8))
+                    _metric_row("Faltas recibidas", np.random.randint(8,18))
+                with col_s2:
+                    _metric_row("Recuperaciones", np.random.randint(20,45))
+                    _metric_row("Pérdidas de balón", np.random.randint(10,25), color="#ff4d6d")
+                    _metric_row("Línea defensiva media", f"{np.random.randint(35,52)} m")
+                    _metric_row("Amplitud media ataque", f"{np.random.randint(38,58)} m")
+                    _metric_row("Sprints del equipo", np.random.randint(80,160))
+                    _metric_row("Distancia total", f"{np.random.uniform(95,115):.1f} km")
 
             # Mini radar del equipo
             st.markdown('<div class="ws-section-header">Perfil colectivo</div>', unsafe_allow_html=True)
@@ -202,35 +241,46 @@ def render():
             _draw_pitch_mini(ax_m)
 
             if viz == "Heatmap de posesión":
-                x_pos = np.clip(np.random.normal(62, 18, 400), 0, 105)
-                y_pos = np.clip(np.random.normal(34, 14, 400), 0, 68)
-                ax_m.hexbin(x_pos, y_pos, gridsize=20, cmap='YlOrRd', alpha=0.7, extent=[0,105,0,68])
+                hx = st.session_state.get("heatmap_x", [])
+                hy = st.session_state.get("heatmap_y", [])
+                if hx and is_analysis:
+                    # Usar datos reales (ya en metros si es versión nueva)
+                    x_p = np.array(hx) if max(hx) < 110 else np.array(hx) / 1280 * 105
+                    y_p = np.array(hy) if max(hx) < 110 else np.array(hy) / 720 * 68
+                else:
+                    x_p = np.clip(np.random.normal(62, 18, 400), 0, 105)
+                    y_p = np.clip(np.random.normal(34, 14, 400), 0, 68)
+                ax_m.hexbin(x_p, y_p, gridsize=20, cmap='YlOrRd', alpha=0.7, extent=[0,105,0,68])
                 ax_m.set_title("Heatmap de posesión de equipo", color='#8899aa', fontsize=10, pad=10)
 
             elif viz == "Pases":
-                n = 35
-                xs = np.random.normal(55, 14, n); ys = np.random.normal(34, 12, n)
-                xe = xs + np.random.normal(8, 6, n); ye = ys + np.random.normal(0, 7, n)
-                for i in range(n):
-                    ax_m.annotate("", xy=(xe[i], ye[i]), xytext=(xs[i], ys[i]),
-                                  arrowprops=dict(arrowstyle='->', color='#00d4aa', lw=1.4, alpha=0.55))
-                ax_m.scatter(xs, ys, color='white', s=18, zorder=5, alpha=0.7)
-
-            elif viz == "Líneas de presión":
-                for y_line in [38, 52, 65]:
-                    ax_m.axvline(y_line, color='#ff6b35', alpha=0.35, lw=2, linestyle='--')
-                ax_m.text(38, 67, 'Bloque bajo', color='#ff6b35', alpha=0.6, ha='center', fontsize=8)
-                ax_m.text(52, 67, 'Bloque medio', color='#ff6b35', alpha=0.6, ha='center', fontsize=8)
-                ax_m.text(65, 67, 'Pressing alto', color='#ff6b35', alpha=0.6, ha='center', fontsize=8)
-                n = 22
-                px = np.random.uniform(35, 95, n); py = np.random.uniform(5, 63, n)
-                ax_m.scatter(px, py, color='#ff6b35', s=80, alpha=0.55, edgecolors='white', lw=0.5)
+                pases = [e for e in b_events if e.get("action") == "Pase" and "pitch_pos" in e]
+                if pases and is_analysis:
+                    for i, p in enumerate(pases[:40]):
+                        px, py = p["pitch_pos"]
+                        ax_m.annotate("", xy=(px+3, py), xytext=(px, py),
+                                      arrowprops=dict(arrowstyle='->', color='#00d4aa', lw=1.4, alpha=0.55))
+                    ax_m.set_title(f"Pases detectados · {len(pases)} acciones", color='#8899aa', fontsize=10, pad=10)
+                else:
+                    n = 35
+                    xs = np.random.normal(55, 14, n); ys = np.random.normal(34, 12, n)
+                    xe = xs + np.random.normal(8, 6, n); ye = ys + np.random.normal(0, 7, n)
+                    for i in range(n):
+                        ax_m.annotate("", xy=(xe[i], ye[i]), xytext=(xs[i], ys[i]),
+                                      arrowprops=dict(arrowstyle='->', color='#00d4aa', lw=1.4, alpha=0.55))
+                    ax_m.scatter(xs, ys, color='white', s=18, zorder=5, alpha=0.7)
 
             elif viz == "Zonas de recuperación":
-                n = 30
-                rx = np.clip(np.random.normal(48, 16, n), 5, 100)
-                ry = np.clip(np.random.normal(34, 13, n), 5, 63)
-                ax_m.scatter(rx, ry, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', lw=0.5)
+                recs = [e for e in b_events if e.get("action") == "Recuperación" and "pitch_pos" in e]
+                if recs and is_analysis:
+                    for r in recs:
+                        px, py = r["pitch_pos"]
+                        ax_m.scatter(px, py, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', lw=0.5)
+                else:
+                    n = 30
+                    rx = np.clip(np.random.normal(48, 16, n), 5, 100)
+                    ry = np.clip(np.random.normal(34, 13, n), 5, 63)
+                    ax_m.scatter(rx, ry, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', lw=0.5)
 
             # Zonas
             for x in [35, 70]:

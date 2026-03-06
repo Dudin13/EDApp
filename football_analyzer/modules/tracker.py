@@ -1,11 +1,5 @@
-"""
-tracker.py — Tracking simple de jugadores entre frames consecutivos.
-
-Asocia detecciones de frames distintos usando IoU (Intersection over Union)
-para mantener IDs consistentes a lo largo del vídeo. No requiere ByteTrack.
-"""
-
 import numpy as np
+import supervision as sv
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
@@ -21,140 +15,118 @@ class Track:
     history_x: list = field(default_factory=list)
     history_y: list = field(default_factory=list)
     history_minute: list = field(default_factory=list)
+    appearance_color: Optional[tuple] = None  # (h, s, v) medio del torso
 
 
-def _iou(box_a: tuple, box_b: tuple) -> float:
-    """Calcula IoU entre dos bounding boxes (cx, cy, w, h)."""
-    ax, ay, aw, ah = box_a
-    bx, by, bw, bh = box_b
-
-    ax1, ay1 = ax - aw / 2, ay - ah / 2
-    ax2, ay2 = ax + aw / 2, ay + ah / 2
-    bx1, by1 = bx - bw / 2, by - bh / 2
-    bx2, by2 = bx + bw / 2, by + bh / 2
-
-    inter_x1 = max(ax1, bx1)
-    inter_y1 = max(ay1, by1)
-    inter_x2 = min(ax2, bx2)
-    inter_y2 = min(ay2, by2)
-
-    inter_w = max(0, inter_x2 - inter_x1)
-    inter_h = max(0, inter_y2 - inter_y1)
-    inter_area = inter_w * inter_h
-
-    area_a = aw * ah
-    area_b = bw * bh
-    union_area = area_a + area_b - inter_area
-
-    return inter_area / union_area if union_area > 0 else 0.0
-
-
-class SimpleTracker:
+class ProfessionalTracker:
     """
-    Tracker ligero basado en asignación greedy por IoU.
-    Mantiene tracks activos durante MAX_LOST frames sin detección.
+    Tracker avanzado basado en ByteTrack (via supervision).
+    Utiliza predicción de Kalman y lógica persistente para no perder IDs.
     """
-
-    MAX_LOST = 3       # frames sin deteccion antes de eliminar el track
-    IOU_THRESHOLD = 0.10  # umbral bajo porque entre frames de 2s los jugadores se mueven mucho
-    MAX_DIST_PX = 200     # distancia maxima de centroide como fallback
 
     def __init__(self):
-        self._next_id = 1
+        self._tracker = sv.ByteTrack(
+            track_activation_threshold=0.25,
+            lost_track_buffer=30,  # Frames a esperar antes de borrar (aprox 15s a 0.5fps)
+            minimum_matching_threshold=0.8, # IoU mínimo para asociar
+            frame_rate=2 # Ajustado a nuestro sample rate típico
+        )
         self._tracks: Dict[int, Track] = {}
+        self._history: Dict[int, Track] = {} # Para persistencia final
 
     def update(self, detecciones: list, equipo_map: list, minute: float = 0.0) -> Dict[int, Track]:
         """
-        Actualiza el tracker con las detecciones del frame actual.
-
-        Args:
-            detecciones: lista de dicts con {x, y, w, h, clase}
-            equipo_map: lista de ints con el equipo de cada detección (misma longitud)
-            minute: minuto del vídeo
-
-        Returns:
-            dict {track_id: Track} con los tracks activos
+        Actualiza el tracker usando ByteTrack.
         """
-        active_ids = set()
-
         if not detecciones:
-            # Incrementar contador de frames perdidos para todos los tracks
-            to_delete = []
-            for tid, track in self._tracks.items():
-                track.frames_lost += 1
-                if track.frames_lost > self.MAX_LOST:
-                    to_delete.append(tid)
-            for tid in to_delete:
-                del self._tracks[tid]
             return self._tracks
 
-        # Construir matriz de IoU
-        track_list = list(self._tracks.values())
-        n_tracks = len(track_list)
-        n_dets = len(detecciones)
+        # Convertir nuestras detecciones al formato de supervision
+        xyxy = []
+        confidence = []
+        class_id = []
+        
+        for d in detecciones:
+            # cx, cy, w, h -> x1, y1, x2, y2
+            x1 = d["x"] - d["w"] / 2
+            y1 = d["y"] - d["h"] / 2
+            x2 = d["x"] + d["w"] / 2
+            y2 = d["y"] + d["h"] / 2
+            xyxy.append([x1, y1, x2, y2])
+            confidence.append(d.get("conf", 0.5))
+            class_id.append(0) # Asumimos 'player' por simplicidad en el tracker
 
-        iou_matrix = np.zeros((n_tracks, n_dets))
-        for i, track in enumerate(track_list):
-            for j, det in enumerate(detecciones):
-                iou_matrix[i, j] = _iou(track.last_box,
-                                         (det["x"], det["y"], det["w"], det["h"]))
+        sv_detections = sv.Detections(
+            xyxy=np.array(xyxy),
+            confidence=np.array(confidence),
+            class_id=np.array(class_id)
+        )
 
-        matched_tracks = set()
-        matched_dets = set()
+        # Ejecutar ByteTrack
+        sv_detections = self._tracker.update_with_detections(sv_detections)
 
-        # Asignación greedy: mayor IoU primero
-        if n_tracks > 0:
-            flat_indices = np.argsort(-iou_matrix, axis=None)
-            for idx in flat_indices:
-                i, j = divmod(int(idx), n_dets)
-                if iou_matrix[i, j] < self.IOU_THRESHOLD:
-                    break
-                if i not in matched_tracks and j not in matched_dets:
-                    track = track_list[i]
-                    det = detecciones[j]
-                    track.last_box = (det["x"], det["y"], det["w"], det["h"])
-                    track.frames_lost = 0
-                    track.frames_seen += 1
-                    track.history_x.append(det["x"])
-                    track.history_y.append(det["y"])
-                    track.history_minute.append(minute)
-                    track.equipo = equipo_map[j]
-                    active_ids.add(track.track_id)
-                    matched_tracks.add(i)
-                    matched_dets.add(j)
+        # Mapear IDs de ByteTrack a nuestra estructura Track
+        current_active = {}
+        
+        for i in range(len(sv_detections)):
+            tid = int(sv_detections.tracker_id[i])
+            box = sv_detections.xyxy[i]
+            # Convertir de vuelta a cx, cy, w, h
+            x1, y1, x2, y2 = box
+            w, h = x2 - x1, y2 - y1
+            cx, cy = x1 + w/2, y1 + h/2
 
-        # Crear nuevos tracks para detecciones no asignadas
-        for j, det in enumerate(detecciones):
-            if j not in matched_dets:
-                new_track = Track(
-                    track_id=self._next_id,
-                    clase=det["clase"],
-                    equipo=equipo_map[j],
-                    last_box=(det["x"], det["y"], det["w"], det["h"]),
-                    history_x=[det["x"]],
-                    history_y=[det["y"]],
-                    history_minute=[minute],
+            # Buscar si ya existe o es nuevo
+            if tid not in self._history:
+                # Intentar encontrar equipo original (ByteTrack no cambia el orden de dets si coinciden 1:1)
+                # NOTA: En produccion real usariamos detecciones originales vs tracks finales
+                # Por ahora, buscamos la deteccion mas cercana espacialmente en este frame
+                equipo = 0
+                dist_min = float('inf')
+                for d_idx, d in enumerate(detecciones):
+                    dist = np.sqrt((cx - d["x"])**2 + (cy - d["y"])**2)
+                    if dist < dist_min:
+                        dist_min = dist
+                        equipo = equipo_map[d_idx]
+
+                self._history[tid] = Track(
+                    track_id=tid,
+                    clase="player",
+                    equipo=equipo,
+                    last_box=(cx, cy, w, h),
+                    history_x=[cx],
+                    history_y=[cy],
+                    history_minute=[minute]
                 )
-                self._tracks[self._next_id] = new_track
-                active_ids.add(self._next_id)
-                self._next_id += 1
+            else:
+                track = self._history[tid]
+                track.last_box = (cx, cy, w, h)
+                track.history_x.append(cx)
+                track.history_y.append(cy)
+                track.history_minute.append(minute)
+                track.frames_seen += 1
+            
+            current_active[tid] = self._history[tid]
 
-        # Eliminar tracks muy perdidos
-        to_delete = []
-        for tid, track in self._tracks.items():
-            if tid not in active_ids:
-                track.frames_lost += 1
-                if track.frames_lost > self.MAX_LOST:
-                    to_delete.append(tid)
-        for tid in to_delete:
-            del self._tracks[tid]
-
+        self._tracks = current_active
         return self._tracks
 
     def get_all_tracks(self) -> List[Track]:
-        """Retorna todos los tracks, incluidos los ya eliminados (para estadísticas finales)."""
-        return list(self._tracks.values())
+        """Retorna todos los tracks detectados en la sesión."""
+        return list(self._history.values())
 
     def reset(self):
-        self._next_id = 1
+        self._tracker = sv.ByteTrack()
         self._tracks = {}
+        self._history = {}
+
+    def initialize_with_seeds(self, seeds: List[Dict]):
+        """
+        ByteTrack es difícil de pre-inicializar manualmente sin inyectar detecciones falsas.
+        Por ahora, dejamos que ByteTrack cree los IDs automáticamente en el primer frame.
+        """
+        pass
+
+
+# Alias para mantener compatibilidad si se usa SimpleTracker en otros archivos
+SimpleTracker = ProfessionalTracker

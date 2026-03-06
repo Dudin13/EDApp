@@ -142,14 +142,14 @@ def _pintar_clip(in_path: str, out_path: str, team_colors: dict) -> bool:
     return True
 
 
-def _cortar_y_pintar_clip(video_path: str, video_second: float, clip_key: str, team_colors: dict) -> str | None:
+def _cortar_y_pintar_clip(video_path: str, video_second: float, clip_key: str, team_colors: dict, skip_paint: bool = False) -> str | None:
     """Corta el clip original y luego lo procesa frame a frame con IA"""
     base_clip = _cortar_clip(video_path, video_second, clip_key)
     if not base_clip:
         return None
         
-    if not yolo_model_available():
-        return base_clip # Skip paint si no hay IA
+    if skip_paint or not yolo_model_available():
+        return base_clip # Skip paint si se pide o si no hay IA
         
     painted_path = str(CLIPS_DIR / f"painted_{clip_key}.mp4")
     if Path(painted_path).exists():
@@ -174,10 +174,10 @@ def render():
 
     if not st.session_state.get("analysis_done"):
         st.markdown("""
-        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:12px;padding:32px;text-align:center;">
-            <div style="font-size:36px;margin-bottom:12px;">✂️</div>
-            <div style="font-size:16px;font-weight:600;color:#fff;margin-bottom:8px;">Sin datos de análisis</div>
-            <div style="font-size:13px;color:#5a6a7e;">Primero realiza un análisis en "Análisis de Vídeo"</div>
+        <div style="background:rgba(17, 24, 39, 0.4); backdrop-filter:blur(15px); border:1px solid rgba(255, 77, 109, 0.2); border-radius:16px; padding:48px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+            <div style="font-size:48px; margin-bottom:16px; filter: drop-shadow(0 0 10px rgba(255, 77, 109, 0.3));">✂️</div>
+            <div style="font-size:18px; font-weight:700; color:#fff; margin-bottom:8px; letter-spacing:0.5px;">SIN DATOS DE ANÁLISIS</div>
+            <div style="font-size:14px; color:#8899aa;">Primero completa el proceso en <strong>Nuevo Análisis</strong> para generar fragmentos de vídeo.</div>
         </div>
         """, unsafe_allow_html=True)
         return
@@ -191,14 +191,15 @@ def render():
 
     if not ball_events:
         st.markdown("""
-        <div style="background:#111827;border:1px solid #ff6b3544;border-radius:12px;padding:28px 32px;">
-            <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:10px;">⚠️ No se detectaron acciones con balón</div>
-            <div style="font-size:13px;color:#5a6a7e;line-height:1.7;">
-                Posibles causas:<br>
-                • El modelo no detectó el balón en el vídeo<br>
-                • El intervalo entre frames es demasiado grande<br>
+        <div style="background:rgba(255, 107, 53, 0.1); backdrop-filter:blur(10px); border:1px solid rgba(255, 107, 53, 0.3); border-radius:16px; padding:32px;">
+            <div style="font-size:16px; font-weight:700; color:#fff; margin-bottom:12px; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">⚠️</span> NO SE DETECTARON ACCIONES
+            </div>
+            <div style="font-size:14px; color:#8899aa; line-height:1.7;">
+                El motor no ha encontrado interacciones claras con el balón en este vídeo.<br>
                 <br>
-                <strong style="color:#00d4aa;">Consejo:</strong> Repite el análisis con intervalo de <strong>1–2 segundos</strong>.
+                <strong style="color:#00d4aa; text-transform:uppercase; font-size:11px; letter-spacing:1px;">Recomendación:</strong><br>
+                Ajusta el <strong>intervalo de análisis</strong> a un valor menor (ej. 0.5s) en el Paso 2 del configurador para una detección más sensible.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -227,6 +228,10 @@ def render():
     col_f1, col_f2 = st.columns(2)
     equipo_filtro = col_f1.multiselect("Equipo", [team_local, team_visit])
     jugador_filtro = col_f2.multiselect("Jugador", jugadores_en_eventos)
+    
+    st.markdown('<div class="ws-section-header">Opciones de Clip</div>', unsafe_allow_html=True)
+    c_opt1, c_opt2 = st.columns(2)
+    skip_paint = c_opt1.checkbox("⚡ Ver vídeo original (Instantáneo)", value=True, help="Si se desactiva, la IA dibujará sobre el vídeo (tarda unos segundos)")
 
     eventos_filtrados = ball_events.copy()
     if jugador_filtro:
@@ -254,20 +259,22 @@ def render():
             f"⚽  Min {minuto:.1f}'  ·  {nombre}  ·  {equipo}",
             expanded=False
         ):
-            # Cabecera del clip
+            # Cabecera del clip con estilo futurista
             st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:12px 16px;
-                        background:#0d1220;border-radius:8px;border-left:3px solid {eq_color};">
-                <div style="font-size:22px;font-weight:800;color:{eq_color};min-width:50px;">
+            <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:20px;
+                        background:rgba(13, 18, 32, 0.6); backdrop-filter:blur(10px);
+                        border-radius:12px; border:1px solid rgba(255,255,255,0.05);
+                        border-left:5px solid {eq_color}; shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <div style="font-size:28px;font-weight:900;color:{eq_color};min-width:60px; text-shadow:0 0 10px {eq_color}55;">
                     {minuto:.0f}'
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:14px;font-weight:600;color:#fff;">{nombre}</div>
-                    <div style="font-size:12px;color:#5a6a7e;">{equipo} · Segundo {seg:.1f}s del vídeo</div>
+                    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:2px;">{nombre}</div>
+                    <div style="font-size:12px;color:#8899aa;font-family:monospace;">STAMP: {seg:.1f}s · {equipo}</div>
                 </div>
-                <div style="background:{eq_color}22;border:1px solid {eq_color}44;color:{eq_color};
-                            padding:4px 12px;border-radius:16px;font-size:11px;font-weight:600;">
-                    {equipo.upper()[:12]}
+                <div style="background:{eq_color}22; border:1px solid {eq_color}44; color:{eq_color};
+                            padding:6px 14px; border-radius:20px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">
+                    EVENTO
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -287,13 +294,15 @@ def render():
                     with st.spinner("Generando clip (IA dibujando jugadores...)"):
                         # Obtener paleta de colores si existe en la sesión
                         team_colors = st.session_state.get("team_colors", {})
-                        clip_path = _cortar_y_pintar_clip(video_path, seg, clip_key, team_colors)
+                        clip_path = _cortar_y_pintar_clip(video_path, seg, clip_key, team_colors, skip_paint=skip_paint)
 
-                    if clip_path:
-                        st.video(clip_path)
+                    if clip_path and os.path.exists(clip_path):
+                        with open(clip_path, "rb") as f:
+                            video_bytes = f.read()
+                        st.video(video_bytes)
                         st.caption(f"📍 {seg:.1f}s en el vídeo · ±{CLIP_ANTES}s antes / {CLIP_DESPUES}s después")
                     else:
-                        st.error("❌ No se pudo generar el clip.")
+                        st.error("❌ No se pudo generar el clip o el archivo no existe.")
             else:
                 st.markdown("""
                 <div style="font-size:12px;color:#5a6a7e;">

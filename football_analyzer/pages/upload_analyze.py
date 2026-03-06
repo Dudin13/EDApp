@@ -1,7 +1,11 @@
 import streamlit as st
+st.set_page_config(page_title="Football Analyzer", layout="wide", initial_sidebar_state="collapsed")
 import time
 import os
+import json
 from pathlib import Path
+from PIL import Image
+from streamlit_drawable_canvas import st_canvas
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -20,338 +24,331 @@ def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: 
     import cv2
     import numpy as np
     from pathlib import Path
-
-    # Estado del modelo
-    try:
-        from modules.detector import yolo_model_available, detect_frame, classify_team
-        from modules.detector import YOLO_MODEL_PATH
-        yolo_ok = yolo_model_available()
-    except Exception as e:
-        st.error(f"Error cargando detector: {e}")
-        return
+    from modules.detector import yolo_model_available, detect_frame
+    from modules.detector import YOLO_MODEL_PATH
+    
+    yolo_ok = yolo_model_available()
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         if yolo_ok:
             st.markdown(f"""
-            <div style="background:#0d1f14;border:1px solid #00d4aa44;border-radius:8px;padding:12px 16px;">
-                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#00d4aa;font-weight:600;">
-                    Modelo YOLO activo
+            <div style="background:rgba(0, 212, 170, 0.1);border:1px solid rgba(0, 212, 170, 0.3);border-radius:12px;padding:16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#00d4aa;font-weight:700;">
+                    MODELO YOLO V8 ACTIVO
                 </div>
-                <div style="font-size:12px;color:#8899aa;margin-top:4px;">
-                    {Path(str(YOLO_MODEL_PATH)).name}
-                </div>
+                <div style="font-size:13px;color:#fff;margin-top:4px;">{Path(str(YOLO_MODEL_PATH)).name}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div style="background:#1e1220;border:1px solid #ff4d6d44;border-radius:8px;padding:12px 16px;">
-                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#ff4d6d;font-weight:600;">
-                    Sin modelo YOLO local
+            <div style="background:rgba(255, 77, 109, 0.1);border:1px solid rgba(255, 77, 109, 0.3);border-radius:12px;padding:16px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#ff4d6d;font-weight:700;">
+                    FALLBACK: ROBOFLOW MODE
                 </div>
-                <div style="font-size:12px;color:#8899aa;margin-top:4px;">Usando Roboflow</div>
+                <div style="font-size:13px;color:#fff;margin-top:4px;">No se detectó el modelo local .pt</div>
             </div>
             """, unsafe_allow_html=True)
 
     with col_m2:
         st.markdown(f"""
-        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:8px;padding:12px 16px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;">
-                Motor seleccionado
+        <div style="background:rgba(17, 24, 39, 0.4);border:1px solid rgba(30, 42, 58, 0.6);border-radius:12px;padding:16px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8899aa;font-weight:700;">
+                MOTOR SELECCIONADO
             </div>
-            <div style="font-size:13px;color:#fff;margin-top:4px;font-weight:600;">{detection_mode.upper()}</div>
+            <div style="font-size:13px;color:#fff;margin-top:4px;font-weight:700;">{detection_mode.upper()}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
     if not video_path or not Path(video_path).exists():
-        st.info("Carga un vídeo para ver el diagnóstico del modelo.")
+        st.info("Carga un vídeo para ver el diagnóstico.")
         return
 
-    if st.button("🔍 Analizar frame de muestra", key="btn_diag_frame"):
-        cap = cv2.VideoCapture(video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # Saltar al minuto 3 del vídeo (o al 20% si es más corto)
-        target_second = min(180, total_frames / fps * 0.2) if fps > 0 else 0
-        target_frame = int(target_second * fps)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-        ret, frame = cap.read()
-        cap.release()
+    target_second = min(180, total_frames / fps * 0.2) if fps > 0 else 0
+    target_frame = int(target_second * fps)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+    ret, frame = cap.read()
+    cap.release()
 
-        if not ret:
-            st.error("No se pudo leer el frame de muestra.")
-            return
+    if not ret:
+        st.error("No se pudo leer el frame.")
+        return
 
-        # Detección raw con conf muy baja para diagnóstico
-        with st.spinner("Ejecutando detección..."):
-            try:
-                dets = detect_frame(frame, mode=detection_mode, confidence=confidence / 100)
-            except Exception as e:
-                st.error(f"Error en detección: {e}")
-                return
+    with st.spinner("⏳ Ejecutando diagnóstico..."):
+        dets = detect_frame(frame, mode=detection_mode, confidence=confidence / 100)
 
-        # Dibujar detecciones sobre el frame
-        CLASS_COLORS = {
-            "ball":       (0, 255, 255),   # Amarillo
-            "player":     (0, 212, 170),   # Teal
-            "goalkeeper": (255, 200, 0),   # Naranja
-            "referee":    (0, 0, 255),     # Rojo
-        }
-        vis_frame = frame.copy()
-        for det in dets:
-            x, y, w, h = det["x"], det["y"], det["w"], det["h"]
-            clase = det.get("clase", "player")
-            conf = det.get("confianza", 0)
-            color = CLASS_COLORS.get(clase, (200, 200, 200))
+    CLASS_COLORS = {"ball": (0, 255, 255), "player": (0, 212, 170), "goalkeeper": (255, 200, 0), "referee": (0, 0, 255)}
+    vis_frame = frame.copy()
+    for det in dets:
+        x, y, w, h = det["x"], det["y"], det["w"], det["h"]
+        clase = det.get("clase", "player")
+        conf = det.get("confianza", 0)
+        color = CLASS_COLORS.get(clase, (200, 200, 200))
+        cv2.rectangle(vis_frame, (x - w//2, y - h//2), (x + w//2, y + h//2), color, 2)
 
-            # Dibujar bounding box
-            cv2.rectangle(vis_frame,
-                          (x - w//2, y - h//2),
-                          (x + w//2, y + h//2),
-                          color, 2)
-            # Etiqueta
-            label = f"{clase} {conf:.2f}"
-            cv2.putText(vis_frame, label, (x - w//2, y - h//2 - 4),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
-
-        # Convertir BGR → RGB para Streamlit
-        vis_rgb = cv2.cvtColor(vis_frame, cv2.COLOR_BGR2RGB)
-        st.image(vis_rgb, caption=f"Frame ~{target_second:.0f}s | {len(dets)} detecciones", use_container_width=True)
-
-        # Tabla resumen por clase
-        if dets:
-            import pandas as pd
-            resumen = {}
-            for det in dets:
-                clase = det.get("clase", "player")
-                conf = det.get("confianza", 0)
-                if clase not in resumen:
-                    resumen[clase] = {"count": 0, "max_conf": 0.0, "min_conf": 1.0}
-                resumen[clase]["count"] += 1
-                resumen[clase]["max_conf"] = max(resumen[clase]["max_conf"], conf)
-                resumen[clase]["min_conf"] = min(resumen[clase]["min_conf"], conf)
-
-            rows = []
-            class_icons = {"ball": "⚽", "player": "👤", "goalkeeper": "🧤", "referee": "🟨"}
-            for clase, stats in sorted(resumen.items()):
-                rows.append({
-                    "Clase": f"{class_icons.get(clase, '•')} {clase}",
-                    "Detectados": stats["count"],
-                    "Conf. máx.": f"{stats['max_conf']:.3f}",
-                    "Conf. mín.": f"{stats['min_conf']:.3f}",
-                })
-            df = pd.DataFrame(rows)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-
-            # Alerta si no se detecta el balón
-            clases_detectadas = set(d.get("clase") for d in dets)
-            if "ball" not in clases_detectadas:
-                st.markdown("""
-                <div style="background:#1e1220;border:1px solid #ff6b3544;border-radius:8px;padding:10px 14px;font-size:12px;color:#ff6b35;margin-top:8px;">
-                    ⚠️ <strong>Balón no detectado</strong> en este frame.
-                    El modelo necesita más entrenamiento para detectar el balón de forma consistente.
-                    Prueba a bajar la confianza mínima o selecciona un frame donde el balón sea visible.
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                ball_dets = [d for d in dets if d.get("clase") == "ball"]
-                max_ball_conf = max(d.get("confianza", 0) for d in ball_dets)
-                if max_ball_conf < 0.1:
-                    st.markdown(f"""
-                    <div style="background:#1e1a10;border:1px solid #FFD70044;border-radius:8px;padding:10px 14px;font-size:12px;color:#FFD700;margin-top:8px;">
-                        ⚠️ <strong>Balón detectado pero con baja confianza</strong> (máx: {max_ball_conf:.3f}).
-                        Se recomienda continuar entrenando el modelo para mejorar la detección del balón.
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.success(f"✅ Balón detectado con confianza {max_ball_conf:.3f}")
-        else:
-            st.warning("No se detectó nada en este frame. Prueba otro vídeo o baja el umbral de confianza.")
+    vis_rgb = cv2.cvtColor(vis_frame, cv2.COLOR_BGR2RGB)
+    st.image(vis_rgb, caption=f"Frame ~{target_second:.0f}s | {len(dets)} detecciones", use_container_width=True)
 
 
 def render():
-    # ── PAGE HEADER ──────────────────────────────────────────────────────────
-    st.markdown("""
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
-        <div>
-            <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">Análisis de Vídeo</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:#5a6a7e;">Sube el vídeo del partido y configura el análisis</p>
-        </div>
-        <div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.25);color:#00d4aa;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">
-            Nuevo análisis
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    if "analysis_step" not in st.session_state:
+        st.session_state["analysis_step"] = 1
 
-    # ── BLOQUE 1: VÍDEO ──────────────────────────────────────────────────────
-    st.markdown('<div class="ws-section-header">01 — Vídeo del partido</div>', unsafe_allow_html=True)
+    # --- Loading Persistence ---
+    results_file = Path("c:/apped/football_analyzer/output/results.json")
+    if not st.session_state.get("analysis_done") and results_file.exists():
+        try:
+            with open(results_file, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            st.session_state["resultados_jugadores"] = saved.get("resultados_jugadores", {})
+            st.session_state["heatmap_x"] = saved.get("heatmap_x", [])
+            st.session_state["heatmap_y"] = saved.get("heatmap_y", [])
+            st.session_state["ball_events"] = saved.get("ball_events", [])
+            st.session_state["total_detecciones"] = saved.get("total_detecciones", 0)
+            st.session_state["frames_analizados"] = saved.get("frames_analizados", 0)
+            st.session_state["analysis_done"] = True
+            st.toast("⏳ Análisis previo cargado automáticamente", icon="💾")
+        except Exception:
+            pass
 
-    col_up, col_status = st.columns([2, 1])
-    with col_up:
-        # Option 1: Upload
-        uploaded_file = st.file_uploader(
-            "Sube un nuevo vídeo",
-            type=["mp4", "avi", "mkv", "mov"],
-            label_visibility="collapsed"
-        )
+    # --- STEPPER UI ---
+    steps = ["📹 Entrada", "🔬 Calibración", "📍 Marcado", "⚙️ Motor", "📊 Resumen"]
+    cols = st.columns(len(steps))
+    for i, s in enumerate(steps):
+        step_num = i + 1
+        is_active = st.session_state["analysis_step"] == step_num
+        is_done = st.session_state["analysis_step"] > step_num
         
-        # Option 2: Select from 'videos/' folder
-        VIDEO_DIR = Path(__file__).parent.parent / "videos"
-        VIDEO_DIR.mkdir(exist_ok=True)
-        local_videos = [f.name for f in VIDEO_DIR.glob("*") if f.suffix.lower() in [".mp4", ".avi", ".mkv", ".mov"]]
+        color = "#00d4aa" if is_active else ("#fff" if is_done else "#5a6a7e")
+        bg = "rgba(0, 212, 170, 0.15)" if is_active else "transparent"
+        border = "1px solid #00d4aa" if is_active else "none"
         
-        if local_videos:
-            selected_local = st.selectbox("O selecciona un vídeo ya existente:", [""] + local_videos)
-            if selected_local:
+        cols[i].markdown(f"""
+        <div style="text-align:center; padding:10px; border-radius:10px; background:{bg}; border:{border}; transition: all 0.3s; cursor:pointer;">
+            <div style="font-size:10px; color:{color}; font-weight:700; margin-bottom:4px;">PASO 0{step_num}</div>
+            <div style="font-size:12px; color:{color}; font-weight:600;">{s.split()[-1]}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- STEP 1: VIDEO Y RIVAL ---
+    if st.session_state["analysis_step"] == 1:
+        st.markdown('<div class="ws-section-header">Configuración del Encuentro</div>', unsafe_allow_html=True)
+        col1, col2 = st.columns([1.5, 1])
+        
+        with col1:
+            uploaded_file = st.file_uploader("Sube vídeo", type=["mp4","avi","mkv","mov"], label_visibility="collapsed")
+            VIDEO_DIR = Path(__file__).parent.parent / "videos"
+            VIDEO_DIR.mkdir(exist_ok=True)
+            local_videos = [f.name for f in VIDEO_DIR.glob("*") if f.suffix.lower() in [".mp4",".avi",".mkv",".mov"]]
+            selected_local = st.selectbox("O selecciona uno existente:", [""] + local_videos)
+            
+            if uploaded_file:
+                video_path = UPLOAD_DIR / uploaded_file.name
+                with open(video_path, "wb") as f: f.write(uploaded_file.read())
+                st.session_state["video_path"] = str(video_path)
+                st.session_state["video_name"] = uploaded_file.name
+            elif selected_local:
                 st.session_state["video_path"] = str(VIDEO_DIR / selected_local)
                 st.session_state["video_name"] = selected_local
 
+        with col2:
+            st.text_input("Equipo Local", value="Cadiz CF", key="step1_local")
+            st.text_input("Equipo Visitante", placeholder="Ej: Real Madrid", key="step1_visit")
+            st.date_input("Fecha", key="step1_date")
 
-    with col_status:
-        if st.session_state.get("video_name"):
-            st.markdown(f"""
-            <div style="background:#111827;border:1px solid #00d4aa44;border-radius:10px;padding:14px 16px;height:100%;display:flex;flex-direction:column;justify-content:center;">
-                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#00d4aa;font-weight:600;margin-bottom:4px;">Vídeo cargado</div>
-                <div style="font-size:13px;font-weight:600;color:#fff;word-break:break-all;">{st.session_state['video_name']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Siguiente: Calibrar IA →", use_container_width=True):
+            if not st.session_state.get("video_path"):
+                st.error("No has seleccionado ningún vídeo.")
+            else:
+                st.session_state["analysis_step"] = 2
+                st.rerun()
+
+    # --- STEP 2: CALIBRACION ---
+    elif st.session_state["analysis_step"] == 2:
+        st.markdown('<div class="ws-section-header">Diagnóstico de Visión Artificial</div>', unsafe_allow_html=True)
+        
+        col_c1, col_c2 = st.columns([1, 2])
+        with col_c1:
             st.markdown("""
-            <div style="background:#111827;border:1px solid #1e2a3a;border-radius:10px;padding:14px 16px;height:100%;display:flex;flex-direction:column;justify-content:center;">
-                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:4px;">Estado</div>
-                <div style="font-size:13px;color:#5a6a7e;">Sin vídeo cargado</div>
+            <div style="background:rgba(0, 212, 170, 0.05); border:1px solid rgba(0, 212, 170, 0.2); border-radius:12px; padding:20px;">
+                <div style="font-size:14px; font-weight:700; color:#00d4aa; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">CONFIGURACIÓN ÓPTIMA</div>
+                <div style="font-size:13px; color:#8899aa; line-height:1.6;">
+                    Los parámetros han sido calibrados para maximizar la precisión en este tipo de tomas:<br><br>
+                    • <b>Precisión</b>: 0.5s (Análisis de alta densidad)<br>
+                    • <b>Umbral Confianza</b>: 25% (Sensibilidad mejorada)<br><br>
+                    Verifica en la imagen de la derecha que los jugadores y el balón están siendo detectados correctamente.
+                </div>
             </div>
             """, unsafe_allow_html=True)
+            # Parámetros fijos
+            sample_rate = 0.5
+            confidence = 25
+            st.session_state["analysis_params"] = {"rate": sample_rate, "conf": confidence}
+        
+        with col_c2:
+            _render_model_diagnostics(st.session_state.get("video_path"), "yolo", confidence)
 
-    if uploaded_file:
-        video_path = UPLOAD_DIR / uploaded_file.name
-        with open(video_path, "wb") as f:
-            f.write(uploaded_file.read())
-        st.session_state["video_path"] = str(video_path)
-        st.session_state["video_name"] = uploaded_file.name
-        st.success(f"✅ **{uploaded_file.name}** cargado correctamente")
+        c_prev, c_next = st.columns(2)
+        if c_prev.button("← Volver", use_container_width=True):
+            st.session_state["analysis_step"] = 1
+            st.rerun()
+        if c_next.button("Siguiente: Marcado Manual →", use_container_width=True):
+            st.session_state["analysis_step"] = 3
+            st.rerun()
 
-    # ── BLOQUE 2: INFO DEL PARTIDO ───────────────────────────────────────────
-    st.markdown('<div class="ws-section-header">02 — Datos del partido</div>', unsafe_allow_html=True)
+    # --- STEP 3: MARCADO MANUAL ---
+    elif st.session_state["analysis_step"] == 3:
+        st.markdown('<div class="ws-section-header">Marcado Manual (Semillas de Tracking)</div>', unsafe_allow_html=True)
+        st.info("💡 **Tip Pro**: ¿Ves jugadores no detectados o duplicados en el diagnóstico anterior? Haz clic sobre su base aquí para marcarlos manualmente. El sistema usará estos puntos para identificarlos y rastrearlos por todo el vídeo.")
+        
+        video_p = st.session_state.get("video_path")
+        import cv2
+        cap = cv2.VideoCapture(video_p)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30
+        
+        marking_sec = st.slider("Momento del vídeo", 0.0, float(total_frames/fps), 1.0, step=0.1)
+        cap.set(cv2.CAP_PROP_POS_MSEC, marking_sec * 1000)
+        ret, frame = cap.read()
+        cap.release()
+        
+        if ret:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            h, w = frame_rgb.shape[:2]
+            
+            col_z1, col_z2 = st.columns([1, 2])
+            with col_z1:
+                zoom = st.slider("🔍 Zoom de imagen (Scroll para ampliar)", 1.0, 4.0, 1.0, 0.5, help="Aumenta el tamaño para marcar jugadores lejanos con precisión.")
+            
+            base_w = 900
+            display_w = int(base_w * zoom)
+            scale = display_w / w
+            display_h = int(h * scale)
+            
+            # Contenedor con scroll para zoom
+            st.markdown(f"""
+            <style>
+            .canvas-container {{
+                width: 100%;
+                max-height: 700px;
+                overflow: auto;
+                border: 1px solid rgba(0, 212, 170, 0.2);
+                border-radius: 12px;
+                background: #000;
+            }}
+            </style>
+            """, unsafe_allow_html=True)
 
-    col_info1, col_info2, col_info3, col_info4 = st.columns(4)
-    team_local = col_info1.text_input("Equipo local", placeholder="Ej: Atlético Sanluqueño")
-    team_visit = col_info2.text_input("Equipo visitante", placeholder="Ej: Real Jaén")
-    match_date = col_info3.date_input("Fecha del partido")
-    competition = col_info4.selectbox("Competición", [
-        "1ª División", "2ª División", "1ª RFEF", "2ª RFEF", "3ª RFEF",
-        "División de Honor", "1ª Andaluza", "2ª Andaluza", "Copa del Rey", "Otro"
-    ])
+            with st.container():
+                st.markdown('<div class="canvas-container">', unsafe_allow_html=True)
+                canvas_result = st_canvas(
+                    fill_color="rgba(0, 212, 170, 0.3)", stroke_width=2, stroke_color="#00d4aa",
+                    background_image=Image.fromarray(frame_rgb), update_streamlit=True,
+                    height=display_h, width=display_w, drawing_mode="point",
+                    point_display_radius=5, key="canvas_step3",
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            if canvas_result.json_data:
+                seeds = [{"x": int(obj["left"]/scale), "y": int(obj["top"]/scale)} 
+                         for obj in canvas_result.json_data["objects"] if obj["type"]=="circle"]
+                st.session_state["manual_seeds"] = seeds
+                if seeds: st.toast(f"📍 {len(seeds)} jugadores marcados")
 
-    # ── BLOQUE 3: JUGADORES ───────────────────────────────────────────────────
-    st.markdown('<div class="ws-section-header">03 — Plantillas convocadas</div>', unsafe_allow_html=True)
+        c_prev, c_next = st.columns(2)
+        if c_prev.button("← Volver", use_container_width=True):
+            st.session_state["analysis_step"] = 2
+            st.rerun()
+        if c_next.button("Siguiente: Iniciar Motor →", use_container_width=True, type="primary"):
+            st.session_state["analysis_step"] = 4
+            st.rerun()
 
-    POSICIONES = ["", "Portero", "Lateral D", "Lateral I", "Central", "Pivote",
-                  "Mediocentro", "Interior D", "Interior I", "Mediapunta",
-                  "Extremo D", "Extremo I", "Delantero Centro"]
-
-    col_local, col_visit = st.columns(2)
-
-    with col_local:
-        st.markdown(f"""
-        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:2px;">Local</div>
-            <div style="font-size:16px;font-weight:700;color:#fff;">{team_local or "Equipo Local"}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("**#** &nbsp;&nbsp; **Nombre** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **Posición**")
-        jugadores_local = []
-        for i in range(20):
-            c1, c2, c3 = st.columns([1, 3, 2])
-            dorsal = c1.number_input("D", min_value=1, max_value=99, value=i + 1,
-                                     key=f"local_dorsal_{i}", label_visibility="collapsed")
-            nombre = c2.text_input("Nombre", placeholder=f"Jugador {i + 1}",
-                                   key=f"local_nombre_{i}", label_visibility="collapsed")
-            posicion = c3.selectbox("Pos", POSICIONES,
-                                    key=f"local_pos_{i}", label_visibility="collapsed")
-            jugadores_local.append({"dorsal": dorsal, "nombre": nombre,
-                                    "equipo": team_local, "posicion": posicion})
-
-    with col_visit:
-        st.markdown(f"""
-        <div style="background:#111827;border:1px solid #1e2a3a;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#5a6a7e;font-weight:600;margin-bottom:2px;">Visitante</div>
-            <div style="font-size:16px;font-weight:700;color:#fff;">{team_visit or "Equipo Visitante"}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("**#** &nbsp;&nbsp; **Nombre** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **Posición**")
-        jugadores_visit = []
-        for i in range(20):
-            c1, c2, c3 = st.columns([1, 3, 2])
-            dorsal = c1.number_input("D", min_value=1, max_value=99, value=i + 1,
-                                     key=f"visit_dorsal_{i}", label_visibility="collapsed")
-            nombre = c2.text_input("Nombre", placeholder=f"Jugador {i + 1}",
-                                   key=f"visit_nombre_{i}", label_visibility="collapsed")
-            posicion = c3.selectbox("Pos", POSICIONES,
-                                    key=f"visit_pos_{i}", label_visibility="collapsed")
-            jugadores_visit.append({"dorsal": dorsal, "nombre": nombre,
-                                    "equipo": team_visit, "posicion": posicion})
-
-    # ── BLOQUE 4: OPCIONES DE ANÁLISIS ───────────────────────────────────────
-    st.markdown('<div class="ws-section-header">04 — Configuración del análisis</div>', unsafe_allow_html=True)
-
-    with st.expander("⚙️ Opciones avanzadas", expanded=False):
-        col_opt1, col_opt2, col_opt3 = st.columns(3)
-        detection_mode = col_opt1.selectbox(
-            "Motor de detección",
-            ["yolo (local)", "roboflow", "auto"],
-            help="'auto' usa YOLOv8 si está entrenado, sino Roboflow"
-        )
-        if detection_mode == "yolo (local)":
-            detection_mode = "yolo"
-
-        sample_rate = col_opt2.slider("Analizar 1 frame cada (seg)", 1, 10, 2,
-                                      help="Menor = más preciso pero más lento")
-        confidence = col_opt3.slider("Confianza de detección (%)", 5, 80, 30)
-
-    # ── BLOQUE 5: DIAGNÓSTICO DEL MODELO ─────────────────────────────────────
-    st.markdown('<div class="ws-section-header">05 — Diagnóstico del modelo</div>', unsafe_allow_html=True)
-
-    with st.expander("🔬 Ver qué detecta el modelo en el vídeo actual", expanded=False):
-        _render_model_diagnostics(st.session_state.get("video_path"), detection_mode, confidence)
-
-    # ── BOTÓN ANALIZAR ───────────────────────────────────────────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
-    _, col_btn, _ = st.columns([2, 1, 2])
-    with col_btn:
-        analizar = st.button("🚀 Iniciar Análisis", type="primary", use_container_width=True)
-
-    if analizar:
-        if not st.session_state.get("video_path"):
-            st.error("❌ Primero sube un vídeo")
-        elif not team_local or not team_visit:
-            st.error("❌ Introduce los nombres de los dos equipos")
+    # --- STEP 4: PROCESAMIENTO ---
+    elif st.session_state["analysis_step"] == 4:
+        st.markdown('<div class="ws-section-header">Ejecución del Motor Analytics</div>', unsafe_allow_html=True)
+        
+        if not st.session_state.get("processing", False):
+            if st.button("LANZAR ANÁLISIS AHORA", use_container_width=True, type="primary"):
+                st.session_state["processing"] = True
+                params = st.session_state.get("analysis_params", {"rate": 0.5, "conf": 25})
+                config = {
+                    "team": st.session_state.get("step1_local", "Cadiz CF"),
+                    "rival": st.session_state.get("step1_visit", "Rival"),
+                    "match_date": str(st.session_state.get("step1_date")),
+                    "sample_rate": params["rate"],
+                    "detection_mode": "yolo",
+                    "confidence": params["conf"],
+                    "manual_seeds": st.session_state.get("manual_seeds", [])
+                }
+                st.session_state["analysis_config"] = config
+                
+                # Reloj de arena animado durante el proceso
+                with st.spinner("⏳ Analizando vídeo..."):
+                    st.markdown("""
+                        <div style="text-align:center;padding:24px;background:rgba(0,212,170,0.05);border-radius:12px;border:1px dashed #00d4aa;margin-bottom:20px;">
+                            <div style="font-size:50px;animation: hourglass_spin 2.5s ease-in-out infinite;">⏳</div>
+                            <style>
+                                @keyframes hourglass_spin {
+                                    0% { transform: rotate(0deg); }
+                                    45% { transform: rotate(180deg); }
+                                    55% { transform: rotate(180deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                            </style>
+                            <div style="font-size:14px;color:#00d4aa;font-weight:700;margin-top:12px;letter-spacing:1px;">IA PROCESANDO MOVIMIENTOS...</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    run_analysis_real(config)
+                
+                st.session_state["processing"] = False
+                st.session_state["analysis_step"] = 5
+                st.rerun()
         else:
-            config = {
-                "team": team_local, "rival": team_visit,
-                "match_date": str(match_date), "competition": competition,
-                "jugadores_local": jugadores_local, "jugadores_visit": jugadores_visit,
-                "sample_rate": sample_rate, "detection_mode": detection_mode,
-                "confidence": confidence,
-            }
-            st.session_state["analysis_config"] = config
-            st.session_state["processing"] = True
-            run_analysis_real(config)
-            st.session_state["processing"] = False
+            st.warning("Ya hay un análisis en curso...")
+
+        if st.button("← Cancelar / Volver", use_container_width=True):
+            st.session_state["analysis_step"] = 3
+            st.rerun()
+
+    # --- STEP 5: RESUMEN ---
+    elif st.session_state["analysis_step"] == 5:
+        st.markdown('<div class="ws-section-header">Resultados del Análisis</div>', unsafe_allow_html=True)
+        
+        if st.session_state.get("analysis_done"):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Jugadores", len(st.session_state.get("resultados_jugadores", {})))
+            c2.metric("Eventos Balón", len(st.session_state.get("ball_events", [])))
+            c3.metric("Frames", st.session_state.get("frames_analizados", 0))
+            c4.metric("Detecciones", f"{st.session_state.get('total_detecciones', 0):,}")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_d1, col_d2 = st.columns(2)
+            if col_d1.button("📂 Ir al Dashboard Colectivo", use_container_width=True, type="primary"):
+                st.session_state["page"] = "datos_colectivos"
+                st.rerun()
+            if col_d2.button("✂️ Ver Clips Generados", use_container_width=True):
+                st.session_state["page"] = "partido_clips"
+                st.rerun()
+        else:
+            st.error("No hay resultados cargados.")
+
+        if st.button("➕ Iniciar Nuevo Análisis", use_container_width=True):
+            st.session_state["analysis_step"] = 1
+            st.session_state["analysis_done"] = False
+            st.rerun()
 
 
 def run_analysis_real(config: dict):
-    st.markdown('<div class="ws-section-header">Progreso del análisis</div>', unsafe_allow_html=True)
     progress_bar = st.progress(0)
     status_box = st.empty()
-
     video_path = st.session_state.get("video_path", "")
-    if not video_path or not os.path.exists(video_path):
-        st.error("❌ No se encontró el fichero de vídeo. Vuelve a subirlo.")
-        return
 
     try:
         from modules.video_processor import VideoProcessor
@@ -361,45 +358,27 @@ def run_analysis_real(config: dict):
         for progreso, estado, resultados in processor.process():
             progress_bar.progress(int(progreso))
             status_box.markdown(f"""
-            <div style="background:#111827;border:1px solid #1e2a3a;border-radius:8px;padding:10px 16px;font-size:13px;color:#e8eaed;">
+            <div style="background:rgba(17, 24, 25, 0.5);border:1px solid rgba(0, 212, 170, 0.2);border-radius:12px;padding:12px 20px;font-size:13px;color:#00d4aa; font-weight:600;">
                 {estado}
             </div>
             """, unsafe_allow_html=True)
-            if resultados:
-                resultados_finales = resultados
+            if resultados: resultados_finales = resultados
 
         if resultados_finales:
             st.session_state["analysis_done"] = True
-            st.session_state["mock_results"] = resultados_finales.get("mock_results", {})
             st.session_state["resultados_jugadores"] = resultados_finales.get("resultados_jugadores", {})
             st.session_state["heatmap_x"] = resultados_finales.get("heatmap_x", [])
             st.session_state["heatmap_y"] = resultados_finales.get("heatmap_y", [])
-            st.session_state["detecciones_por_minuto"] = resultados_finales.get("detecciones_por_minuto", {})
             st.session_state["ball_events"] = resultados_finales.get("ball_events", [])
             st.session_state["total_detecciones"] = resultados_finales.get("total_detecciones", 0)
             st.session_state["frames_analizados"] = resultados_finales.get("frames_analizados", 0)
-            if not st.session_state.get("video_path"):
-                st.session_state["video_path"] = video_path
-
-            total = resultados_finales.get("total_detecciones", 0)
-            frames = resultados_finales.get("frames_analizados", 0)
-            ball_evs = len(resultados_finales.get("ball_events", []))
-
-            # Resumen con tarjetas
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.success(f"✅ Análisis **{config.get('team')} vs {config.get('rival')}** completado")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Jugadores detectados", len(resultados_finales.get("resultados_jugadores", {})))
-            c2.metric("Total detecciones", f"{total:,}")
-            c3.metric("Frames analizados", frames)
-            c4.metric("⚽ Acciones con balón", ball_evs)
-        else:
-            st.warning("⚠️ El análisis terminó sin resultados. Comprueba que el vídeo contiene el partido.")
-
-    except ImportError as e:
-        st.error(f"❌ Dependencia no instalada: {e}")
+            
+            # Persistence save
+            results_file = Path("c:/apped/football_analyzer/output/results.json")
+            results_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(results_file, "w", encoding="utf-8") as f:
+                json.dump(resultados_finales, f, ensure_ascii=False, indent=2)
+                
+            st.success("✅ Análisis completado y guardado.")
     except Exception as e:
-        st.error(f"❌ Error durante el análisis: {e}")
-        import traceback
-        with st.expander("Ver detalle del error"):
-            st.code(traceback.format_exc())
+        st.error(f"Error: {e}")

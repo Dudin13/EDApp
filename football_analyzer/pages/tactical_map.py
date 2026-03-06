@@ -122,8 +122,14 @@ def render():
             hx = st.session_state.get("heatmap_x", [])
             hy = st.session_state.get("heatmap_y", [])
             if hx and len(hx) > 5:
-                x_pos = np.clip(np.array(hx) / 1280 * 105, 0, 105)
-                y_pos = np.clip(np.array(hy) / 720 * 68, 0, 68)
+                # Escalar solo si parece que vienen en píxeles (legacy)
+                # En la nueva versión de VideoProcessor ya vienen en metros (0-105)
+                if max(hx) > 110:
+                    x_pos = np.clip(np.array(hx) / 1280 * 105, 0, 105)
+                    y_pos = np.clip(np.array(hy) / 720 * 68, 0, 68)
+                else:
+                    x_pos = np.array(hx)
+                    y_pos = np.array(hy)
                 data_src = f"{len(x_pos):,} detecciones reales"
             else:
                 x_pos = np.clip(np.random.normal(60, 18, 300), 0, 105)
@@ -132,36 +138,42 @@ def render():
             hb = ax.hexbin(x_pos, y_pos, gridsize=22, cmap='YlOrRd', alpha=0.75, extent=[0, 105, 0, 68])
             ax.set_title(f"Heatmap de posiciones · {data_src}", color='#8899aa', fontsize=11, pad=12)
 
-        elif viz_type in ["Mapa de pases", "Pases progresivos"]:
-            n = 30 if viz_type == "Mapa de pases" else 9
-            x_s = np.random.normal(55, 15, n); y_s = np.random.normal(34, 12, n)
-            x_e = x_s + np.random.normal(9, 5, n); y_e = y_s + np.random.normal(0, 7, n)
-            col_arr = accent
-            for i in range(n):
-                alpha = 0.85 if viz_type == "Pases progresivos" else 0.6
-                ax.annotate("", xy=(x_e[i], y_e[i]), xytext=(x_s[i], y_s[i]),
-                            arrowprops=dict(arrowstyle='->', color=col_arr, lw=1.8, alpha=alpha))
-            ax.scatter(x_s, y_s, color='white', s=25, zorder=5, alpha=0.8)
-            ax.set_title(f"{viz_type} · {n} acciones", color='#8899aa', fontsize=11, pad=12)
-
-        elif viz_type == "Tiros":
-            n_shots = max(results.get("shots", 3), 1)
-            sx = np.random.uniform(78, 103, n_shots)
-            sy = np.random.uniform(20, 48, n_shots)
-            on_target = np.random.choice([True, False], n_shots, p=[0.4, 0.6])
-            for i in range(n_shots):
-                c = '#00d4aa' if on_target[i] else '#ff4d6d'
-                ax.scatter(sx[i], sy[i], color=c, s=200, zorder=5, marker='*', edgecolors='white', linewidths=0.5)
-            ax.set_title(f"Tiros · {n_shots} intentos", color='#8899aa', fontsize=11, pad=12)
-
-        elif viz_type in ["Zonas de recuperación", "Zonas de pérdida"]:
-            key = "recoveries" if "recuperación" in viz_type.lower() else "losses"
-            n_ev = max(results.get(key, 5), 1)
-            col_sc = '#00d4aa' if "recuperación" in viz_type.lower() else '#ff4d6d'
-            x_ev = np.random.normal(52, 18, n_ev); y_ev = np.random.normal(34, 13, n_ev)
-            ax.scatter(np.clip(x_ev, 0, 105), np.clip(y_ev, 0, 68),
-                       color=col_sc, s=160, zorder=5, edgecolors='white', linewidths=0.8, alpha=0.85)
-            ax.set_title(f"{viz_type} · {n_ev} acciones", color='#8899aa', fontsize=11, pad=12)
+        elif viz_type in ["Mapa de pases", "Pases progresivos", "Tiros", "Zonas de recuperación", "Zonas de pérdida"]:
+            events = st.session_state.get("ball_events", [])
+            
+            # Mapeo de tipos de visualización a acciones del modelo
+            action_map = {
+                "Mapa de pases": "Pase",
+                "Pases progresivos": "Pase",
+                "Tiros": "Tiro",
+                "Zonas de recuperación": "Recuperación",
+                "Zonas de pérdida": "Pérdida"
+            }
+            target_action = action_map.get(viz_type)
+            
+            # Filtrar eventos que tengan 'pitch_pos' (nueva versión)
+            real_events = [e for e in events if e.get("action") == target_action and "pitch_pos" in e]
+            
+            if real_events:
+                for ev in real_events:
+                    px, py = ev["pitch_pos"]
+                    if viz_type == "Tiros":
+                        ax.scatter(px, py, color='#ff4d6d', s=200, zorder=5, marker='*', edgecolors='white', linewidths=0.5)
+                    elif "Zonas" in viz_type:
+                        col = '#00d4aa' if "recuperación" in viz_type.lower() else '#ff4d6d'
+                        ax.scatter(px, py, color=col, s=160, zorder=5, edgecolors='white', linewidths=0.8, alpha=0.85)
+                    else:
+                        # Para pases, como no tenemos el 'end_pos' real aún, dibujamos un punto y una flecha corta indicativa
+                        ax.annotate("", xy=(px+2, py), xytext=(px, py),
+                                    arrowprops=dict(arrowstyle='->', color=accent, lw=1.8, alpha=0.7))
+                        ax.scatter(px, py, color='white', s=25, zorder=5, alpha=0.8)
+                ax.set_title(f"{viz_type} · {len(real_events)} acciones reales", color='#8899aa', fontsize=11, pad=12)
+            else:
+                # Fallback a datos aleatorios si no hay eventos reales (para no dejar el campo vacío en demo)
+                n = 15
+                x_ev = np.random.normal(52, 18, n); y_ev = np.random.normal(34, 13, n)
+                ax.scatter(np.clip(x_ev, 0, 105), np.clip(y_ev, 0, 68), color=accent, s=100, alpha=0.3)
+                ax.set_title(f"{viz_type} · Sin datos reales (Vista previa)", color='#8899aa', fontsize=11, pad=12)
 
         # Zonas verticales
         if show_zones:

@@ -100,18 +100,20 @@ def _render_player_detail(jugador):
             st.rerun()
     with col_info:
         st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:14px;padding:8px 0 12px;">
-            <div style="font-size:32px;font-weight:900;color:{color};">#{jugador['dorsal']}</div>
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;
+                    background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(10px);
+                    border:1px solid rgba(0, 212, 170, 0.2);border-radius:12px;margin:8px 0;">
+            <div style="font-size:36px;font-weight:900;color:{color};text-shadow:0 0 15px {color}66;">#{jugador['dorsal']}</div>
             <div>
-                <div style="font-size:18px;font-weight:800;color:#fff;">{jugador['nombre']}</div>
-                <div style="font-size:12px;color:#5a6a7e;">{jugador['nacionalidad']} {jugador['pais']} ·
+                <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.5px;">{jugador['nombre']}</div>
+                <div style="font-size:12px;color:#8899aa;font-weight:500;">{jugador['nacionalidad']} {jugador['pais']} ·
                     {jugador['edad']} años · {jugador['altura']} · Pie {jugador['pie']}
                 </div>
             </div>
-            <span style="background:{color}22;border:1px solid {color}55;color:{color};
-                         padding:3px 14px;border-radius:16px;font-size:11px;font-weight:700;
-                         text-transform:uppercase;letter-spacing:1px;">{pos}</span>
-            <span style="margin-left:auto;font-size:11px;color:#5a6a7e;">
+            <span style="background:{color}33;border:1px solid {color}66;color:#fff;
+                         padding:4px 16px;border-radius:20px;font-size:11px;font-weight:700;
+                         text-transform:uppercase;letter-spacing:1px;box-shadow:0 0 10px {color}33;">{pos}</span>
+            <span style="margin-left:auto;font-size:11px;color:#5a6a7e;font-weight:600;">
                 Temporada 2024-25 · {stats['partidos']} partidos · {stats['minutos']:,} min
             </span>
         </div>
@@ -129,16 +131,18 @@ def _render_player_detail(jugador):
         # LEFT: General Info + Video types
         with col_l:
             st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#0d1f35,#111827);border:1px solid #1e2a3a;
-                        border-radius:12px;padding:20px;text-align:center;margin-bottom:14px;">
-                <div style="width:76px;height:76px;border-radius:50%;background:{color}22;
-                            border:3px solid {color}55;margin:0 auto 12px;display:flex;
-                            align-items:center;justify-content:center;">
-                    <span style="font-size:30px;font-weight:900;color:{color};">{jugador['dorsal']}</span>
+            <div style="background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(10px);
+                        border:1px solid rgba(0, 212, 170, 0.2);
+                        border-radius:12px;padding:24px;text-align:center;margin-bottom:18px;
+                        box-shadow:0 8px 32px 0 rgba(0,0,0,0.37);">
+                <div style="width:84px;height:84px;border-radius:50%;background:{color}22;
+                            border:3px solid {color}66;margin:0 auto 16px;display:flex;
+                            align-items:center;justify-content:center;box-shadow:0 0 20px {color}44;">
+                    <span style="font-size:34px;font-weight:900;color:#fff;text-shadow:0 0 10px {color};">{jugador['dorsal']}</span>
                 </div>
-                <div style="font-size:15px;font-weight:700;color:#fff;">{jugador['nombre']}</div>
-                <div style="font-size:11px;color:{color};font-weight:600;text-transform:uppercase;
-                            letter-spacing:1px;margin-top:2px;">{pos}</div>
+                <div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:0.5px;">{jugador['nombre']}</div>
+                <div style="font-size:11px;color:{color};font-weight:700;text-transform:uppercase;
+                            letter-spacing:1.5px;margin-top:4px;">{pos}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -150,7 +154,7 @@ def _render_player_detail(jugador):
                 ("Pie", jugador["pie"]),
                 ("Altura", jugador["altura"]),
                 ("País", jugador["pais"]),
-                ("Club", "ED Atl. Sanluqueño"),
+                ("Club", "Cadiz CF"),
                 ("Posición", pos),
             ]:
                 st.markdown(f"""
@@ -270,10 +274,10 @@ def _render_player_detail(jugador):
             for i in range(6):
                 rival = rivales[i % len(rivales)]
                 local = bool(np.random.choice([True, False]))
-                enc = f"ED Sanluqueño – {rival}" if local else f"{rival} – ED Sanluqueño"
+                enc = f"Cadiz CF – {rival}" if local else f"{rival} – Cadiz CF"
                 res = f"{int(np.random.randint(0,3))} – {int(np.random.randint(0,3))}"
                 rows.append({
-                    "Fecha": f"{int(np.random.randint(1,28)):02d}/{int(np.random.randint(1,3)):02d}/2026",
+                    "Fecha": f"{int(np.random.randint(1,28)):02d}/{int(np.random.randint(1,4)):02d}/2026",
                     "Partido": enc,
                     "Resultado": res,
                     "Pos.": pos[:5],
@@ -402,33 +406,36 @@ def render():
                 color = POSICION_COLOR.get(pos, "#00d4aa")
                 stats = _generar_stats(jugador)
                 st.markdown(f"""
-                <div style="background:#111827;border:1px solid #1e2a3a;border-radius:14px;
-                            overflow:hidden;margin-bottom:4px;">
-                    <div style="height:4px;background:{color};"></div>
-                    <div style="padding:20px;text-align:center;">
-                        <div style="width:64px;height:64px;border-radius:50%;background:{color}22;
-                                    border:2px solid {color}55;margin:0 auto 10px;display:flex;
-                                    align-items:center;justify-content:center;">
-                            <span style="font-size:22px;font-weight:900;color:{color};">{jugador['dorsal']}</span>
+                <div style="background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(10px);
+                            border:1px solid rgba(0, 212, 170, 0.15);border-radius:16px;
+                            overflow:hidden;margin-bottom:8px;transition:all 0.3s ease;
+                            box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                    <div style="height:4px;background:linear-gradient(90deg, {color}00, {color}, {color}00);"></div>
+                    <div style="padding:24px;text-align:center;">
+                        <div style="width:68px;height:68px;border-radius:50%;background:{color}15;
+                                    border:2px solid {color}44;margin:0 auto 12px;display:flex;
+                                    align-items:center;justify-content:center;box-shadow:0 0 15px {color}22;">
+                            <span style="font-size:24px;font-weight:900;color:#fff;text-shadow:0 0 8px {color};">{jugador['dorsal']}</span>
                         </div>
-                        <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;
-                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;
+                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.3px;">
                             {jugador['nombre']}
                         </div>
-                        <div style="font-size:10px;font-weight:600;text-transform:uppercase;
-                                    letter-spacing:1px;color:{color};margin-bottom:10px;">{pos}</div>
-                        <div style="display:flex;justify-content:space-around;border-top:1px solid #1e2a3a;padding-top:10px;">
-                            <div style="text-align:center;">
-                                <div style="font-size:16px;font-weight:700;color:#fff;">{stats['partidos']}</div>
-                                <div style="font-size:9px;color:#5a6a7e;text-transform:uppercase;">PJ</div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;
+                                    letter-spacing:1.2px;color:{color};margin-bottom:14px;opacity:0.9;">{pos}</div>
+                        
+                        <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;">
+                            <div style="text-align:center;flex:1;">
+                                <div style="font-size:17px;font-weight:800;color:#fff;">{stats['partidos']}</div>
+                                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">PJ</div>
                             </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:16px;font-weight:700;color:#fff;">{stats['goles'] if pos != 'Portero' else stats['paradas']}</div>
-                                <div style="font-size:9px;color:#5a6a7e;text-transform:uppercase;">{'G' if pos != 'Portero' else 'PAR'}</div>
+                            <div style="text-align:center;flex:1;border-left:1px solid rgba(255,255,255,0.05);border-right:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:17px;font-weight:800;color:{color};">{stats['goles'] if pos != 'Portero' else stats['paradas']}</div>
+                                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">{'GOL' if pos != 'Portero' else 'PAR'}</div>
                             </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:16px;font-weight:700;color:{color};">{stats['nota']}</div>
-                                <div style="font-size:9px;color:#5a6a7e;text-transform:uppercase;">NOTA</div>
+                            <div style="text-align:center;flex:1;">
+                                <div style="font-size:17px;font-weight:800;color:#fff;">{stats['nota']}</div>
+                                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">NOTA</div>
                             </div>
                         </div>
                     </div>
