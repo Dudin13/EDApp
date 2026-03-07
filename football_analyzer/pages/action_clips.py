@@ -284,7 +284,8 @@ def render():
             if ffmpeg_ok:
                 if st.button(f"▶  Ver clip  ({CLIP_ANTES + CLIP_DESPUES}s)", key=f"btn_clip_{i}",
                              type="primary"):
-                    with st.spinner("Generando clip (IA dibujando jugadores...)"):
+                    msg = "Generando clip (IA dibujando jugadores...)" if yolo_model_available() else "Recortando fragmento de vídeo..."
+                    with st.spinner(msg):
                         # Obtener paleta de colores si existe en la sesión
                         team_colors = st.session_state.get("team_colors", {})
                         clip_path = _cortar_y_pintar_clip(video_path, seg, clip_key, team_colors)

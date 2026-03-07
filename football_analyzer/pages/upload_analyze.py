@@ -248,10 +248,97 @@ def render():
 
     # ── BLOQUE 3: JUGADORES ───────────────────────────────────────────────────
     st.markdown('<div class="ws-section-header">03 — Plantillas convocadas</div>', unsafe_allow_html=True)
+    
+    # Pre-inicializar valores vacíos para que los inputs no exploten al sobrescribir desde Pandas
+    for col_prefix in ["local", "visit"]:
+        for i in range(20):
+            if f"{col_prefix}_dorsal_{i}" not in st.session_state:
+                st.session_state[f"{col_prefix}_dorsal_{i}"] = i + 1
+            if f"{col_prefix}_nombre_{i}" not in st.session_state:
+                st.session_state[f"{col_prefix}_nombre_{i}"] = ""
+            if f"{col_prefix}_pos_{i}" not in st.session_state:
+                st.session_state[f"{col_prefix}_pos_{i}"] = ""
+
+    st.markdown("""
+    <div style="font-size:13px;color:#8899aa;margin-bottom:12px;">
+        Puedes rellenar los datos manualmente o subir un archivo Excel/CSV con columnas: <code>Dorsal</code>, <code>Nombre</code>, <code>Posición</code>
+    </div>
+    """, unsafe_allow_html=True)
 
     POSICIONES = ["", "Portero", "Lateral D", "Lateral I", "Central", "Pivote",
                   "Mediocentro", "Interior D", "Interior I", "Mediapunta",
                   "Extremo D", "Extremo I", "Delantero Centro"]
+
+    import pandas as pd
+    col_upload1, col_upload2 = st.columns(2)
+    template_local = col_upload1.file_uploader(f"Plantilla {team_local or 'Local'}", type=["csv", "xlsx"], key="template_local")
+    template_visit = col_upload2.file_uploader(f"Plantilla {team_visit or 'Visitante'}", type=["csv", "xlsx"], key="template_visit")
+
+    def normalize_str(s):
+        import unicodedata
+        if pd.isna(s): return ""
+        s = str(s).strip().lower()
+        return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+    def map_pos(p_raw):
+        p = normalize_str(p_raw)
+        if "porter" in p: return "Portero"
+        elif "lateral i" in p or ("lateral" in p and "izq" in p) or "carrilero i" in p: return "Lateral I"
+        elif "lateral" in p or "carrilero" in p: return "Lateral D"
+        elif "central" in p or "defensa" in p: return "Central"
+        elif "pivote" in p or "mediocentro def" in p: return "Pivote"
+        elif "interior i" in p: return "Interior I"
+        elif "interior" in p: return "Interior D"
+        elif "mediapunta" in p: return "Mediapunta"
+        elif "med" in p or "centrocampista" in p: return "Mediocentro"
+        elif "extremo i" in p or ("extremo" in p and "izq" in p): return "Extremo I"
+        elif "extremo" in p: return "Extremo D"
+        elif "delantero" in p or "punta" in p or "ariete" in p or "ataque" in p: return "Delantero Centro"
+        return ""
+
+    def process_df(df, prefix):
+        # Mapear columnas dinámicamente ignorando tildes y mayúsculas
+        cols = {normalize_str(c): c for c in df.columns}
+        col_dor = cols.get("dorsal", cols.get("numero", None))
+        col_nom = cols.get("nombre", cols.get("jugador", None))
+        col_pos = cols.get("posicion", cols.get("demarcacion", None))
+        
+        for i in range(20):
+            if i < len(df):
+                if col_dor and pd.notna(df.iloc[i][col_dor]):
+                    st.session_state[f"{prefix}_dorsal_{i}"] = int(pd.to_numeric(df.iloc[i][col_dor], errors='coerce') or (i+1))
+                if col_nom and pd.notna(df.iloc[i][col_nom]):
+                    st.session_state[f"{prefix}_nombre_{i}"] = str(df.iloc[i][col_nom])
+                else:
+                    st.session_state[f"{prefix}_nombre_{i}"] = ""
+                    
+                if col_pos and pd.notna(df.iloc[i][col_pos]):
+                    pos_mapped = map_pos(df.iloc[i][col_pos])
+                    if pos_mapped in POSICIONES:
+                        st.session_state[f"{prefix}_pos_{i}"] = pos_mapped
+            else:
+                # Limpiar celdas sobrantes si el nuevo excel tiene menos jugadores
+                st.session_state[f"{prefix}_dorsal_{i}"] = i + 1 # Reset dorsal to default
+                st.session_state[f"{prefix}_nombre_{i}"] = ""
+                st.session_state[f"{prefix}_pos_{i}"] = ""
+
+    if template_local:
+        try:
+            df_local = pd.read_excel(template_local) if template_local.name.endswith(".xlsx") else pd.read_csv(template_local)
+            if st.session_state.get("last_local_file") != template_local.name:
+                process_df(df_local, "local")
+                st.session_state["last_local_file"] = template_local.name
+        except Exception as e:
+            col_upload1.error(f"Error leyendo archivo local: {e}")
+            
+    if template_visit:
+        try:
+            df_visit = pd.read_excel(template_visit) if template_visit.name.endswith(".xlsx") else pd.read_csv(template_visit)
+            if st.session_state.get("last_visit_file") != template_visit.name:
+                process_df(df_visit, "visit")
+                st.session_state["last_visit_file"] = template_visit.name
+        except Exception as e:
+            col_upload2.error(f"Error leyendo archivo visitante: {e}")
 
     col_local, col_visit = st.columns(2)
 
@@ -266,14 +353,17 @@ def render():
         jugadores_local = []
         for i in range(20):
             c1, c2, c3 = st.columns([1, 3, 2])
-            dorsal = c1.number_input("D", min_value=1, max_value=99, value=i + 1,
+            
+            dorsal = c1.number_input("D", min_value=1, max_value=99,
                                      key=f"local_dorsal_{i}", label_visibility="collapsed")
             nombre = c2.text_input("Nombre", placeholder=f"Jugador {i + 1}",
                                    key=f"local_nombre_{i}", label_visibility="collapsed")
             posicion = c3.selectbox("Pos", POSICIONES,
                                     key=f"local_pos_{i}", label_visibility="collapsed")
-            jugadores_local.append({"dorsal": dorsal, "nombre": nombre,
-                                    "equipo": team_local, "posicion": posicion})
+            
+            if nombre.strip():
+                jugadores_local.append({"dorsal": dorsal, "nombre": nombre,
+                                        "equipo": team_local, "posicion": posicion})
 
     with col_visit:
         st.markdown(f"""
@@ -286,14 +376,17 @@ def render():
         jugadores_visit = []
         for i in range(20):
             c1, c2, c3 = st.columns([1, 3, 2])
-            dorsal = c1.number_input("D", min_value=1, max_value=99, value=i + 1,
+            
+            dorsal = c1.number_input("D", min_value=1, max_value=99,
                                      key=f"visit_dorsal_{i}", label_visibility="collapsed")
             nombre = c2.text_input("Nombre", placeholder=f"Jugador {i + 1}",
                                    key=f"visit_nombre_{i}", label_visibility="collapsed")
             posicion = c3.selectbox("Pos", POSICIONES,
                                     key=f"visit_pos_{i}", label_visibility="collapsed")
-            jugadores_visit.append({"dorsal": dorsal, "nombre": nombre,
-                                    "equipo": team_visit, "posicion": posicion})
+            
+            if nombre.strip():
+                jugadores_visit.append({"dorsal": dorsal, "nombre": nombre,
+                                        "equipo": team_visit, "posicion": posicion})
 
     # ── BLOQUE 4: OPCIONES DE ANÁLISIS ───────────────────────────────────────
     st.markdown('<div class="ws-section-header">04 — Configuración del análisis</div>', unsafe_allow_html=True)
@@ -338,9 +431,182 @@ def render():
                 "confidence": confidence,
             }
             st.session_state["analysis_config"] = config
-            st.session_state["processing"] = True
-            run_analysis_real(config)
-            st.session_state["processing"] = False
+            st.session_state["manual_tagging_phase"] = True
+            st.rerun()
+
+    # ── FASE DE ETIQUETADO MANUAL ────────────────────────────────────────────
+    if st.session_state.get("manual_tagging_phase", False):
+        st.markdown('<div class="ws-section-header">06 — Asignación Manual Inicial (Frame 1)</div>', unsafe_allow_html=True)
+        st.info("💡 Asigna de forma visual la identidad de los jugadores para mejorar la precisión del seguimiento.")
+        
+        config = st.session_state["analysis_config"]
+        video_path = st.session_state.get("video_path", "")
+        
+        if "first_frame_dets" not in st.session_state:
+            with st.spinner("🖼️ Extrayendo y analizando primer frame clave..."):
+                import cv2
+                from modules.detector import detect_frame
+                cap = cv2.VideoCapture(video_path)
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, int(fps * 2)) # Extraer segundo 2
+                ret, frame = cap.read()
+                cap.release()
+                
+                if ret:
+                    # Guardamos la imagen en memoria para recortes
+                    import numpy as np
+                    from PIL import Image
+                    st.session_state["first_frame_img"] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    # Detección
+                    dets = detect_frame(frame, mode=config["detection_mode"], confidence=config["confidence"])
+                    # Filtramos detecciones válidas
+                    valid_dets = [d for d in dets if d["w"] > 10 and d["h"] > 10]
+                    # Asignamos IDs temporales a las cajas
+                    for idx, d in enumerate(valid_dets):
+                        d["temp_id"] = idx
+                    st.session_state["first_frame_dets"] = valid_dets
+                    if "manual_tags" not in st.session_state:
+                        st.session_state["manual_tags"] = {}
+                else:
+                    st.error("Error al leer el vídeo.")
+                    st.session_state["manual_tagging_phase"] = False
+                    st.rerun()
+                    
+        if "extra_manual_dets" not in st.session_state:
+            st.session_state["extra_manual_dets"] = []
+            st.session_state["last_click"] = None
+
+        # Juntamos detecciones
+        dets = st.session_state["first_frame_dets"]
+        all_dets = list(dets) + st.session_state["extra_manual_dets"]
+        img = st.session_state["first_frame_img"]
+
+        import cv2
+        from PIL import Image
+        from streamlit_image_coordinates import streamlit_image_coordinates
+        
+        vis_img = img.copy()
+        for det in all_dets:
+            x, y, w, h = det["x"], det["y"], det["w"], det["h"]
+            x1, y1 = int(x - w/2), int(y - h/2)
+            x2, y2 = int(x + w/2), int(y + h/2)
+            
+            color = (0, 0, 255) if det.get("is_manual") else (0, 212, 170)
+            tid = det["temp_id"]
+            
+            # Dibujar caja
+            cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, 2)
+            # Dibujar fondo para el texto
+            cv2.rectangle(vis_img, (x1, max(0, y1 - 22)), (x1 + 32, max(0, y1)), color, -1)
+            # Dibujar ID numérico
+            cv2.putText(vis_img, str(tid), (x1 + 5, max(0, y1 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+            
+        st.markdown("### 🖱️ Haz clic sobre los jugadores que falten")
+        st.caption("Si la IA no ha detectado a alguien (ej. el árbitro), **haz clic sobre él en la imagen** y aparecerá una nueva caja roja que podrás etiquetar abajo.")
+
+        # Obtiene las coordenadas al ahcer click
+        value = streamlit_image_coordinates(Image.fromarray(vis_img), key="img_click")
+        
+        if value is not None and value != st.session_state.get("last_click"):
+            st.session_state["last_click"] = value
+            new_id = len(dets) + len(st.session_state["extra_manual_dets"])
+            st.session_state["extra_manual_dets"].append({
+                "x": value["x"], "y": value["y"], "w": 40, "h": 60,
+                "temp_id": new_id,
+                "is_manual": True
+            })
+            st.rerun()
+        
+        # Opciones disponibles de los Excel/Formularios base
+        plantilla_local = [f"[Local] {j['dorsal']} - {j['nombre']} ({j['posicion']})" for j in config["jugadores_local"] if j["nombre"]]
+        plantilla_visit = [f"[Visit] {j['dorsal']} - {j['nombre']} ({j['posicion']})" for j in config["jugadores_visit"] if j["nombre"]]
+        todas_las_opciones = ["Árbitro 🟨", "Balón ⚽"] + plantilla_local + plantilla_visit
+        
+        st.markdown("<br>### Asignar identidades por ID", unsafe_allow_html=True)
+        
+        num_cols = 4
+        cols = st.columns(num_cols)
+        
+        # Tags guardados globalmente para deducir qué está "pillado"
+        current_selections = list(st.session_state.get("manual_tags", {}).values())
+        
+        for idx_list, det in enumerate(all_dets):
+            # idx real (puede ser de la IA o el manual que acabamos de añadir)
+            tid = det["temp_id"]
+            is_manual = det.get("is_manual", False)
+            
+            # Decorativo para ver de donde viene
+            origen = "🔴 Manual" if is_manual else "🟢 IA"
+            
+            col = cols[idx_list % num_cols]
+            with col:
+                st.markdown(f"**Caja ID {tid}** [{origen}]")
+                saved_val = st.session_state.get("manual_tags", {}).get(str(tid))
+                
+                # Construir opciones DENTRO del bucle para filtrar las ya elegidas
+                mis_opciones = ["Descartar / No Asignar"]
+                for opt in todas_las_opciones:
+                    # Incluimos la opción si es la nuestra actual, o si está libre
+                    if opt == saved_val or opt not in current_selections:
+                        mis_opciones.append(opt)
+                        
+                default_idx = 0
+                if saved_val and saved_val in mis_opciones:
+                    default_idx = mis_opciones.index(saved_val)
+                    
+                sel = st.selectbox(
+                    "Identidad", 
+                    options=mis_opciones, 
+                    key=f"tag_sel_{tid}",
+                    index=default_idx,
+                    label_visibility="collapsed"
+                )
+                
+                # Actualizar el diccionario y forzar un rerun si hay una nueva asignación validada
+                if sel != "Descartar / No Asignar" and sel != saved_val:
+                    st.session_state["manual_tags"][str(tid)] = sel
+                    st.rerun() # Fuerzo rerun para que las demas cajas vean que esto está "pillado"
+                elif sel == "Descartar / No Asignar" and str(tid) in st.session_state.get("manual_tags", {}):
+                    st.session_state["manual_tags"].pop(str(tid), None)
+                    st.rerun() # Fuerzo rerun para liberar el nombre
+                
+                if is_manual:
+                    if st.button("❌ Eliminar Caja", key=f"del_box_{tid}", use_container_width=True):
+                        # Filter out the deleted box by its temp_id
+                        st.session_state["extra_manual_dets"] = [d for d in st.session_state["extra_manual_dets"] if d["temp_id"] != tid]
+                        # Remove from tags if it was selected
+                        st.session_state["manual_tags"].pop(str(tid), None)
+                        st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("⏭️ Omitir este paso (Auto-Tracking)"):
+                st.session_state["manual_tags"] = {} # Limpiamos
+                st.session_state["processing"] = True
+                st.session_state["manual_tagging_phase"] = False
+                st.rerun()
+        with col2:
+            if st.button("✅ Confirmar Etiquetas e Iniciar Análisis", type="primary"):
+                # Transformamos los tags guardados al formato {"temp_id": "Arbitro" o dict del jugador local/visitante}
+                final_seeds = {}
+                for tid_str, text_val in st.session_state.get("manual_tags", {}).items():
+                    tid = int(tid_str)
+                    if text_val == "Árbitro 🟨": final_seeds[tid] = "referee"
+                    elif text_val == "Balón ⚽": final_seeds[tid] = "ball"
+                    elif text_val.startswith("[Local]"): final_seeds[tid] = text_val.replace("[Local] ", "")
+                    elif text_val.startswith("[Visit]"): final_seeds[tid] = text_val.replace("[Visit] ", "")
+                config["initial_seeds"] = final_seeds
+                config["initial_dets"] = all_dets # guardamos TODAS las detecciones (IA + manuales)
+                st.session_state["analysis_config"] = config
+                
+                st.session_state["processing"] = True
+                st.session_state["manual_tagging_phase"] = False
+                st.rerun()
+
+    if st.session_state.get("processing", False) and not st.session_state.get("manual_tagging_phase", False):
+        run_analysis_real(st.session_state.get("analysis_config", {}))
+        st.session_state["processing"] = False
 
 
 def run_analysis_real(config: dict):
@@ -393,6 +659,13 @@ def run_analysis_real(config: dict):
             c2.metric("Total detecciones", f"{total:,}")
             c3.metric("Frames analizados", frames)
             c4.metric("⚽ Acciones con balón", ball_evs)
+            
+            # Limpiar memoria de tagging phase
+            st.session_state.pop("first_frame_dets", None)
+            st.session_state.pop("first_frame_img", None)
+            st.session_state.pop("manual_tags", None)
+            st.session_state.pop("extra_manual_dets", None)
+            st.session_state.pop("last_click", None)
         else:
             st.warning("⚠️ El análisis terminó sin resultados. Comprueba que el vídeo contiene el partido.")
 

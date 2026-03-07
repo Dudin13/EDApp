@@ -125,6 +125,37 @@ class VideoProcessor:
                 # Actualizar tracker (solo con jugadores)
                 tracks = self.tracker.update(player_dets, equipo_list, minute=minute)
 
+                # ── Inyección Semillas (Manual Tagging) ──
+                # Si estamos en el primer frame procesado y tenemos initial_dets/initial_seeds
+                if frame_count == 0 and "initial_seeds" in self.config and "initial_dets" in self.config:
+                    seeds = self.config["initial_seeds"]
+                    init_dets = self.config["initial_dets"]
+                    
+                    # Para cada seed (t_id inicial), cruzamos IoU con los tracks nuevos para asignarles nombre
+                    for init_tid, assigned_name in seeds.items():
+                        init_det = next((d for d in init_dets if d.get("temp_id") == init_tid), None)
+                        if init_det:
+                            init_box = (init_det["x"], init_det["y"], init_det["w"], init_det["h"])
+                            
+                            # Buscar el track actual más cercano a esa box inicial
+                            from modules.tracker import _iou
+                            best_iou = 0
+                            best_track_id = None
+                            for tid, track in tracks.items():
+                                iou_val = _iou(init_box, track.last_box)
+                                if iou_val > best_iou:
+                                    best_iou = iou_val
+                                    best_track_id = tid
+                                    
+                            if best_track_id is not None and best_iou > 0.1:
+                                if assigned_name == "referee":
+                                    tracks[best_track_id].clase = "referee"
+                                elif assigned_name == "ball":
+                                    pass # El balón se maneja aparte
+                                else:
+                                    tracks[best_track_id].nombre = assigned_name
+                # ── Fin Inyección Semillas ──
+
                 # Guardar estadísticas por track
                 for tid, track in tracks.items():
                     if track.frames_lost == 0:  # track activo este frame
@@ -133,6 +164,7 @@ class VideoProcessor:
                         track_stats[tid]["minutes"].append(minute)
                         track_stats[tid]["equipo"] = track.equipo
                         track_stats[tid]["clase"] = track.clase
+                        track_stats[tid]["nombre"] = track.nombre # Guardar nombre arrastrado
                         track_stats[tid]["count"] += 1
 
                 # ── Detección de contacto balón-jugador ────────────────
@@ -207,77 +239,82 @@ class VideoProcessor:
         jugadores_local = [j for j in self.config.get("jugadores_local", []) if j.get("nombre")]
         jugadores_visit = [j for j in self.config.get("jugadores_visit", []) if j.get("nombre")]
 
-        # Separar tracks por equipo
-        tracks_eq0 = sorted(
-            [s for s in track_stats.values() if s["equipo"] == 0],
-            key=lambda x: -x["count"]
-        )
-        tracks_eq1 = sorted(
-            [s for s in track_stats.values() if s["equipo"] == 1],
-            key=lambda x: -x["count"]
-        )
-
         resultados_jugadores = {}
-        # Mapa track_id -> nombre (para enriquecer ball_events)
         track_id_to_name = {}
         track_id_to_equipo_nombre = {}
 
-        # Construir mapa de track_id para asignacion nominal
-        tracks_eq0_ids = sorted(
-            [(tid, s) for tid, s in track_stats.items() if s["equipo"] == 0],
-            key=lambda x: -x[1]["count"]
-        )
-        tracks_eq1_ids = sorted(
-            [(tid, s) for tid, s in track_stats.items() if s["equipo"] == 1],
-            key=lambda x: -x[1]["count"]
-        )
+        # --- 1. Separar los tracks que YA TIENEN un nombre asignado manualmente (Semillas) ---
+        assigned_tracks = {tid: s for tid, s in track_stats.items() if s.get("nombre")}
+        unassigned_tracks = {tid: s for tid, s in track_stats.items() if not s.get("nombre")}
 
-        # Asignar jugadores locales a tracks del equipo 0
-        for i, jugador in enumerate(jugadores_local):
-            track_data = tracks_eq0[i] if i < len(tracks_eq0) else None
-            resultados_jugadores[jugador["nombre"]] = self._player_stats(
-                jugador, team_local, track_data
-            )
-            if i < len(tracks_eq0_ids):
-                tid = tracks_eq0_ids[i][0]
+        # Procesar primero los que el usuario etiquetó
+        for tid, td in assigned_tracks.items():
+            nombre = td["nombre"]
+            
+            # Buscar el dict del jugador original
+            jugador_ref = next((j for j in jugadores_local + jugadores_visit if j["nombre"] == nombre), None)
+            
+            if jugador_ref:
+                eq_nombre = team_local if jugador_ref in jugadores_local else team_visit
+                resultados_jugadores[nombre] = self._player_stats(jugador_ref, eq_nombre, td)
+                track_id_to_name[tid] = nombre
+                track_id_to_equipo_nombre[tid] = eq_nombre
+            else:
+                # Si se asignó un nombre que no está en las plantillas (ej: fue escrito a mano)
+                eq_idx = td.get("equipo", 0)
+                eq_nombre = team_local if eq_idx == 0 else team_visit
+                j_anon = {"nombre": nombre, "dorsal": 0, "equipo": eq_nombre, "posicion": td.get("clase", "player")}
+                resultados_jugadores[nombre] = self._player_stats(j_anon, eq_nombre, td)
+                track_id_to_name[tid] = nombre
+                track_id_to_equipo_nombre[tid] = eq_nombre
+
+        # --- 2. Asignar los jugadores restantes (sin track manual) a los tracks huérfanos ---
+        # Jugadores que faltan por ser detectados
+        nombres_asignados = set(track_id_to_name.values())
+        jugadores_local_restantes = [j for j in jugadores_local if j["nombre"] not in nombres_asignados]
+        jugadores_visit_restantes = [j for j in jugadores_visit if j["nombre"] not in nombres_asignados]
+
+        # Tracks que todavía no tienen nombre, separados por equipo
+        tracks_eq0_viejos = sorted([(tid, s) for tid, s in unassigned_tracks.items() if s["equipo"] == 0], key=lambda x: -x[1]["count"])
+        tracks_eq1_viejos = sorted([(tid, s) for tid, s in unassigned_tracks.items() if s["equipo"] == 1], key=lambda x: -x[1]["count"])
+
+        # Rellenar locales restantes
+        for i, jugador in enumerate(jugadores_local_restantes):
+            if i < len(tracks_eq0_viejos):
+                tid, td = tracks_eq0_viejos[i]
+                resultados_jugadores[jugador["nombre"]] = self._player_stats(jugador, team_local, td)
                 track_id_to_name[tid] = jugador["nombre"]
                 track_id_to_equipo_nombre[tid] = team_local
+            else:
+                resultados_jugadores[jugador["nombre"]] = self._player_stats(jugador, team_local, None)
 
-        # Asignar jugadores visitantes a tracks del equipo 1
-        for i, jugador in enumerate(jugadores_visit):
-            track_data = tracks_eq1[i] if i < len(tracks_eq1) else None
-            resultados_jugadores[jugador["nombre"]] = self._player_stats(
-                jugador, team_visit, track_data
-            )
-            if i < len(tracks_eq1_ids):
-                tid = tracks_eq1_ids[i][0]
+        # Rellenar visitantes restantes
+        for i, jugador in enumerate(jugadores_visit_restantes):
+            if i < len(tracks_eq1_viejos):
+                tid, td = tracks_eq1_viejos[i]
+                resultados_jugadores[jugador["nombre"]] = self._player_stats(jugador, team_visit, td)
                 track_id_to_name[tid] = jugador["nombre"]
                 track_id_to_equipo_nombre[tid] = team_visit
+            else:
+                resultados_jugadores[jugador["nombre"]] = self._player_stats(jugador, team_visit, None)
 
-        # ── Fallback: tracks detectados sin jugador asignado ──────────
-        # Si no hay nombres, o hay más tracks que jugadores, generar anónimos
-        n_local = len(jugadores_local)
-        n_visit = len(jugadores_visit)
+        # --- 3. Tracks Anónimos ---
+        tracks_sin_usar_eq0 = tracks_eq0_viejos[len(jugadores_local_restantes):]
+        for i, (tid, td) in enumerate(tracks_sin_usar_eq0):
+            key = f"{team_local} T{len(jugadores_local)+i+1}"
+            j_anon = {"nombre": key, "dorsal": len(jugadores_local)+i+1, "equipo": team_local, "posicion": ""}
+            resultados_jugadores[key] = self._player_stats(j_anon, team_local, td)
+            track_id_to_name[tid] = key
+            track_id_to_equipo_nombre[tid] = team_local
 
-        if n_local == 0 and n_visit == 0:
-            # Sin ningún nombre: generar todos los tracks como anónimos
-            all_tracks = sorted(track_stats.items(), key=lambda x: -x[1]["count"])
-            for i, (tid, td) in enumerate(all_tracks):
-                eq_idx = td.get("equipo", 0)
-                eq_nombre = team_local if eq_idx == 0 else (team_visit if eq_idx == 1 else "Arbitro")
-                key = f"{eq_nombre} T{i+1}"
-                j_anon = {"nombre": key, "dorsal": i+1, "equipo": eq_nombre, "posicion": td.get("clase", "player")}
-                resultados_jugadores[key] = self._player_stats(j_anon, eq_nombre, td)
-        else:
-            # Hay algunos nombres — añadir anónimos solo para los tracks sobrantes
-            for i, td in enumerate(tracks_eq0[n_local:]):
-                key = f"{team_local} T{n_local+i+1}"
-                j_anon = {"nombre": key, "dorsal": n_local+i+1, "equipo": team_local, "posicion": ""}
-                resultados_jugadores[key] = self._player_stats(j_anon, team_local, td)
-            for i, td in enumerate(tracks_eq1[n_visit:]):
-                key = f"{team_visit} T{n_visit+i+1}"
-                j_anon = {"nombre": key, "dorsal": n_visit+i+1, "equipo": team_visit, "posicion": ""}
-                resultados_jugadores[key] = self._player_stats(j_anon, team_visit, td)
+        tracks_sin_usar_eq1 = tracks_eq1_viejos[len(jugadores_visit_restantes):]
+        for i, (tid, td) in enumerate(tracks_sin_usar_eq1):
+            key = f"{team_visit} T{len(jugadores_visit)+i+1}"
+            j_anon = {"nombre": key, "dorsal": len(jugadores_visit)+i+1, "equipo": team_visit, "posicion": ""}
+            resultados_jugadores[key] = self._player_stats(j_anon, team_visit, td)
+            track_id_to_name[tid] = key
+            track_id_to_equipo_nombre[tid] = team_visit
+
         # ── Enriquecer ball_events con nombres ────────────────────────
         eq_idx_to_nombre = {0: team_local, 1: team_visit, 2: "Arbitro", -1: "Desconocido"}
         for ev in ball_events:

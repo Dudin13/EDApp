@@ -16,6 +16,7 @@ class Track:
     clase: str
     equipo: int          # 0, 1 o 2 (árbitro)
     last_box: tuple      # (x, y, w, h) último frame
+    nombre: Optional[str] = None  # Asignación manual de identidad
     frames_seen: int = 1
     frames_lost: int = 0
     history_x: list = field(default_factory=list)
@@ -49,15 +50,21 @@ def _iou(box_a: tuple, box_b: tuple) -> float:
     return inter_area / union_area if union_area > 0 else 0.0
 
 
+def _distance(box_a: tuple, box_b: tuple) -> float:
+    """Calcula la distancia euclídea entre los centros de dos bounding boxes."""
+    return ((box_a[0] - box_b[0]) ** 2 + (box_a[1] - box_b[1]) ** 2) ** 0.5
+
+
 class SimpleTracker:
     """
-    Tracker ligero basado en asignación greedy por IoU.
+    Tracker ligero generalizado.
     Mantiene tracks activos durante MAX_LOST frames sin detección.
+    Utiliza Distancia Euclídea para asociar tracks, dado que IoU 
+    falla al usar intervalos grandes (ej 2s).
     """
 
     MAX_LOST = 3       # frames sin deteccion antes de eliminar el track
-    IOU_THRESHOLD = 0.10  # umbral bajo porque entre frames de 2s los jugadores se mueven mucho
-    MAX_DIST_PX = 200     # distancia maxima de centroide como fallback
+    MAX_DIST_PX = 400  # distancia maxima de centroide permitida para asociar
 
     def __init__(self):
         self._next_id = 1
@@ -88,27 +95,37 @@ class SimpleTracker:
                 del self._tracks[tid]
             return self._tracks
 
-        # Construir matriz de IoU
+        # Construir matriz de Distancias
         track_list = list(self._tracks.values())
         n_tracks = len(track_list)
         n_dets = len(detecciones)
 
-        iou_matrix = np.zeros((n_tracks, n_dets))
+        dist_matrix = np.zeros((n_tracks, n_dets))
         for i, track in enumerate(track_list):
             for j, det in enumerate(detecciones):
-                iou_matrix[i, j] = _iou(track.last_box,
-                                         (det["x"], det["y"], det["w"], det["h"]))
+                dist = _distance(track.last_box, (det["x"], det["y"], det["w"], det["h"]))
+                # Penalización grande si la red neuronal dice que son de equipos diferentes
+                # para evitar que el ID salte de un equipo a otro si se cruzan.
+                if track.equipo != equipo_map[j]:
+                    dist += 400
+                dist_matrix[i, j] = dist
 
         matched_tracks = set()
         matched_dets = set()
 
-        # Asignación greedy: mayor IoU primero
+        # Asignación greedy: menor Distancia primero
         if n_tracks > 0:
-            flat_indices = np.argsort(-iou_matrix, axis=None)
+            flat_indices = np.argsort(dist_matrix, axis=None)
             for idx in flat_indices:
                 i, j = divmod(int(idx), n_dets)
-                if iou_matrix[i, j] < self.IOU_THRESHOLD:
+                if dist_matrix[i, j] > self.MAX_DIST_PX + 400: # max allow penalty included
                     break
+                    
+                # Strict check without penalty to make sure it's somewhat realistic 
+                real_dist = _distance(track_list[i].last_box, (detecciones[j]["x"], detecciones[j]["y"]))
+                if real_dist > self.MAX_DIST_PX:
+                    continue
+
                 if i not in matched_tracks and j not in matched_dets:
                     track = track_list[i]
                     det = detecciones[j]

@@ -42,8 +42,6 @@ def render():
         if yolo_path.exists():
             size_mb = yolo_path.stat().st_size / 1024 / 1024
             st.success(f"✅ Modelo YOLOv8 local disponible ({size_mb:.1f} MB) — {yolo_path}")
-        else:
-            st.warning("⚠️ No hay modelo YOLOv8 local entrenado. Ejecuta `python train_yolo/train.py` para entrenarlo.")
 
         st.markdown("---")
         st.subheader("Parámetros de análisis")
