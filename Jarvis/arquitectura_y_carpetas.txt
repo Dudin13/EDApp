@@ -1,0 +1,85 @@
+================================================================================
+ED ANALYTICS - ARQUITECTURA DEL PROYECTO (GUÍA PARA NO PROGRAMADORES)
+================================================================================
+
+¡Hola! Esta es la guía maestra ("Jarvis") para entender cómo está estructurado
+todo el proyecto. Hemos organizado las carpetas con nombres en español y claros
+para que sepas dónde está cada cosa, separando el panel visual (Front-End) del
+cerebro de cálculo (Back-End/Inteligencia Artificial).
+
+A continuación tienes el mapa de cómo está montada la aplicación:
+
+--------------------------------------------------------------------------------
+📁 CARPETAS PRINCIPALES (LA RAÍZ DEL SISTEMA)
+--------------------------------------------------------------------------------
+1. [01_Modelos_IA]
+   - ¿Qué es?: Es el "cerebro" descargado de la Inteligencia Artificial.
+   - Contenido: Aquí guardamos los archivos pesados (.pt) como YOLOv8 que saben reconocer qué es un jugador, un balón o un árbitro.
+
+2. [02_Scripts_Pruebas]
+   - ¿Qué es?: El laboratorio de pruebas.
+   - Contenido: Archivos de código sueltos (test_algo.py) que usamos para hacer experimentos rápídos sin romper la aplicación principal.
+
+3. [03_Imagenes_Ejemplo]
+   - ¿Qué es?: La galería multimedia de testeo.
+   - Contenido: Fotos de partidos, recortes de vídeo (.mp4) y pantallazos que usamos para probar si la IA o la botonera funcionan bien.
+
+4. [04_Datasets_Entrenamiento]
+   - ¿Qué es?: La "escuela" de la IA.
+   - Contenido: Miles de fotos del Cádiz y otros equipos con sus etiquetas (jugador, balón) para que la IA aprenda a base de estudiar fotos.
+
+5. [Jarvis] (Estás aquí)
+   - ¿Qué es?: La oficina del asistente y la dirección del proyecto.
+   - Contenido: Listas de tareas pendientes (task.md), el mapa de ruta hacia el futuro (roadmap_v2.md) y esta guía de arquitectura.
+
+6. [football_analyzer]
+   - ¿Qué es?: ¡LA APLICACIÓN REAL! Todo el código final que hace funcionar el programa. Entraremos en detalle a continuación porque esta carpeta está separada en Front-End y Back-End.
+
+--------------------------------------------------------------------------------
+📂 DENTRO DE "football_analyzer" (LA APLICACIÓN)
+--------------------------------------------------------------------------------
+Para que el código esté nivel Dios, hemos separado la "fachada" de la casa (el frontend) de las "tuberías" (el backend).
+
+🔶 FRONT-END (Lo que el usuario ve y toca)
+El Front-End está compuesto principalmente por:
+- app.py: Es la puerta principal. Dibuja el panel izquierdo oscuro (Sidebar) y el menú de navegación.
+- Carpeta [pages]: Cada archivo aquí es una pestaña de la aplicación.
+   > home.py: La pantalla de bienvenida "ED Analytics" con las tarjetas de los clubes (Cádiz, Juvenil, etc).
+   > scout.py: El Modo Analista o Botonera (estilo Nacsport) con el vídeo y los botones para recortar.
+   > squad_players.py: "Mi Equipo", donde se visualiza la plantilla y las estadísticas.
+   > collective_dashboard.py: Los datos colectivos.
+   > upload_analyze.py: La pestaña para subir vídeos nuevos.
+
+🔶 BACK-END / INTELIGENCIA ARTIFICIAL (Los motores ocultos)
+El Back-End son los engranajes matemáticos que trabajan por detrás.
+- Carpeta [modules]: ¡El cerebro de la aplicación!
+   > detector.py: Llama a los modelos de YOLO para encontrar jugadores en la imagen.
+   > tracker.py: Sigue a un jugador de un fotograma a otro poniéndole un "ID" numérico (DeepSORT/ByteTrack).
+   > video_processor.py: Se encarga de usar el procesador de tu PC para exportar los clips de vídeo recortados con la botonera.
+   > tactical_draw.py: El código complejo que dibuja los triángulos debajo de los jugadores y las flechas.
+
+- Carpeta [train_yolo]:
+   > Los códigos que usaste para entrenar tu propia Inteligencia Artificial con la tarjeta gráfica de tu ordenador usando datos de Roboflow.
+   
+- Carpeta [projects]:
+   > Aquí se guardan los archivos .json que contienen los proyectos del analista. Cuando tú etiquetas un partido y haces 50 cortes en la botonera, los minutos exactos de "Inicio" y "Fin" se guardan aquí.
+
+--------------------------------------------------------------------------------
+🚀 PRÓXIMOS PASOS (BACKLOG PENDIENTE RELEVANTE)
+--------------------------------------------------------------------------------
+Tal como lo tenemos apuntado en nuestro Roadmap, estas son las tareas clave que resolveremos próximamente:
+
+1. Tracking 100% Perfecto (Técnicas Open Source)
+   - Integrar técnicas de Optical Flow y Homografía (SoccerNet) para que un jugador no cambie de ID cuando se cruza con otro.
+   - Proyectar los jugadores en un mini-mapa cenital 2D usando `cv2.getPerspectiveTransform()`.
+
+2. Modo Analista "Pro"
+   - Añadir atajos de teclado (Hotkeys) para pulsar A, S, D, F y registrar acciones sin tocar el ratón.
+   - Dibujo en vivo sobre el reproductor de vídeo principal.
+
+3. Base de Datos de Equipos
+   - Conectar las tarjetas de la pantalla Inicio (Cádiz CF, Mirandilla, Juveniles) a bases de datos reales para que al hacer clic carguen diferentes jugadores e historiales de recortes.
+
+================================================================================
+Fin de la guía. ¡Sigamos construyendo la mejor herramienta de Scout!
+================================================================================

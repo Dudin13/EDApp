@@ -1,0 +1,27 @@
+# Current Objectives
+
+- [x] Refactor Scout Module (Analyst Mode) into a 3-Step Wizard
+  - [x] Step 1: Dashboard (New Analysis / Continue Analysis).
+  - [x] Step 2: Configuration (Define tags and their pre/post durations to create a template).
+  - [x] Step 3: Editor Layout
+    - [x] Make the Video Player large and primary.
+    - [x] Move the Tag Buttons into a floating/draggable panel (or Sidebar) so it can be moved.
+    - [x] Move the Event Timeline to the bottom of the video, including the 4 action buttons (Edit, Delete, Clip, Preview).
+    - [x] Add a pencil/drawing mode (like KlipDraw) to edit and annotate generated video clips using `streamlit-drawable-canvas`.
+    - [x] Burn the drawn annotation directly into the final video clip using FFmpeg (`overlay` filter) so it is present in the downloaded file.
+- [x] Global UI Improvements:
+  - [x] Set sidebar to be collapsed by default across the entire application (global `.streamlit/config.toml`).
+  - [x] Replace loading indicators with ⏳ in all pages (`upload_analyze.py`, `match_metrics.py`, etc.).
+- [x] Scout Module Enhancements:
+  - [x] Implement "Save Template" (`Guardar Botonera`) button to store tag configurations in `scout_templates.json`.
+  - [x] Redesign Editor layout to place Tag Buttons in a dedicated column **next to the video** (Left: Buttons, Right: Video) instead of the sidebar.
+- [x] Post-Training Cleanup & Sync:
+  - [x] Delete redundant root files (`run_analysis_cli.py`, etc.).
+  - [x] Monitor and confirm training completion (Epoch 30/30).
+  - [x] Delete datasets and temporary files to free up space.
+  - [x] Secure best weights in `modules/` and update `detector.py`.
+  - [x] Sync all changes to Git (commit + push).
+- [x] Future Improvements:
+  - [x] Design a V2 roadmap for UI/UX (Glassmorphism, Shortcuts, etc.).
+  - [x] Outline future AI training steps (ReID, Pitch Calibration).
+- [x] Provide global progress update to the user regarding model training.
