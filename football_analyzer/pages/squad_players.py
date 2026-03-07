@@ -368,14 +368,53 @@ def render():
 
     # ── Grid de plantilla ────────────────────────────────────────────────────
     config = st.session_state.get("analysis_config", {})
-    nombre_equipo = config.get("team", "Mi Equipo")
+    nombre_equipo = config.get("team", "Cádiz CF")
+    
+    # ── Club Dashboard ──
+    from pathlib import Path
+    import base64
+    base_dir = Path(__file__).parent.parent
+    logo_path = base_dir / "logo.png"
+    logo_b64 = ""
+    if logo_path.exists():
+        with open(logo_path, "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode()
+            
+    logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height:90px; border-radius:12px; margin-right:20px;">' if logo_b64 else '<div style="font-size:60px; margin-right:20px;">🛡️</div>'
+
+    # Datos demo para el club
+    partidos_cargados = 8
+    victorias, empates, derrotas = 5, 2, 1
+    goles_favor, goles_contra = 14, 6
 
     st.markdown(f"""
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-        <div>
-            <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">Plantilla — {nombre_equipo}</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:#5a6a7e;">20 jugadores · Temporada 2024-25 · Haz clic para ver la ficha</p>
+    <div style="background:rgba(17, 24, 39, 0.6);backdrop-filter:blur(10px);
+                border:1px solid rgba(30, 42, 58, 0.8);border-radius:16px;
+                padding:24px;margin-bottom:30px;display:flex;align-items:center;
+                box-shadow:0 8px 32px 0 rgba(0,0,0,0.2);">
+        {logo_html}
+        <div style="flex:1;">
+            <h1 style="margin:0 0 4px 0;font-size:28px;font-weight:800;color:#fff;letter-spacing:1px;">{nombre_equipo}</h1>
+            <div style="font-size:13px;color:#00d4aa;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Temporada 2024-25</div>
         </div>
+        <div style="display:flex;gap:20px;">
+            <div style="text-align:center;background:rgba(0,0,0,0.2);padding:12px 20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:24px;font-weight:900;color:#fff;">{partidos_cargados}</div>
+                <div style="font-size:10px;color:#8899aa;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Partidos</div>
+            </div>
+            <div style="text-align:center;background:rgba(0,0,0,0.2);padding:12px 20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:24px;font-weight:900;color:#00d4aa;">{victorias} - {empates} - {derrotas}</div>
+                <div style="font-size:10px;color:#8899aa;font-weight:700;letter-spacing:1px;text-transform:uppercase;">V - E - D</div>
+            </div>
+            <div style="text-align:center;background:rgba(0,0,0,0.2);padding:12px 20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:24px;font-weight:900;color:#ff4d6d;">{goles_favor} - {goles_contra}</div>
+                <div style="font-size:10px;color:#8899aa;font-weight:700;letter-spacing:1px;text-transform:uppercase;">GF - GC</div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">Plantilla</h2>
         <div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.25);color:#00d4aa;
                     padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;">
             {len(PLANTILLA)} jugadores
@@ -406,41 +445,41 @@ def render():
                 color = POSICION_COLOR.get(pos, "#00d4aa")
                 stats = _generar_stats(jugador)
                 st.markdown(f"""
-                <div style="background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(10px);
-                            border:1px solid rgba(0, 212, 170, 0.15);border-radius:16px;
-                            overflow:hidden;margin-bottom:8px;transition:all 0.3s ease;
-                            box-shadow:0 4px 20px rgba(0,0,0,0.3);">
-                    <div style="height:4px;background:linear-gradient(90deg, {color}00, {color}, {color}00);"></div>
-                    <div style="padding:24px;text-align:center;">
-                        <div style="width:68px;height:68px;border-radius:50%;background:{color}15;
-                                    border:2px solid {color}44;margin:0 auto 12px;display:flex;
-                                    align-items:center;justify-content:center;box-shadow:0 0 15px {color}22;">
-                            <span style="font-size:24px;font-weight:900;color:#fff;text-shadow:0 0 8px {color};">{jugador['dorsal']}</span>
-                        </div>
-                        <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;
-                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.3px;">
-                            {jugador['nombre']}
-                        </div>
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;
-                                    letter-spacing:1.2px;color:{color};margin-bottom:14px;opacity:0.9;">{pos}</div>
-                        
-                        <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;">
-                            <div style="text-align:center;flex:1;">
-                                <div style="font-size:17px;font-weight:800;color:#fff;">{stats['partidos']}</div>
-                                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">PJ</div>
-                            </div>
-                            <div style="text-align:center;flex:1;border-left:1px solid rgba(255,255,255,0.05);border-right:1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size:17px;font-weight:800;color:{color};">{stats['goles'] if pos != 'Portero' else stats['paradas']}</div>
-                                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">{'GOL' if pos != 'Portero' else 'PAR'}</div>
-                            </div>
-                            <div style="text-align:center;flex:1;">
-                                <div style="font-size:17px;font-weight:800;color:#fff;">{stats['nota']}</div>
-                                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">NOTA</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+<div style="background:rgba(17, 24, 39, 0.4);backdrop-filter:blur(10px);
+            border:1px solid rgba(0, 212, 170, 0.15);border-radius:16px;
+            overflow:hidden;margin-bottom:8px;transition:all 0.3s ease;
+            box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+    <div style="height:4px;background:linear-gradient(90deg, {color}00, {color}, {color}00);"></div>
+    <div style="padding:24px;text-align:center;">
+        <div style="width:68px;height:68px;border-radius:50%;background:{color}15;
+                    border:2px solid {color}44;margin:0 auto 12px;display:flex;
+                    align-items:center;justify-content:center;box-shadow:0 0 15px {color}22;">
+            <span style="font-size:24px;font-weight:900;color:#fff;text-shadow:0 0 8px {color};">{jugador['dorsal']}</span>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.3px;">
+            {jugador['nombre']}
+        </div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:1.2px;color:{color};margin-bottom:14px;opacity:0.9;">{pos}</div>
+        
+        <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;">
+            <div style="text-align:center;flex:1;">
+                <div style="font-size:17px;font-weight:800;color:#fff;">{stats['partidos']}</div>
+                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">PJ</div>
+            </div>
+            <div style="text-align:center;flex:1;border-left:1px solid rgba(255,255,255,0.05);border-right:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:17px;font-weight:800;color:{color};">{stats['goles'] if pos != 'Portero' else stats['paradas']}</div>
+                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">{'GOL' if pos != 'Portero' else 'PAR'}</div>
+            </div>
+            <div style="text-align:center;flex:1;">
+                <div style="font-size:17px;font-weight:800;color:#fff;">{stats['nota']}</div>
+                <div style="font-size:9px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:1px;">NOTA</div>
+            </div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
                 if st.button(f"Ver ficha #{jugador['dorsal']}", key=f"player_{jugador['dorsal']}",
                              use_container_width=True):
                     st.session_state["squad_selected_player"] = jugador["dorsal"]

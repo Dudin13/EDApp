@@ -183,6 +183,8 @@ def init_session():
         st.session_state.editing_ev_id = None
     if "video_duration" not in st.session_state:
         st.session_state.video_duration = 0.0
+    if "current_time" not in st.session_state:
+        st.session_state.current_time = 0.0
 
 def save_persistence():
     if st.session_state.project_name:
@@ -235,7 +237,7 @@ def view_dashboard():
     col1, col2 = st.columns(2)
     with col1:
         with st.container(border=True):
-            st.subheader("🆕 Nuevo Análisis")
+            st.subheader("Nuevo Análisis")
             st.write("Carga un vídeo para crear un nuevo proyecto.")
             uploaded_file = st.file_uploader("Cargar vídeo (.mp4, .mov)", type=["mp4", "mov"])
             proj_name = st.text_input("Nombre del Proyecto (opcional)", placeholder="Ej. Partido_Final")
@@ -263,16 +265,16 @@ def view_dashboard():
 
     with col2:
         with st.container(border=True):
-            st.subheader("📂 Continuar Proyecto")
+            st.subheader("Continuar Proyecto")
             projects = list(PROJECTS_DIR.glob("scout_*.json"))
             if not projects:
                 st.info("No hay proyectos guardados.")
             else:
                 p_names = [p.stem.replace("scout_", "") for p in projects]
                 selected_project = st.selectbox("Selecciona un proyecto:", p_names)
-                if st.button("Cargar y Continuar 🚀", use_container_width=True):
+                if st.button("Cargar y Continuar", use_container_width=True):
                     if load_persistence(selected_project):
-                        st.session_state.scout_step = "editor"
+                        st.session_state.scout_step = "config"
                         st.rerun()
                     else:
                         st.error("Error al cargar el proyecto.")
@@ -303,7 +305,7 @@ def view_config():
             
         st.session_state.tag_templates = new_templates
         
-        if st.button("➕ Añadir Botón"):
+        if st.button("Añadir Botón"):
             st.session_state.tag_templates.append({
                 "id": f"t_{uuid.uuid4().hex[:6]}", 
                 "name": "Nueva Etiqueta", 
@@ -315,9 +317,9 @@ def view_config():
             
     st.markdown("<br>", unsafe_allow_html=True)
     c_save, c_next = st.columns(2)
-    if c_save.button("💾 Guardar como Plantilla Predeterminada", use_container_width=True):
+    if c_save.button("Guardar como Plantilla Predeterminada", use_container_width=True):
         save_template_global()
-    if c_next.button("✅ Terminar Configuración e Ir al Editor", use_container_width=True, type="primary"):
+    if c_next.button("Terminar Configuración e Ir al Editor", use_container_width=True, type="primary"):
         save_persistence()
         st.session_state.scout_step = "editor"
         st.rerun()
@@ -342,27 +344,63 @@ def view_editor():
             st.session_state.scout_step = "config"
             st.rerun()
 
-    # Main Layout: 2 Columns (Video | Buttons)
-    col_vid, col_tags = st.columns([4, 1])
+    # Main Layout: 1 Column for full-width Video, and popover for buttons
+    st.markdown("""
+        <style>
+        /* Aumentamos el ancho de los popovers para que encajen mejor los botones */
+        div[data-testid="stPopoverBody"] {
+            min-width: 300px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    with col_vid:
-        st.video(st.session_state.video_path)
-        # Use simple caption or nothing as user said built-in bar is enough
-        st.caption("ℹ️ Usa los controles del propio vídeo para navegar")
+    header_col1, header_col2 = st.columns([3, 1])
+    with header_col1:
+        p_name = st.session_state.project_name if st.session_state.project_name else "Sin Nombre"
+        st.write(f"### 📂 Proyecto: {p_name}")
 
-    with col_tags:
-        st.markdown("### 🏷️ Etiquetas")
+    st.markdown("""
+        <style>
+        .botonera-flotante {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            width: 300px;
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid rgba(0,212,170,0.5);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        /* Remove default container padding to make it flush */
+        [data-testid="stVerticalBlock"] > div.stContainer > div {
+            padding: 0;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<div class="scout-video-container" style="max-width: 75vw;">', unsafe_allow_html=True)
+    v_path = st.session_state.video_path
+    vid_time = st.session_state.get("current_time", 0.0)
+    st.video(str(v_path), format="video/mp4", start_time=vid_time)
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.caption("Usa los controles del propio vídeo para navegar. El vídeo ocupa el ancho principal.")
+
+    with st.sidebar:
+        st.markdown(f"""
+        <div style="background:rgba(17, 24, 39, 0.4);border:1px solid rgba(0,212,170,0.2);
+                    border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+            <h4 style="margin-top:0;color:#00d4aa;text-transform:uppercase;font-size:14px;letter-spacing:1px;font-weight:700;">🏷️ Botonera Automática (Panel Nacsport)</h4>
+        """, unsafe_allow_html=True)
         
-        # Link video current time to tags using JS or state if possible
-        # Since we removed the slider, we might need a hidden way to get current time
-        # Or just trust common streamling behavior. 
-        # For now, keeping a small hidden or compact slider if really needed, 
-        # but user said "already have a bar". Streamlit st.video doesn't sync back time easily without custom components.
-        # I'll keep the session_state.current_time logic but maybe hide the slider label.
-        st.session_state.current_time = st.number_input("Tiempo (s)", 0.0, float(st.session_state.video_duration), st.session_state.current_time, step=0.1, label_visibility="collapsed")
-            
+        st.session_state.current_time = st.number_input("Tiempo de marcado (s)", 0.0, float(st.session_state.video_duration), st.session_state.current_time, step=0.1)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         for t in st.session_state.tag_templates:
-            btn_html = f'<span class="tag-btn-text">{t["name"]}</span>'
             if st.button(t['name'], key=f"btn_tag_{t['id']}", use_container_width=True):
                 ct = st.session_state.current_time
                 new_ev = {
@@ -376,11 +414,13 @@ def view_editor():
                 }
                 st.session_state.manual_events.append(new_ev)
                 save_persistence()
-                st.toast(f"⏳ '{t['name']}' registrado", icon="⏳")
+                st.toast(f"'{t['name']}' registrado", icon="✅")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
     
     # Bottom Layout: Timeline
     st.markdown("<br><hr>", unsafe_allow_html=True)
-    st.markdown("### 📊 Timeline de Eventos Recortados")
+    st.markdown("### Timeline de Eventos Recortados")
     
     if st.session_state.editing_ev_id:
         # Inline Edit Panel

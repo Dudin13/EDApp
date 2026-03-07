@@ -26,13 +26,18 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 [data-testid="stSidebar"] {
     background: #0d1220 !important;
     border-right: 1px solid #1e2a3a;
-    min-width: 230px !important; max-width: 230px !important;
 }
-[data-testid="stSidebar"] > div:first-child { padding: 0.75rem 0.75rem; }
+[data-testid="stSidebar"] > div:first-child { 
+    padding-top: 0rem !important; 
+}
+[data-testid="stSidebarUserContent"] {
+    padding-top: 0rem !important;
+}
 
 .sidebar-logo {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 6px 16px; border-bottom: 1px solid #1e2a3a; margin-bottom: 6px;
+    display: flex; flex-direction: column; align-items: flex-start;
+    padding: 0 0 16px 0; margin-bottom: 16px; border-bottom: 1px solid #1e2a3a;
+    margin-top: -30px;
 }
 .sidebar-logo-text { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
 .sidebar-logo-sub { font-size: 10px; color: #5a6a7e; font-weight: 400; text-transform: uppercase; letter-spacing: 1px; }
@@ -140,8 +145,16 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 }
 
 /* ── INPUTS ── */
-[data-testid="stSelectbox"] > div > div,
-[data-testid="stMultiSelect"] > div > div,
+.stSelectbox div[data-baseweb="select"] span,
+.stSelectbox div[data-baseweb="select"] div {
+    color: #e8eaed !important;
+}
+div[data-baseweb="popover"] ul {
+    background: #111827 !important;
+}
+div[data-baseweb="popover"] li, div[data-baseweb="popover"] span, div[data-baseweb="popover"] div {
+    color: #e8eaed !important;
+}
 .stTextInput > div > div > input, .stNumberInput > div > div > input {
     background: rgba(17, 24, 39, 0.6) !important;
     backdrop-filter: blur(10px);
@@ -149,6 +162,12 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     border-radius: 10px !important;
     color: #e8eaed !important;
     padding: 8px 12px !important;
+}
+[data-testid="stSelectbox"] > div > div, [data-testid="stMultiSelect"] > div > div {
+    background: rgba(17, 24, 39, 0.6) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(30, 42, 58, 0.8) !important;
+    border-radius: 10px !important;
 }
 .stTextInput > div > div > input:focus {
     border-color: #00d4aa !important;
@@ -190,7 +209,8 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
 
 def get_logo_base64():
-    logo_path = Path("C:/apped/football_analyzer/logo.png")
+    base_dir = Path(__file__).parent
+    logo_path = base_dir / "logo.png"
     if logo_path.exists():
         with open(logo_path, "rb") as f:
             return base64.b64encode(f.read()).decode()
@@ -246,7 +266,8 @@ if not st.session_state.get("logged_in"):
 # ══════════════════════════════════════════════════════════════════════════════
 # page_key es el identificador interno que usamos para el routing
 NAV_TOP = [
-    {"key": "equipo_config",  "icon": "🏆", "label": "Mi Equipo",      "group": "EQUIPO"},
+    {"key": "datos_jugadores",  "icon": "🏆", "label": "Mi Equipo",      "group": "EQUIPO"},
+    {"key": "equipo_config",  "icon": "⚙️", "label": "Configuración",      "group": "EQUIPO"},
     {"key": "partido_nuevo",  "icon": "🎬", "label": "Nuevo Análisis",  "group": "PARTIDOS"},
     {"key": "partido_clips",  "icon": "✂️",  "label": "Clips de Acción","group": "PARTIDOS"},
 ]
@@ -261,7 +282,7 @@ DATO_COLECTIVO_ITEMS = [
 
 # Estado de navegación
 if "page" not in st.session_state:
-    st.session_state["page"] = "partido_nuevo"
+    st.session_state["page"] = "home"
 
 current_page = st.session_state["page"]
 
@@ -276,7 +297,7 @@ with st.sidebar:
 
     st.markdown(f"""
     <div class="sidebar-logo">
-        {logo_html}
+        <div style="margin-top: -10px;">{logo_html}</div>
         <div>
             <div class="sidebar-logo-text">ED Analytics</div>
             <div class="sidebar-logo-sub">Scout Platform</div>
@@ -284,15 +305,21 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown('<div class="nav-group-label">PRINCIPAL</div>', unsafe_allow_html=True)
+    if st.button("🏠 Inicio", key="nav_home", use_container_width=True):
+        st.session_state["page"] = "home"
+        st.rerun()
+
     # ── EQUIPO ──
     st.markdown('<div class="nav-group-label">EQUIPO</div>', unsafe_allow_html=True)
     if st.button("Mi Equipo", key="nav_equipo", use_container_width=True):
-        st.session_state["page"] = "equipo_config"
+        st.session_state["page"] = "datos_jugadores"
         st.rerun()
     
     # Nuevo botón Modo Analista bajo Mi Equipo
     if st.button("Modo Analista", key="nav_analista", use_container_width=True):
         st.session_state["page"] = "scout"
+        st.session_state["scout_step"] = "dashboard"
         st.rerun()
 
     # ── PARTIDOS ──
@@ -327,15 +354,10 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
 
-    if st.session_state.get("analysis_done"):
-        st.markdown("""
-        <div style="display:flex;align-items:center;gap:6px;padding:10px 6px 0;">
-            <div style="width:7px;height:7px;background:#00d4aa;border-radius:50%;box-shadow:0 0 6px #00d4aa;"></div>
-            <span style="font-size:11px;color:#00d4aa;font-weight:600;">Análisis completado</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    if st.button("Configuración", key="nav_config", use_container_width=True):
+        st.session_state["page"] = "equipo_config"
+        st.rerun()
     if st.button("↩  Cerrar sesión", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
@@ -345,9 +367,13 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════════════════════════════
 # ROUTING
 # ══════════════════════════════════════════════════════════════════════════════
-page = st.session_state.get("page", "partido_nuevo")
+page = st.session_state.get("page", "home")
 
-if page == "equipo_config":
+if page == "home":
+    from pages.home import render
+    render()
+
+elif page == "equipo_config":
     from pages.settings import render
     render()
 

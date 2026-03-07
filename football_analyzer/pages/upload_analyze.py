@@ -116,7 +116,7 @@ def render():
             pass
 
     # --- STEPPER UI ---
-    steps = ["📹 Entrada", "🔬 Calibración", "📍 Marcado", "⚙️ Motor", "📊 Resumen"]
+    steps = ["Entrada", "Calibración", "Marcado", "Motor", "Resumen"]
     cols = st.columns(len(steps))
     for i, s in enumerate(steps):
         step_num = i + 1
@@ -161,6 +161,8 @@ def render():
             st.text_input("Equipo Local", value="Cadiz CF", key="step1_local")
             st.text_input("Equipo Visitante", placeholder="Ej: Real Madrid", key="step1_visit")
             st.date_input("Fecha", key="step1_date")
+            st.text_input("Jornada/Competición", placeholder="Ej: Jornada 14", key="step1_jornada")
+            st.text_input("Resultado", placeholder="Ej: 2 - 1", key="step1_result")
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Siguiente: Calibrar IA →", use_container_width=True):
