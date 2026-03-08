@@ -348,7 +348,8 @@ def render():
         if video_available and partido_idx == 0 and st.session_state.get("analysis_done"):
             st.video(video_path)
         else:
-            # Placeholder estilo Wyscout
+            p_local = str(partido_sel['local']) if partido_sel else 'Local'
+            p_visit = str(partido_sel['visitante']) if partido_sel else 'Visitante'
             st.markdown(f"""
             <div style="background:#0d1220;border:1px solid #1e2a3a;border-radius:12px;
                         aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;
@@ -358,7 +359,7 @@ def render():
                     🎬
                 </div>
                 <div style="font-size:13px;font-weight:600;color:#5a6a7e;text-align:center;">
-                    {partido_sel['local'] + ' vs ' + partido_sel['visitante'] if partido_sel else 'Sin partido'}<br>
+                    {p_local} vs {p_visit}<br>
                     <span style="font-size:11px;font-weight:400;">{partido_sel['fecha'] if partido_sel else ''}</span>
                 </div>
                 <div style="font-size:11px;color:#3a4a5e;text-align:center;">
@@ -385,89 +386,93 @@ def render():
         </div>
         """, unsafe_allow_html=True)
 
-        # ── Clips de acción ────────────────────────────────────────────────────
-        st.markdown('<div class="ws-section-header">Clips de acción</div>', unsafe_allow_html=True)
+        # ── Event Timeline (Pro Dashboard) ────────────────────────────────────
+        st.markdown('<div class="ws-section-header">Línea de Eventos IA</div>', unsafe_allow_html=True)
 
-        ball_events = st.session_state.get("ball_events", [])
+        results = st.session_state.get("analysis_results", {})
+        ball_events = results.get("ball_events", [])
+        
         team_local = partido_sel["local"] if partido_sel else "Local"
         team_visit = partido_sel["visitante"] if partido_sel else "Visitante"
 
+        # Filtro de búsqueda (Open-Vocabulary placeholder)
+        search_query = st.text_input("🔍 Buscar evento (ej: 'tiro', 'Sánchez', 'local')", placeholder="Ej: pase, tiro, nombre de jugador...", label_visibility="collapsed")
+
         # Clips del análisis real o mock
         if ball_events and partido_idx == 0 and st.session_state.get("analysis_done"):
-            clips_data = ball_events[:8]  # max 8 clips aquí
+            clips_data = ball_events
             real_clips = True
         else:
-            # Clips de ejemplo
+            # Clips de ejemplo si no hay análisis
             np.random.seed(partido_idx * 5)
-            acciones_mock = ["Gol", "Tiro a puerta", "Pase clave", "Falta", "Córner",
-                             "Recuperación", "Contra", "Penalti"]
+            acciones_mock = ["Gol", "Tiro", "Pase", "Falta", "Córner", "Recuperación"]
             clips_data = [
                 {
                     "nombre_jugador": np.random.choice(["Sánchez", "Delgado", "Ruiz", "Vega", "Morales"]),
                     "nombre_equipo": np.random.choice([team_local, team_visit]),
                     "minute": np.random.randint(5, 88),
-                    "accion": np.random.choice(acciones_mock),
+                    "action": np.random.choice(acciones_mock),
                     "video_second": float(np.random.randint(60, 5400)),
                 }
-                for _ in range(6)
+                for _ in range(12)
             ]
             real_clips = False
 
+        # Aplicar filtro
+        if search_query:
+            clips_data = [c for c in clips_data if search_query.lower() in str(c).lower()]
+
         ACTION_ICON = {
-            "Gol": "⚽", "Tiro a puerta": "🥅", "Pase clave": "🎯",
+            "Gol": "⚽", "Tiro": "🥅", "Pase": "🎯",
             "Falta": "🟥", "Córner": "🚩", "Recuperación": "💪",
-            "Contra": "⚡", "Penalti": "🎯", "Acción con balón": "⚽",
+            "Conducción": "🏃", "Parada/Despeje": "👐"
         }
 
-        for i, clip in enumerate(clips_data[:8]):
+        # Contenedor de scroll para el Timeline
+        timeline_html = ""
+        for i, clip in enumerate(clips_data):
             nombre = clip.get("nombre_jugador", "Jugador")
             equipo = clip.get("nombre_equipo", "—")
             minuto = clip.get("minute", 0)
-            accion = clip.get("accion", "Acción con balón")
+            accion = clip.get("action", clip.get("accion", "Acción"))
             seg = clip.get("video_second", 0)
             eq_color = "#00d4aa" if equipo == team_local else "#4d9fff"
             icon = ACTION_ICON.get(accion, "⚽")
 
-            # Mini tarjeta de clip
-            col_clip_info, col_clip_btn = st.columns([4, 1])
-            with col_clip_info:
-                st.markdown(f"""
-                <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;
-                            background:#111827;border:1px solid #1e2a3a;border-radius:8px;
-                            margin-bottom:4px;transition:border-color 0.15s;">
-                    <div style="font-size:18px;">{icon}</div>
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:12px;font-weight:700;color:#fff;
-                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                            {nombre}
-                        </div>
-                        <div style="font-size:10px;color:#5a6a7e;">
-                            <span style="color:{eq_color};font-weight:600;">Min {int(minuto)}'</span>
-                            {' · ' + accion if not real_clips else ''}
-                        </div>
+            # Tarjeta de evento premium
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;
+                        background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);
+                        border:1px solid rgba(255,255,255,0.05);border-radius:10px;
+                        margin-bottom:8px;border-left:4px solid {eq_color};transition:all 0.2s;">
+                <div style="font-size:20px;background:rgba(255,255,255,0.05);width:40px;height:40px;
+                            display:flex;align-items:center;justify-content:center;border-radius:8px;">{icon}</div>
+                <div style="flex:1;">
+                    <div style="display:flex;justify-content:space-between;">
+                        <span style="font-size:13px;font-weight:700;color:#fff;">{nombre}</span>
+                        <span style="font-size:11px;font-weight:800;color:{eq_color};">{int(minuto)}'</span>
                     </div>
-                    <div style="font-size:11px;font-weight:700;color:{eq_color};
-                                background:{eq_color}18;padding:2px 8px;border-radius:10px;
-                                white-space:nowrap;">{int(minuto)}'</div>
+                    <div style="font-size:11px;color:#8899aa;margin-top:2px;">
+                        {accion.upper()} · {equipo}
+                    </div>
                 </div>
-                """, unsafe_allow_html=True)
-            with col_clip_btn:
-                st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-                if st.button("▶", key=f"play_clip_col_{i}", help=f"Ver clip min {int(minuto)}"):
-                    if video_available and real_clips:
-                        st.session_state["preview_clip_second"] = seg
-                    else:
-                        st.toast(f"Sube el vídeo del partido para reproducir este clip", icon="ℹ️")
-
-        if not clips_data:
-            st.markdown("""
-            <div style="text-align:center;padding:20px;color:#5a6a7e;font-size:12px;">
-                Sin clips disponibles para este partido.<br>Realiza un análisis para generar clips automáticamente.
             </div>
             """, unsafe_allow_html=True)
+            
+            # Botones de acción debajo de la tarjeta para Streamlit
+            c1, c2, c3 = st.columns([1,1,2])
+            with c1:
+                if st.button("👁️ Ir", key=f"jump_{i}", use_container_width=True):
+                    st.session_state["preview_clip_second"] = seg
+            with c2:
+                if st.button("✂️ Cortar", key=f"cut_{i}", use_container_width=True):
+                    st.toast(f"Generando clip de {accion}...", icon="✂️")
+            st.markdown("<div style='margin-bottom:12px;'></div>", unsafe_allow_html=True)
 
-        # Ver todos los clips
+        if not clips_data:
+            st.info("No se han encontrado eventos para esta búsqueda.")
+
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Ver todos los clips →", use_container_width=True):
+        if st.button("Panel de Clips Maestro →", use_container_width=True):
             st.session_state["page"] = "partido_clips"
             st.rerun()

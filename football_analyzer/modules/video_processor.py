@@ -328,12 +328,12 @@ class VideoProcessor:
             key=lambda x: -x["count"]
         )
 
-        resultados_jugadores = {}
-        # Mapa track_id -> nombre (para enriquecer ball_events)
+        # ── Fase A: Construir mapa de nombres y enriquecer eventos ────────
         track_id_to_name = {}
         track_id_to_equipo_nombre = {}
+        eq_idx_to_nombre = {0: team_local, 1: team_visit, 2: "Arbitro", -1: "Desconocido"}
 
-        # Construir mapa de track_id para asignacion nominal
+        # Construir listas ordenadas de IDs por equipo para asignacion nominal
         tracks_eq0_ids = sorted(
             [(tid, s) for tid, s in track_stats.items() if s["equipo"] == 0],
             key=lambda x: -x[1]["count"]
@@ -342,64 +342,61 @@ class VideoProcessor:
             [(tid, s) for tid, s in track_stats.items() if s["equipo"] == 1],
             key=lambda x: -x[1]["count"]
         )
-
-        # Asignar jugadores locales a tracks del equipo 0
+        
+        # 1. Mapear tracks principales
         for i, jugador in enumerate(jugadores_local):
-            track_data = tracks_eq0[i] if i < len(tracks_eq0) else None
-            resultados_jugadores[jugador["nombre"]] = self._player_stats(
-                jugador, team_local, track_data
-            )
             if i < len(tracks_eq0_ids):
                 tid = tracks_eq0_ids[i][0]
                 track_id_to_name[tid] = jugador["nombre"]
                 track_id_to_equipo_nombre[tid] = team_local
 
-        # Asignar jugadores visitantes a tracks del equipo 1
         for i, jugador in enumerate(jugadores_visit):
-            track_data = tracks_eq1[i] if i < len(tracks_eq1) else None
-            resultados_jugadores[jugador["nombre"]] = self._player_stats(
-                jugador, team_visit, track_data, ball_events, track_id_to_name
-            )
             if i < len(tracks_eq1_ids):
                 tid = tracks_eq1_ids[i][0]
                 track_id_to_name[tid] = jugador["nombre"]
                 track_id_to_equipo_nombre[tid] = team_visit
 
-        # ── Fallback: tracks detectados sin jugador asignado ──────────
-        # Si no hay nombres, o hay más tracks que jugadores, generar anónimos
+        # 2. Mapear anónimos/sobrantes
         n_local = len(jugadores_local)
         n_visit = len(jugadores_visit)
+        for i, td_val in enumerate(tracks_eq0[n_local:]):
+            # Buscar el tid que corresponde a este objeto data (td_val)
+            tid_found = [tid for tid, data in track_stats.items() if data == td_val][0]
+            track_id_to_name[tid_found] = f"{team_local} T{n_local+i+1}"
+            track_id_to_equipo_nombre[tid_found] = team_local
+        for i, td_val in enumerate(tracks_eq1[n_visit:]):
+            tid_found = [tid for tid, data in track_stats.items() if data == td_val][0]
+            track_id_to_name[tid_found] = f"{team_visit} T{n_visit+i+1}"
+            track_id_to_equipo_nombre[tid_found] = team_visit
 
-        if n_local == 0 and n_visit == 0:
-            # Sin ningún nombre: generar todos los tracks como anónimos
-            all_tracks = sorted(track_stats.items(), key=lambda x: -x[1]["count"])
-            for i, (tid, td) in enumerate(all_tracks):
-                eq_idx = td.get("equipo", 0)
-                eq_nombre = team_local if eq_idx == 0 else (team_visit if eq_idx == 1 else "Arbitro")
-                key = f"{eq_nombre} T{i+1}"
-                j_anon = {"nombre": key, "dorsal": i+1, "equipo": eq_nombre, "posicion": td.get("clase", "player")}
-                resultados_jugadores[key] = self._player_stats(j_anon, eq_nombre, td, ball_events, track_id_to_name)
-        else:
-            # Hay algunos nombres — añadir anónimos solo para los tracks sobrantes
-            for i, td in enumerate(tracks_eq0[n_local:]):
-                key = f"{team_local} T{n_local+i+1}"
-                j_anon = {"nombre": key, "dorsal": n_local+i+1, "equipo": team_local, "posicion": ""}
-                resultados_jugadores[key] = self._player_stats(j_anon, team_local, td, ball_events, track_id_to_name)
-            for i, td in enumerate(tracks_eq1[n_visit:]):
-                key = f"{team_visit} T{n_visit+i+1}"
-                j_anon = {"nombre": key, "dorsal": n_visit+i+1, "equipo": team_visit, "posicion": ""}
-                resultados_jugadores[key] = self._player_stats(j_anon, team_visit, td, ball_events, track_id_to_name)
-        # ── Enriquecer ball_events con nombres ────────────────────────
-        eq_idx_to_nombre = {0: team_local, 1: team_visit, 2: "Arbitro", -1: "Desconocido"}
+        # 3. Enriquecer ball_events para que _player_stats pueda filtrarlos
         for ev in ball_events:
             tid = ev.get("track_id")
             if tid not in track_id_to_name:
-                # Generar nombre anónimo para este track
                 eq_n = eq_idx_to_nombre.get(ev.get("equipo", -1), "Desconocido")
-                track_id_to_name[tid] = f"{eq_n} T{tid}"
+                name_gen = f"{eq_n} T{tid}"
+                track_id_to_name[tid] = name_gen
                 track_id_to_equipo_nombre[tid] = eq_n
             ev["nombre_jugador"] = track_id_to_name[tid]
             ev["nombre_equipo"] = track_id_to_equipo_nombre.get(tid, "—")
+
+        # ── Fase B: Calcular estadísticas por jugador ──────────
+        resultados_jugadores = {}
+        for i, jugador in enumerate(jugadores_local):
+            track_data = tracks_eq0[i] if i < len(tracks_eq0) else None
+            resultados_jugadores[jugador["nombre"]] = self._player_stats(jugador, team_local, track_data, ball_events)
+
+        for i, jugador in enumerate(jugadores_visit):
+            track_data = tracks_eq1[i] if i < len(tracks_eq1) else None
+            resultados_jugadores[jugador["nombre"]] = self._player_stats(jugador, team_visit, track_data, ball_events)
+
+        # Añadir anónimos a resultados_jugadores (que no sean árbitros)
+        for tid, name in track_id_to_name.items():
+            if name not in resultados_jugadores and "Arbitro" not in name:
+                eq_n = track_id_to_equipo_nombre[tid]
+                j_info = {"nombre": name, "equipo": eq_n, "dorsal": tid, "posicion": "player"}
+                td = track_stats.get(tid)
+                resultados_jugadores[name] = self._player_stats(j_info, eq_n, td, ball_events)
 
         all_x, all_y = [], []
         for s in track_stats.values():
@@ -435,7 +432,7 @@ class VideoProcessor:
             }
         }
 
-    def _player_stats(self, jugador: dict, equipo: str, track: dict | None, ball_events: list, id_map: dict) -> dict:
+    def _player_stats(self, jugador: dict, equipo: str, track: dict | None, ball_events: list) -> dict:
         """
         Genera estadísticas de un jugador a partir de su track y eventos reales.
         """
@@ -486,14 +483,37 @@ class VideoProcessor:
             return float(px), float(py)
 
     def _classify_ball_action(self, ball_det, player_track):
-        """Clasifica la acción basada en la proximidad y 'feeling' físico."""
-        # TODO: Implementar análisis de vector tras contacto
-        dist = 0 # marcador
+        """
+        Clasifica la acción (Pase, Tiro, Conducción) basada en vectores físicos.
+        """
         if player_track.clase == "goalkeeper":
             return "Parada/Despeje"
         
-        # Lógica heurística temporal
-        prob = np.random.random()
-        if prob > 0.92: return "Tiro"
-        if prob > 0.30: return "Pase"
+        # Necesitamos al menos los últimos 3 puntos para ver tendencia de velocidad/dirección
+        if len(self.ball_history) < 3:
+            return "Pase" # Fallback
+            
+        # Calcular vector de velocidad reciente
+        m1, x1, y1 = self.ball_history[-3]
+        m2, x2, y2 = self.ball_history[-1]
+        
+        dt = (m2 - m1) * 60 # segundos
+        if dt <= 0: return "Pase"
+        
+        vx = (x2 - x1) / dt
+        vy = (y2 - y1) / dt
+        speed = (vx**2 + vy**2)**0.5
+        
+        # Convertir a coordenadas de campo para ver si va a portería
+        px, py = self._pixel_to_pitch(x2, y2)
+        
+        # Heurística de TIRO: alta velocidad y dirección hacia portería
+        # Porterías están en x ~ 0 y x ~ 105
+        is_heading_goal = (vx > 300 and px > 70) or (vx < -300 and px < 35)
+        
+        if speed > 800 and is_heading_goal:
+            return "Tiro"
+        elif speed > 400:
+            return "Pase"
+        
         return "Conducción"
