@@ -13,8 +13,7 @@ Layout:
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.patches import Arc, Circle
+from mplsoccer import Pitch
 import io
 from pathlib import Path
 
@@ -25,23 +24,6 @@ PARTIDOS_MOCK = [
     {"id": 2, "local": "Cadiz CF", "visitante": "Lucena CF",      "fecha": "22/02/2026", "comp": "3ª RFEF", "resultado": "0–0"},
     {"id": 3, "local": "Pozoblanco",         "visitante": "Cadiz CF","fecha":"15/02/2026","comp":"3ª RFEF", "resultado": "1–2"},
 ]
-
-
-def _draw_pitch_mini(ax, bg='#0a3d1f', lc=(1,1,1,0.75)):
-    ax.set_facecolor(bg)
-    ax.set_xlim(0, 105); ax.set_ylim(0, 68)
-    ax.set_aspect('equal'); ax.axis('off')
-    lw = 1.2
-    ax.add_patch(patches.Rectangle((0,0), 105, 68, lw=lw, edgecolor=lc, facecolor='none'))
-    ax.plot([52.5,52.5],[0,68], color=lc, lw=lw)
-    ax.add_patch(Circle((52.5,34), 9.15, color=lc, fill=False, lw=lw))
-    ax.scatter([52.5],[34], color=lc, s=10)
-    ax.add_patch(patches.Rectangle((0, 13.84), 16.5, 40.32, lw=lw, edgecolor=lc, facecolor='none'))
-    ax.add_patch(patches.Rectangle((88.5, 13.84), 16.5, 40.32, lw=lw, edgecolor=lc, facecolor='none'))
-    # Bandas de césped
-    for x in range(0, 106, 10):
-        ax.add_patch(patches.Rectangle((x,0), 5, 68, facecolor='#0d4a25', edgecolor='none', alpha=0.25))
-    return ax
 
 
 def _metric_row(label, value, unit="", color="#00d4aa"):
@@ -236,21 +218,29 @@ def render():
             viz_opts = ["Heatmap de posesión", "Pases", "Líneas de presión", "Zonas de recuperación"]
             viz = st.radio("Vista", viz_opts, horizontal=True, label_visibility="collapsed")
 
-            fig_m, ax_m = plt.subplots(figsize=(11, 7))
-            fig_m.patch.set_facecolor('#0e1420')
-            _draw_pitch_mini(ax_m)
+            pitch = Pitch(
+                pitch_type='custom', pitch_length=105, pitch_width=68,
+                pitch_color='#09090b', line_color='rgba(255,255,255,0.4)',
+                linewidth=1.2, spot_scale=0.003
+            )
+            fig_m, ax_m = pitch.draw(figsize=(11, 7))
+            fig_m.patch.set_facecolor('#111827')
 
             if viz == "Heatmap de posesión":
                 hx = st.session_state.get("heatmap_x", [])
                 hy = st.session_state.get("heatmap_y", [])
                 if hx and is_analysis:
-                    # Usar datos reales (ya en metros si es versión nueva)
-                    x_p = np.array(hx) if max(hx) < 110 else np.array(hx) / 1280 * 105
-                    y_p = np.array(hy) if max(hx) < 110 else np.array(hy) / 720 * 68
+                    x_p = np.array(hx)
+                    y_p = np.array(hy)
                 else:
                     x_p = np.clip(np.random.normal(62, 18, 400), 0, 105)
                     y_p = np.clip(np.random.normal(34, 14, 400), 0, 68)
-                ax_m.hexbin(x_p, y_p, gridsize=20, cmap='YlOrRd', alpha=0.7, extent=[0,105,0,68])
+                
+                pitch.kdeplot(
+                    x_p, y_p, ax=ax_m,
+                    cmap='YlOrRd', fill=True, n_levels=100,
+                    alpha=0.6, cut=10, zorder=2
+                )
                 ax_m.set_title("Heatmap de posesión de equipo", color='#8899aa', fontsize=10, pad=10)
 
             elif viz == "Pases":
@@ -258,29 +248,29 @@ def render():
                 if pases and is_analysis:
                     for i, p in enumerate(pases[:40]):
                         px, py = p["pitch_pos"]
-                        ax_m.annotate("", xy=(px+3, py), xytext=(px, py),
-                                      arrowprops=dict(arrowstyle='->', color='#00d4aa', lw=1.4, alpha=0.55))
+                        pitch.arrows(px, py, px+3, py, width=1.5,
+                                     headwidth=4, headlength=4, color='#00d4aa', ax=ax_m, zorder=2, alpha=0.55)
                     ax_m.set_title(f"Pases detectados · {len(pases)} acciones", color='#8899aa', fontsize=10, pad=10)
                 else:
                     n = 35
                     xs = np.random.normal(55, 14, n); ys = np.random.normal(34, 12, n)
                     xe = xs + np.random.normal(8, 6, n); ye = ys + np.random.normal(0, 7, n)
                     for i in range(n):
-                        ax_m.annotate("", xy=(xe[i], ye[i]), xytext=(xs[i], ys[i]),
-                                      arrowprops=dict(arrowstyle='->', color='#00d4aa', lw=1.4, alpha=0.55))
-                    ax_m.scatter(xs, ys, color='white', s=18, zorder=5, alpha=0.7)
+                        pitch.arrows(xs[i], ys[i], xe[i], ye[i], width=1.5,
+                                     headwidth=4, headlength=4, color='#00d4aa', ax=ax_m, zorder=2, alpha=0.55)
+                    pitch.scatter(xs, ys, color='white', s=18, zorder=5, alpha=0.7, ax=ax_m)
 
             elif viz == "Zonas de recuperación":
                 recs = [e for e in b_events if e.get("action") == "Recuperación" and "pitch_pos" in e]
                 if recs and is_analysis:
                     for r in recs:
                         px, py = r["pitch_pos"]
-                        ax_m.scatter(px, py, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', lw=0.5)
+                        pitch.scatter(px, py, ax=ax_m, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', linewidths=0.5)
                 else:
                     n = 30
                     rx = np.clip(np.random.normal(48, 16, n), 5, 100)
                     ry = np.clip(np.random.normal(34, 13, n), 5, 63)
-                    ax_m.scatter(rx, ry, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', lw=0.5)
+                    pitch.scatter(rx, ry, ax=ax_m, color='#00d4aa', s=100, alpha=0.6, edgecolors='white', linewidths=0.5)
 
             # Zonas
             for x in [35, 70]:
@@ -313,9 +303,13 @@ def render():
             form_key = st.selectbox("Formación", list(FORMACIONES.keys()), label_visibility="collapsed")
             positions = FORMACIONES[form_key]
 
-            fig_f, ax_f = plt.subplots(figsize=(10, 7))
-            fig_f.patch.set_facecolor('#0e1420')
-            _draw_pitch_mini(ax_f)
+            pitch_f = Pitch(
+                pitch_type='custom', pitch_length=105, pitch_width=68,
+                pitch_color='#09090b', line_color='rgba(255,255,255,0.4)',
+                linewidth=1.2, spot_scale=0.003
+            )
+            fig_f, ax_f = pitch_f.draw(figsize=(10, 7))
+            fig_f.patch.set_facecolor('#111827')
 
             dorsales_form = [1, 2, 3, 4, 5, 6, 8, 10, 7, 11, 9]
             nombres_form = ["Reyes", "Fernández", "Castillo", "Navarro", "Herrera",

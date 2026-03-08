@@ -1,6 +1,5 @@
-
-train: c:/apped/football_analyzer/dataset_pro/train/images
-val: c:/apped/football_analyzer/dataset_pro/val/images
+train: c:/apped/04_Datasets_Entrenamiento/roboflow_dataset/train/images
+val: c:/apped/04_Datasets_Entrenamiento/roboflow_dataset/valid/images
 
 nc: 4
 names: ['goalkeeper', 'player', 'ball', 'referee']

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv*/
+venv/
+ENV/
+
+# Streamlit
+.streamlit/
+! .streamlit/config_impeccable.toml
+! .streamlit/config_wyscout.toml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+uploads/
+output/
+videos/
+train_yolo/runs/
+*.log
+*.tmp

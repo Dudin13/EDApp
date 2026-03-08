@@ -63,32 +63,26 @@ def render():
             
             <div class="club-grid">
                 <div class="club-card">
-                    <div style="font-size:32px; margin-bottom:10px;">🛡️</div>
                     <div class="club-name">Cádiz CF</div>
                     <div class="club-category">Primer Equipo</div>
                 </div>
                 <div class="club-card">
-                    <div style="font-size:32px; margin-bottom:10px;">🌟</div>
                     <div class="club-name">Cádiz Mirandilla</div>
                     <div class="club-category">Filial</div>
                 </div>
                 <div class="club-card">
-                    <div style="font-size:32px; margin-bottom:10px;">⚔️</div>
                     <div class="club-name">Balón de Cádiz</div>
                     <div class="club-category">Senior Amateur</div>
                 </div>
                 <div class="club-card">
-                    <div style="font-size:32px; margin-bottom:10px;">🔥</div>
                     <div class="club-name">Juvenil A</div>
                     <div class="club-category">División de Honor</div>
                 </div>
                 <div class="club-card">
-                    <div style="font-size:32px; margin-bottom:10px;">⚡</div>
                     <div class="club-name">Juvenil B</div>
                     <div class="club-category">Liga Nacional</div>
                 </div>
                 <div class="club-card">
-                    <div style="font-size:32px; margin-bottom:10px;">🦅</div>
                     <div class="club-name">Cadete A</div>
                     <div class="club-category">División de Honor</div>
                 </div>

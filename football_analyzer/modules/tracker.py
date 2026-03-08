@@ -34,12 +34,27 @@ class ProfessionalTracker:
         self._tracks: Dict[int, Track] = {}
         self._history: Dict[int, Track] = {} # Para persistencia final
 
-    def update(self, detecciones: list, equipo_map: list, minute: float = 0.0) -> Dict[int, Track]:
+    def update(self, detecciones: list, equipo_map: list, minute: float = 0.0, camera_offset: tuple = (0.0, 0.0)) -> Dict[int, Track]:
         """
         Actualiza el tracker usando ByteTrack.
+        Aplica compensación de movimiento de cámara si se provee.
         """
         if not detecciones:
             return self._tracks
+
+        # Aplicar Optical Flow (Compensación de cámara) a los estados internos del Kalman Filter si es posible
+        dx, dy = camera_offset
+        if (dx != 0.0 or dy != 0.0) and hasattr(self._tracker, 'tracked_tracks'):
+            try:
+                # ByteTrack guarda el estado [x, y, a, h, vx, vy, va, vh]
+                for track_list in [self._tracker.tracked_tracks, self._tracker.lost_tracks]:
+                    for track in track_list:
+                        # ByteTrack usa Kalman Filter interno. track.mean es [x,y,a,h,vx,vy,va,vh]
+                        if hasattr(track, 'mean') and len(track.mean) >= 2:
+                            track.mean[0] += dx
+                            track.mean[1] += dy
+            except Exception:
+                pass
 
         # Convertir nuestras detecciones al formato de supervision
         xyxy = []

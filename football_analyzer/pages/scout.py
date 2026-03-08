@@ -357,7 +357,7 @@ def view_editor():
     header_col1, header_col2 = st.columns([3, 1])
     with header_col1:
         p_name = st.session_state.project_name if st.session_state.project_name else "Sin Nombre"
-        st.write(f"### 📂 Proyecto: {p_name}")
+        st.write(f"### Proyecto: {p_name}")
 
     st.markdown("""
         <style>
@@ -394,7 +394,7 @@ def view_editor():
         st.markdown(f"""
         <div style="background:rgba(17, 24, 39, 0.4);border:1px solid rgba(0,212,170,0.2);
                     border-radius:12px;padding:16px;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
-            <h4 style="margin-top:0;color:#00d4aa;text-transform:uppercase;font-size:14px;letter-spacing:1px;font-weight:700;">🏷️ Botonera Automática (Panel Nacsport)</h4>
+            <h4 style="margin-top:0;color:#00d4aa;text-transform:uppercase;font-size:14px;letter-spacing:1px;font-weight:700;">Botonera (Modo Nacsport)</h4>
         """, unsafe_allow_html=True)
         
         st.session_state.current_time = st.number_input("Tiempo de marcado (s)", 0.0, float(st.session_state.video_duration), st.session_state.current_time, step=0.1)
@@ -446,7 +446,7 @@ def view_editor():
                     st.rerun()
 
     if not st.session_state.manual_events:
-        st.info("No hay eventos en el timeline. Usa la barra lateral para crear eventos.")
+        st.info("No hay eventos en el timeline. Usa la botonera para crear eventos.")
     else:
         for ev in reversed(st.session_state.manual_events):
             with st.container():
@@ -459,15 +459,15 @@ def view_editor():
                         </div>
                         <div style="font-size:13px; color:#a2b9ce; margin-top:5px;">
                             {ev.get('note', '') or 'Sin notas'}
-                            { ' 🎨 (Anotación/Dibujo aplicado)' if ev.get('has_drawing') else ''}
-                            { ' 🎞️ (Clip MP4)' if ev.get('clip_path') else ''}
+                            { ' (Anotación/Dibujo aplicado)' if ev.get('has_drawing') else ''}
+                            { ' (Clip MP4)' if ev.get('clip_path') else ''}
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 t1, t2, t3, t4, t5 = st.columns(5)
-                if t1.button("✏️ Editar", key=f"edit_{ev['id']}", use_container_width=True):
+                if t1.button("Editar", key=f"edit_{ev['id']}", use_container_width=True):
                     st.session_state.editing_ev_id = ev['id']
                     st.rerun()
                 if t2.button("🗑️ Borrar", key=f"del_{ev['id']}", use_container_width=True):

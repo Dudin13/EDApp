@@ -45,9 +45,18 @@ class VideoProcessor:
         self.manual_seeds = config.get("manual_seeds", [])
         self.tracker = SimpleTracker()
         
-        # Homografía base (mapeo lineal para esta versión)
+        # Homografía base y dimensiones del campo (105x68m estándar)
         self.pitch_width = 105
         self.pitch_height = 68
+        self.H = None
+        
+        src_pts = config.get("src_pts")
+        dst_pts = config.get("dst_pts")
+        if src_pts is not None and dst_pts is not None:
+            src = np.array(src_pts, dtype=np.float32)
+            dst = np.array(dst_pts, dtype=np.float32)
+            if len(src) >= 4 and len(dst) >= 4:
+                self.H, _ = cv2.findHomography(src, dst)
         
         # Inicializar tracker con semillas manuales si existen
         if self.manual_seeds:
@@ -56,6 +65,8 @@ class VideoProcessor:
         # Estado cinemático del balón
         self.last_ball_pos = None  # (x, y)
         self.last_ball_minute = -1
+        self.ball_history = []  # lista de tuplas (minuto, x, y)
+        self.prev_gray = None   # Frame anterior para Optical Flow
 
     def process(self):
         """
@@ -123,6 +134,26 @@ class VideoProcessor:
             yield progreso, status, {}
 
             try:
+                # ── Optical Flow (Compensación de Movimiento de Cámara) ────
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                dx, dy = 0.0, 0.0
+                if self.prev_gray is not None:
+                    # Encontrar puntos clave en el frame anterior
+                    p0 = cv2.goodFeaturesToTrack(self.prev_gray, mask=None, maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
+                    if p0 is not None:
+                        # Calcular el flujo óptico hacia el frame actual
+                        p1, st, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, p0, None, 
+                                                               winSize=(15, 15), maxLevel=2, 
+                                                               criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+                        if p1 is not None and st is not None:
+                            good_new = p1[st == 1]
+                            good_old = p0[st == 1]
+                            if len(good_new) > 0 and len(good_old) > 0:
+                                movements = good_new - good_old
+                                dx = float(np.median(movements[:, 0]))
+                                dy = float(np.median(movements[:, 1]))
+                self.prev_gray = gray
+
                 dets = detect_frame(frame, mode=self.detection_mode, confidence=self.confidence)
 
                 # Separar balón de jugadores
@@ -135,8 +166,8 @@ class VideoProcessor:
                     eq = classify_team(frame, det, team_colors)
                     equipo_list.append(eq)
 
-                # Actualizar tracker (solo con jugadores)
-                tracks = self.tracker.update(player_dets, equipo_list, minute=minute)
+                # Actualizar tracker (solo con jugadores) pasando el offset de la cámara
+                tracks = self.tracker.update(player_dets, equipo_list, minute=minute, camera_offset=(dx, dy))
 
                 # Guardar estadísticas por track
                 for tid, track in tracks.items():
@@ -179,8 +210,41 @@ class VideoProcessor:
                         bx, by = ball["x"], ball["y"]
                         self.last_ball_pos = (bx, by)
                         self.last_ball_minute = minute
+                        self.ball_history.append((minute, bx, by))
                         video_second = frame_pos / fps
 
+                else:
+                    # ── Interpolación del Balón ──────────────────────────
+                    best_ball = None
+                    if len(self.ball_history) >= 2:
+                        # Usamos los últimos 2 puntos para extrapolar
+                        m1, x1, y1 = self.ball_history[-2]
+                        m2, x2, y2 = self.ball_history[-1]
+                        dm = m2 - m1
+                        dt = minute - m2
+                        
+                        # Máximo tiempo permitido para interpolar: 5 segundos (aprox 10 frames de 0.5s)
+                        max_lost_time = 5.0 / 60.0
+                        
+                        if 0 < dm <= max_lost_time and 0 < dt <= max_lost_time:
+                            # Extrapolación lineal simple
+                            pred_x = x2 + (x2 - x1) * (dt / dm)
+                            pred_y = y2 + (y2 - y1) * (dt / dm)
+                            
+                            # Compensar por movimiento de cámara
+                            pred_x += dx
+                            pred_y += dy
+                            
+                            best_ball = {
+                                "x": pred_x, "y": pred_y, "w": 25, "h": 25, 
+                                "clase": "ball", "confianza": 0.05, 
+                                "is_interpolated": True
+                            }
+                            bx, by = pred_x, pred_y
+                            ball = best_ball
+                            video_second = frame_pos / fps
+
+                if best_ball:
                     # Comprobar qué jugador está más cerca del balón
                     min_dist = float("inf")
                     closest_tid = None
@@ -192,20 +256,20 @@ class VideoProcessor:
                                 min_dist = dist
                                 closest_tid = tid
 
-                    # Aumentamos el radio para capturar toques cerca del pie
-                    CONTACT_RADIUS = 110  # píxeles (antes 90)
-                    MIN_GAP_SECONDS = 1.2  # mínimo 1.2s entre eventos del mismo jugador (antes 2.0)
+                    # Radio de contacto: 130 píxeles para ser más permisivos en tomas amplias
+                    CONTACT_RADIUS = 130  
+                    MIN_GAP_SECONDS = 1.0  # Frecuencia mínima de eventos
+                    
                     if closest_tid is not None and min_dist < CONTACT_RADIUS:
                         track_stats[closest_tid]["ball_contacts"] += 1
-                        # Evitar múltiples eventos del mismo jugador en pocos segundos
+                        
                         last_event_second = next(
                             (e["video_second"] for e in reversed(ball_events)
                              if e["track_id"] == closest_tid), -999
                         )
+                        
                         if video_second - last_event_second > MIN_GAP_SECONDS:
-                            # Clasificar acción
                             action_type = self._classify_ball_action(ball, tracks[closest_tid])
-                            
                             bx_p, by_p = self._pixel_to_pitch(bx, by)
                             
                             ball_events.append({
@@ -215,7 +279,8 @@ class VideoProcessor:
                                 "equipo": track_stats[closest_tid]["equipo"],
                                 "ball_pos": (bx, by),
                                 "pitch_pos": (bx_p, by_p),
-                                "action": action_type
+                                "action": action_type,
+                                "is_interpolated": ball.get("is_interpolated", False)
                             })
 
                 # Guardar detecciones por minuto (jugadores)
@@ -407,10 +472,18 @@ class VideoProcessor:
         }
 
     def _pixel_to_pitch(self, x, y):
-        """Mapeo a coordenadas de campo (105x68)."""
-        px = np.clip(x / 1280 * self.pitch_width, 0, self.pitch_width)
-        py = np.clip(y / 720 * self.pitch_height, 0, self.pitch_height)
-        return float(px), float(py)
+        """Mapeo a coordenadas de campo (105x68). Usa Homografía si está disponible."""
+        if self.H is not None:
+            pt = np.array([[[float(x), float(y)]]], dtype=np.float32)
+            transformed = cv2.perspectiveTransform(pt, self.H)
+            px, py = transformed[0][0]
+            # No limitamos entre 0 y 105 estrictamente, porque pueden estar en la banda.
+            return float(px), float(py)
+        else:
+            # Fallback ingenuo (naïve) si no hay puntos de calibración
+            px = np.clip(x / 1280 * self.pitch_width, 0, self.pitch_width)
+            py = np.clip(y / 720 * self.pitch_height, 0, self.pitch_height)
+            return float(px), float(py)
 
     def _classify_ball_action(self, ball_det, player_track):
         """Clasifica la acción basada en la proximidad y 'feeling' físico."""

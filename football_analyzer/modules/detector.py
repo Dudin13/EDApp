@@ -220,6 +220,7 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
                 "x": cx, "y": cy,
                 "w": w, "h": h,
                 "clase": clase,
+                "conf": round(float(box.conf[0]), 3),
                 "confianza": round(float(box.conf[0]), 3),
                 "mask": None,
                 "torso_color": get_torso_color(frame, cx, cy, w, h)
@@ -316,6 +317,10 @@ def auto_detect_team_colors(frame: np.ndarray, detections: list) -> dict:
         if det.get("clase") in ("player", "goalkeeper"):
             c = get_torso_color(frame, det["x"], det["y"], det["w"], det["h"])
             if c is not None:
+                # Filtrar colores que probablemente sean césped (Verde: H 35-85, S > 30)
+                h, s, v = c
+                if 35 <= h <= 85 and s > 30:
+                    continue
                 colors.append(c)
 
     if len(colors) < 4:
@@ -336,19 +341,15 @@ def classify_team(frame: np.ndarray, det: dict, team_colors: dict = None) -> int
     """
     Clasifica a qué equipo pertenece un jugador.
     - Si hay team_colors (de auto_detect_team_colors), usa distancia al centroide.
-    - Si no, usa reglas HSV por el color del partido conocido.
+    - Si no, usa reglas HSV por defecto.
     Retorna: 0 (equipo local), 1 (equipo visitante), 2 (árbitro), -1 (descartado)
-
-    Para el partido Mirandilla vs CCCFB:
-      Equipo 0 (Amarillo): H 20-40, S > 80
-      Equipo 1 (Blanco/Verde): S < 60 o H 55-90
-      Árbitro: Rojo (H 0-10 o 170-180, S > 100)
     """
+    # 1. El árbitro suele detectarse por clase primero
     if det.get("clase") == "referee":
         return 2
 
-    # Filtro por tamaño mínimo (evitar falsas detecciones)
-    if det["w"] * det["h"] < 600:
+    # 2. Filtro por tamaño mínimo
+    if det["w"] * det["h"] < 500:
         return -1
 
     color = get_torso_color(frame, det["x"], det["y"], det["w"], det["h"])
@@ -357,21 +358,31 @@ def classify_team(frame: np.ndarray, det: dict, team_colors: dict = None) -> int
 
     h, s, v = color
 
-    # Si tenemos colores automáticos detectados, usar distancia
+    # 3. Detectar árbitro por color (típicamente Rojo, Negro o Flúor)
+    # Rojo: H 0-10 o 170-180, S > 100
+    if ((0 <= h <= 10 or 170 <= h <= 180) and s > 120):
+        return 2
+    # Negro/Muy oscuro: V < 50
+    if v < 50:
+        return 2
+
+    # 4. Clasificar entre equipos usando KMeans si está disponible
     if team_colors and "team_0" in team_colors and "team_1" in team_colors:
         c0 = np.array(team_colors["team_0"])
         c1 = np.array(team_colors["team_1"])
+        
+        # Pesamos el Hue más que S y V para equipos con colores distintos
+        # pero para Blanco vs Otro, Saturation es clave.
         dist0 = np.linalg.norm(color - c0)
         dist1 = np.linalg.norm(color - c1)
         return 0 if dist0 < dist1 else 1
 
-    # Reglas HSV fijas (árbitro rojo)
-    if (0 <= h <= 10 or 170 <= h <= 180) and s > 100:
-        return 2
+    # 5. Reglas de fallback (Amarillo vs Blanco/Verde)
     # Amarillo
-    if 20 <= h <= 40 and s > 80:
+    if 20 <= h <= 45 and s > 70:
         return 0
-    # Blanco o verde (camiseta a rayas)
-    if s < 60 or (55 <= h <= 90 and s > 60):
+    # Blanco o Verde
+    if s < 70 or (50 <= h <= 95):
         return 1
+        
     return 0
