@@ -21,6 +21,8 @@ from collections import defaultdict
 
 from modules.detector import detect_frame, classify_team, auto_detect_team_colors
 from modules.tracker import SimpleTracker
+from modules.identity_reader import IdentityReader
+from modules.event_spotter_tdeed import EventSpotterTDEED
 
 
 class VideoProcessor:
@@ -61,6 +63,10 @@ class VideoProcessor:
         # Inicializar tracker con semillas manuales si existen
         if self.manual_seeds:
             self.tracker.initialize_with_seeds(self.manual_seeds)
+        
+        # SOTA Modules
+        self.id_reader = IdentityReader()
+        self.event_spotter = EventSpotterTDEED()
         
         # Estado cinemático del balón
         self.last_ball_pos = None  # (x, y)
@@ -272,7 +278,8 @@ class VideoProcessor:
                             action_type = self._classify_ball_action(ball, tracks[closest_tid])
                             bx_p, by_p = self._pixel_to_pitch(bx, by)
                             
-                            ball_events.append({
+                            # SOTA Validation (T-DEED + Geometry)
+                            event_data = {
                                 "track_id": closest_tid,
                                 "video_second": video_second,
                                 "minute": minute,
@@ -280,8 +287,13 @@ class VideoProcessor:
                                 "ball_pos": (bx, by),
                                 "pitch_pos": (bx_p, by_p),
                                 "action": action_type,
+                                "conf": ball.get("confianza", 0),
                                 "is_interpolated": ball.get("is_interpolated", False)
-                            })
+                            }
+                            
+                            # Validate using expert rules
+                            if self.event_spotter.validate_geometrical(event_data, (bx_p, by_p)):
+                                ball_events.append(event_data)
 
                 # Guardar detecciones por minuto (jugadores)
                 minuto_key = int(minute)
@@ -484,14 +496,14 @@ class VideoProcessor:
 
     def _classify_ball_action(self, ball_det, player_track):
         """
-        Clasifica la acción (Pase, Tiro, Conducción) basada en vectores físicos.
+        Clasifica la acción (Pase, Tiro, Conducción) basada en vectores físicos y contexto.
         """
         if player_track.clase == "goalkeeper":
             return "Parada/Despeje"
         
         # Necesitamos al menos los últimos 3 puntos para ver tendencia de velocidad/dirección
         if len(self.ball_history) < 3:
-            return "Pase" # Fallback
+            return "Pase Corto" # Fallback
             
         # Calcular vector de velocidad reciente
         m1, x1, y1 = self.ball_history[-3]
@@ -507,13 +519,18 @@ class VideoProcessor:
         # Convertir a coordenadas de campo para ver si va a portería
         px, py = self._pixel_to_pitch(x2, y2)
         
-        # Heurística de TIRO: alta velocidad y dirección hacia portería
-        # Porterías están en x ~ 0 y x ~ 105
-        is_heading_goal = (vx > 300 and px > 70) or (vx < -300 and px < 35)
-        
-        if speed > 800 and is_heading_goal:
+        # 1. TIRO: alta velocidad y dirección hacia portería (x ~ 0 o x ~ 105)
+        is_heading_goal = (vx > 350 and px > 75) or (vx < -350 and px < 30)
+        if speed > 850 and is_heading_goal:
             return "Tiro"
-        elif speed > 400:
-            return "Pase"
+            
+        # 2. PASE LARGO: alta velocidad sin necesariamente ir a portería
+        if speed > 600:
+            return "Pase Largo"
+            
+        # 3. PASE CORTO: velocidad moderada
+        if speed > 250:
+            return "Pase Corto"
         
+        # 4. CONDUCCIÓN: velocidad baja (el balón se mueve con el jugador)
         return "Conducción"

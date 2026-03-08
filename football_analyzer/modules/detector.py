@@ -12,8 +12,14 @@ import os
 import tempfile
 import logging
 from pathlib import Path
+from modules.calibration_pnl import PnLCalibrator
+from modules.identity_reader import IdentityReader
 
 logger = logging.getLogger(__name__)
+
+# Singletons for calibration and ID
+_calibrator = PnLCalibrator()
+_id_reader = IdentityReader()
 
 # ── Configuración ──────────────────────────────────────────────────────────
 ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "")
@@ -125,7 +131,9 @@ def detect_frame_roboflow(frame: np.ndarray, confidence: int = 40, overlap: int 
                 "h": int(pred["height"]),
                 "clase": pred["class"],
                 "confianza": round(pred["confidence"], 3),
-                "torso_color": get_torso_color(frame, int(pred["x"]) + x_min, int(pred["y"]) + y_min, int(pred["width"]), int(pred["height"]))
+                "torso_color": get_torso_color(frame, int(pred["x"]) + x_min, int(pred["y"]) + y_min, int(pred["width"]), int(pred["height"])),
+                "pitch_coords": _calibrator.transform_point(int(pred["x"]) + x_min, int(pred["y"]) + y_min),
+                "dorsal": None
             })
 
     for pred in result_der.predictions:
@@ -216,6 +224,19 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
                 if box_conf < confidence:
                     continue
 
+            # Extract Dorsal (Identity Layer)
+            dorsal_num = None
+            if clase in ("player", "goalkeeper"):
+                # Crop torso for OCR
+                x1_crop = max(0, cx - w // 4)
+                y1_crop = max(0, cy - h // 3)
+                x2_crop = min(frame.shape[1], cx + w // 4)
+                y2_crop = min(frame.shape[0], cy + h // 6)
+                torso_roi = frame[y1_crop:y2_crop, x1_crop:x2_crop]
+                
+                if torso_roi.size > 0:
+                    dorsal_num, _ = _id_reader.extract_dorsal(torso_roi)
+
             det = {
                 "x": cx, "y": cy,
                 "w": w, "h": h,
@@ -223,7 +244,9 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
                 "conf": round(float(box.conf[0]), 3),
                 "confianza": round(float(box.conf[0]), 3),
                 "mask": None,
-                "torso_color": get_torso_color(frame, cx, cy, w, h)
+                "torso_color": get_torso_color(frame, cx, cy, w, h),
+                "pitch_coords": _calibrator.transform_point(cx, cy),
+                "dorsal": dorsal_num
             }
 
             # Si hay máscaras de segmentación, obtener el polígono
