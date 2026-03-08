@@ -71,106 +71,18 @@ if not st.session_state.get("logged_in"):
     st.stop()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# NAVEGACIÓN — definición de estructura
-# ══════════════════════════════════════════════════════════════════════════════
-# page_key es el identificador interno que usamos para el routing
-NAV_TOP = [
-    {"key": "datos_jugadores",  "icon": "🏆", "label": "Mi Equipo",      "group": "EQUIPO"},
-    {"key": "equipo_config",  "icon": "⚙️", "label": "Configuración",      "group": "EQUIPO"},
-    {"key": "partido_nuevo",  "icon": "🎬", "label": "Nuevo Análisis",  "group": "PARTIDOS"},
-    {"key": "partido_clips",  "icon": "✂️",  "label": "Clips de Acción","group": "PARTIDOS"},
-]
+from modules.navigation import render_sidebar
+from modules.utils import get_logo_base64
 
-# Sub-items bajo el grupo "DATOS"
-DATO_JUGADORES = {"key": "datos_jugadores",    "icon": "👤", "label": "Datos Jugadores"}
-DATO_COLECTIVO_ITEMS = [
-    {"key": "colectivo_mapa",     "icon": "🗻️", "label": "Mapa Táctico"},
-    {"key": "colectivo_stats",    "icon": "👥", "label": "Análisis Colectivo"},
-    {"key": "colectivo_metricas", "icon": "📊", "label": "Métricas de Partido"},
-]
+# ... (Previous code remains up to get_logo_base64 which is now imported)
 
-# Estado de navegación
-if "page" not in st.session_state:
-    st.session_state["page"] = "home"
-
-current_page = st.session_state["page"]
-
+# ... (Previous LOGIN logic remains unchanged for now to preserve session context)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
-    logo_b64 = get_logo_base64()
-    logo_html = (f'<img src="data:image/png;base64,{logo_b64}" style="height:30px;border-radius:6px;">'
-                 if logo_b64 else '<span style="font-size:22px;">⚽</span>')
-
-    st.markdown(f"""
-    <div class="sidebar-logo">
-        <div style="margin-top: -10px;">{logo_html}</div>
-        <div>
-            <div class="sidebar-logo-text">ED Analytics</div>
-            <div class="sidebar-logo-sub">Scout Platform</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="nav-group-label">PRINCIPAL</div>', unsafe_allow_html=True)
-    if st.button("🏠", key="nav_home", use_container_width=True):
-        st.session_state["page"] = "home"
-        st.rerun()
-
-    # ── EQUIPO ──
-    st.markdown('<div class="nav-group-label">EQUIPO</div>', unsafe_allow_html=True)
-    if st.button("Mi Equipo", key="nav_equipo", use_container_width=True):
-        st.session_state["page"] = "datos_jugadores"
-        st.rerun()
-    
-    # Nuevo botón Modo Analista bajo Mi Equipo
-    if st.button("Modo Analista", key="nav_analista", use_container_width=True):
-        st.session_state["page"] = "scout"
-        st.session_state["scout_step"] = "dashboard"
-        st.rerun()
-
-    # ── PARTIDOS ──
-    st.markdown('<div class="nav-group-label">PARTIDOS</div>', unsafe_allow_html=True)
-    if st.button("Nuevo Análisis", key="nav_partido_nuevo", use_container_width=True):
-        st.session_state["page"] = "partido_nuevo"
-        st.rerun()
-    if st.button("Clips de Acción", key="nav_partido_clips", use_container_width=True):
-        st.session_state["page"] = "partido_clips"
-        st.rerun()
-    if st.button("Calibración 📍", key="nav_calibracion", use_container_width=True):
-        st.session_state["page"] = "calibracion"
-        st.rerun()
-
-    # ── DATOS (dos sub-items directos) ──
-    st.markdown('<div class="nav-group-label">DATOS</div>', unsafe_allow_html=True)
-
-    if st.button("Datos Jugadores", key="nav_datos_jugadores", use_container_width=True):
-        st.session_state["page"] = "datos_jugadores"
-        st.session_state["squad_selected_player"] = None
-        st.rerun()
-
-    if st.button("Datos Colectivos", key="nav_datos_colectivos", use_container_width=True):
-        st.session_state["page"] = "datos_colectivos"
-        st.rerun()
-
-    # Partido activo
-    if st.session_state.get("analysis_config"):
-        cfg = st.session_state["analysis_config"]
-        st.markdown(f"""
-        <div class="sidebar-match-card">
-            <div class="sidebar-match-title">Partido activo</div>
-            <div class="sidebar-match-teams">{cfg.get('team','')} <span style="color:#5a6a7e;font-weight:400;">vs</span> {cfg.get('rival','')}</div>
-            <div class="sidebar-match-meta">{cfg.get('match_date','')} · {cfg.get('competition','')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    if st.button("Configuración", key="nav_config", use_container_width=True):
-        st.session_state["page"] = "equipo_config"
-        st.rerun()
+    render_sidebar()
     
     st.markdown('<div class="nav-group-label" style="text-align: center; margin-top: 10px;">🎨 TEMA VISUAL</div>', unsafe_allow_html=True)
     theme_choice = st.selectbox(
@@ -184,58 +96,34 @@ with st.sidebar:
         st.rerun()
         
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("↩  Cerrar sesión", use_container_width=True):
+    if st.sidebar.button("↩  Cerrar sesión", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # ROUTING
 # ══════════════════════════════════════════════════════════════════════════════
-page = st.session_state.get("page", "home")
+PAGES = {
+    "home": "pages.home",
+    "equipo_config": "pages.settings",
+    "partido_nuevo": "pages.upload_analyze",
+    "partido_clips": "pages.action_clips",
+    "datos_jugadores": "pages.squad_players",
+    "datos_colectivos": "pages.collective_dashboard",
+    "scout": "pages.scout",
+    "calibracion": "pages.calibration",
+    "player_tracking": "pages.player_tracking"
+}
 
-if page == "home":
-    from pages.home import render
-    render()
+current_page = st.session_state.get("page", "home")
+# Map legacy routes
+if current_page in ("colectivo_mapa", "colectivo_stats", "colectivo_metricas"):
+    current_page = "datos_colectivos"
 
-elif page == "equipo_config":
-    from pages.settings import render
-    render()
-
-elif page == "partido_nuevo":
-    from pages.upload_analyze import render
-    render()
-
-elif page == "partido_clips":
-    from pages.action_clips import render
-    render()
-
-elif page == "datos_jugadores":
-    from pages.squad_players import render
-    render()
-
-elif page == "datos_colectivos":
-    from pages.collective_dashboard import render
-    render()
-
-elif page == "scout":
-    from pages.scout import render
-    render()
-
-elif page == "calibracion":
-    from pages.calibration import render
-    render()
-
-# Compatibilidad con rutas antiguas
-elif page in ("colectivo_mapa", "colectivo_stats", "colectivo_metricas"):
-    from pages.collective_dashboard import render
-    render()
-
-elif page == "jugador_perfil":
-    from pages.player_tracking import render
-    render()
-
+if current_page in PAGES:
+    module = __import__(PAGES[current_page], fromlist=["render"])
+    module.render()
 else:
     from pages.upload_analyze import render
     render()

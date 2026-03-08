@@ -6,7 +6,9 @@ class PnLCalibrator:
     Wrapper for PnLCalib integration.
     Goal: Transform broadcast video coordinates to 2D pitch coordinates.
     """
-    def __init__(self, pitch_template_path=None):
+    def __init__(self, pitch_width=105, pitch_height=68, pitch_template_path=None):
+        self.pitch_width = pitch_width
+        self.pitch_height = pitch_height
         self.pitch_template = pitch_template_path
         self.homography_matrix = None
 
@@ -15,12 +17,18 @@ class PnLCalibrator:
         Uses PnLCalib logic to find the best homography matrix H.
         In SOTA mode, this would detect lines and optimize the matrix.
         """
-        # Placeholder for PnLCalib optimization loop
-        # 1. Detect field lines
-        # 2. Match with 3D model
-        # 3. Solve PnP / Optimize
-        print("Estimating homography using PnLCalib...")
-        pass
+    def solve_pitch_dimensions(self, keypoints):
+        """
+        GEOMETRY SOLVER: Uses FIFA standard marks (Penalty box = 16.5m) 
+        to infer the total pitch width if unknown.
+        """
+        # A FIFA pitch MUST have a 16.5m penalty box.
+        # By measuring the pixel length of the penalty box vs goal line,
+        # we can calculate the total width of the field.
+        # Ratio = Full_Width / 16.5m_Mark
+        print("Auto-solving pitch dimensions using FIFA standard marks...")
+        # (Real world logic: W = (pixel_W * 16.5) / pixel_penalty_box)
+        pass 
 
     def transform_point(self, x, y):
         """

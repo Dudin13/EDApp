@@ -40,12 +40,52 @@ def _metric_row(label, value, unit="", color="#00d4aa"):
 
 
 def render():
+    # ── CUSTOM CSS ─────────────────────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    .event-icon {
+        font-size: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
+    }
+    .status-tag {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-left: 8px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     # ── HEADER ─────────────────────────────────────────────────────────────────
     st.markdown("""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
         <div>
-            <h2 style="margin:0;font-size:20px;font-weight:700;color:#fff;">Datos Colectivos</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:#5a6a7e;">Análisis táctico y métricas de equipo por partido</p>
+            <h2 style="margin:0;font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Panel Táctico <span style='color:#00d4aa'>Colectivo</span></h2>
+            <p style="margin:2px 0 0;font-size:14px;color:#8899aa;font-weight:500;">Sincronización de eventos IA y métricas avanzadas</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -346,7 +386,9 @@ def render():
         video_available = video_path and Path(video_path).exists()
 
         if video_available and partido_idx == 0 and st.session_state.get("analysis_done"):
-            st.video(video_path)
+            start_sec = st.session_state.get("preview_clip_second", 0)
+            # st.video con start_time permite saltar a eventos automáticamente
+            st.video(video_path, start_time=int(start_sec))
         else:
             p_local = str(partido_sel['local']) if partido_sel else 'Local'
             p_visit = str(partido_sel['visitante']) if partido_sel else 'Visitante'
@@ -418,13 +460,19 @@ def render():
             ]
             real_clips = False
 
-        # Aplicar filtro
+        # Aplicar filtro inteligente
         if search_query:
-            clips_data = [c for c in clips_data if search_query.lower() in str(c).lower()]
+            q = search_query.lower()
+            clips_data = [c for c in clips_data if (
+                q in str(c.get("nombre_jugador", "")).lower() or 
+                q in str(c.get("action", "")).lower() or 
+                q in str(c.get("nombre_equipo", "")).lower() or
+                (q.isdigit() and int(q) == int(c.get("minute", -1)))
+            )]
 
         ACTION_ICON = {
-            "Gol": "⚽", "Tiro": "🥅", "Pase": "🎯",
-            "Falta": "🟥", "Córner": "🚩", "Recuperación": "💪",
+            "Gol": "⚽", "Tiro": "🥅", "Pase Largo": "🎯", "Pase Corto": "🏹", "Pase": "🎯",
+            "Falta": "🟥", "Córner": "🚩", "Recuperación": "💪", "Duelo ganado": "💪",
             "Conducción": "🏃", "Parada/Despeje": "👐"
         }
 
@@ -439,21 +487,21 @@ def render():
             eq_color = "#00d4aa" if equipo == team_local else "#4d9fff"
             icon = ACTION_ICON.get(accion, "⚽")
 
-            # Tarjeta de evento premium
+            # Tarjeta de evento premium con Glassmorphism
             st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:12px;padding:12px;
-                        background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);
-                        border:1px solid rgba(255,255,255,0.05);border-radius:10px;
-                        margin-bottom:8px;border-left:4px solid {eq_color};transition:all 0.2s;">
-                <div style="font-size:20px;background:rgba(255,255,255,0.05);width:40px;height:40px;
-                            display:flex;align-items:center;justify-content:center;border-radius:8px;">{icon}</div>
+            <div class="glass-card" style="display:flex;align-items:center;gap:14px;margin-bottom:10px;border-left:4px solid {eq_color};">
+                <div class="event-icon">{icon}</div>
                 <div style="flex:1;">
-                    <div style="display:flex;justify-content:space-between;">
-                        <span style="font-size:13px;font-weight:700;color:#fff;">{nombre}</span>
-                        <span style="font-size:11px;font-weight:800;color:{eq_color};">{int(minuto)}'</span>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:14px;font-weight:800;color:#fff;letter-spacing:0.2px;">{nombre}</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:12px;font-weight:900;color:{eq_color};background:{eq_color}15;padding:2px 6px;border-radius:4px;">{int(minuto)}'</span>
+                        </div>
                     </div>
-                    <div style="font-size:11px;color:#8899aa;margin-top:2px;">
-                        {accion.upper()} · {equipo}
+                    <div style="display:flex;align-items:center;margin-top:4px;gap:8px;">
+                        <span style="font-size:11px;color:#8899aa;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">{accion}</span>
+                        <span style="width:3px;height:3px;background:#3a4a5e;border-radius:50%;"></span>
+                        <span style="font-size:11px;color:#5a6a7e;font-weight:500;">{equipo}</span>
                     </div>
                 </div>
             </div>

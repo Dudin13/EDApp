@@ -23,6 +23,7 @@ from modules.detector import detect_frame, classify_team, auto_detect_team_color
 from modules.tracker import SimpleTracker
 from modules.identity_reader import IdentityReader
 from modules.event_spotter_tdeed import EventSpotterTDEED
+from modules.calibration_pnl import PnLCalibrator
 
 
 class VideoProcessor:
@@ -66,6 +67,10 @@ class VideoProcessor:
         
         # SOTA Modules
         self.id_reader = IdentityReader()
+        self.calibrator = PnLCalibrator(
+            pitch_width=self.config.get("pitch_width", 105),
+            pitch_height=self.config.get("pitch_height", 68)
+        )
         self.event_spotter = EventSpotterTDEED()
         
         # Estado cinemático del balón
