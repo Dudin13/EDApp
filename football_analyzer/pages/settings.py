@@ -45,7 +45,7 @@ def render():
         )
 
         # Estado del modelo YOLOv8 local
-        yolo_path = Path(__file__).parent.parent / "train_yolo" / "runs" / "detect" / "train" / "weights" / "best.pt"
+        yolo_path = Path(__file__).parent.parent.parent / "train_yolo" / "runs" / "detect" / "EDudin_v1" / "weights" / "best.pt"
         if yolo_path.exists():
             size_mb = yolo_path.stat().st_size / 1024 / 1024
             st.success(f"✅ Modelo YOLOv8 local disponible ({size_mb:.1f} MB) — {yolo_path}")

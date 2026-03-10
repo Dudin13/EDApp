@@ -15,7 +15,7 @@ selected_theme = st.session_state.get("ui_theme", "Estilo Impeccable")
 if selected_theme == "Estilo Impeccable":
     st.markdown(CSS_IMPECCABLE, unsafe_allow_html=True)
 else:
-    st.markdown(CSS_WYSCOUT, unsafe_allow_html=True), unsafe_allow_html=True)
+    st.markdown(CSS_WYSCOUT, unsafe_allow_html=True)
 
 
 def get_logo_base64():
@@ -87,7 +87,7 @@ with st.sidebar:
     st.markdown('<div class="nav-group-label" style="text-align: center; margin-top: 10px;">🎨 TEMA VISUAL</div>', unsafe_allow_html=True)
     theme_choice = st.selectbox(
         "Tema UI", 
-        ["Estilo Impeccable", "Estilo Wyscout Neon"], 
+        ["Estilo Impeccable", "Estilo Neon"], 
         index=0 if st.session_state.get("ui_theme", "Estilo Impeccable") == "Estilo Impeccable" else 1,
         label_visibility="collapsed"
     )

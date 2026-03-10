@@ -131,7 +131,7 @@ def detect_frame_roboflow(frame: np.ndarray, confidence: int = 40, overlap: int 
                 "h": int(pred["height"]),
                 "clase": pred["class"],
                 "confianza": round(pred["confidence"], 3),
-                "torso_color": get_torso_color(frame, int(pred["x"]) + x_min, int(pred["y"]) + y_min, int(pred["width"]), int(pred["height"])),
+                "torso_color": _extract_torso_rgb(frame, int(pred["x"]) + x_min, int(pred["y"]) + y_min, int(pred["width"]), int(pred["height"])),
                 "pitch_coords": _calibrator.transform_point(int(pred["x"]) + x_min, int(pred["y"]) + y_min),
                 "dorsal": None
             })
@@ -244,7 +244,7 @@ def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
                 "conf": round(float(box.conf[0]), 3),
                 "confianza": round(float(box.conf[0]), 3),
                 "mask": None,
-                "torso_color": get_torso_color(frame, cx, cy, w, h),
+                "torso_color": _extract_torso_rgb(frame, cx, cy, w, h),
                 "pitch_coords": _calibrator.transform_point(cx, cy),
                 "dorsal": dorsal_num
             }
@@ -311,101 +311,120 @@ def detect_frame(frame: np.ndarray, mode: str = "auto", confidence=40) -> list:
 
 # ── Clasificación de equipos ───────────────────────────────────────────────
 
-def get_torso_color(frame: np.ndarray, x: int, y: int, w: int, h: int) -> np.ndarray | None:
-    """Extrae el color HSV medio del torso de un jugador (zona central del bounding box)."""
-    x1 = max(0, x - w // 4)
-    x2 = min(frame.shape[1], x + w // 4)
-    y1 = max(0, y - h // 4)
-    y2 = min(frame.shape[0], y + h // 4)
-    roi = frame[y1:y2, x1:x2]
-    if roi.size == 0:
-        return None
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    return np.mean(hsv, axis=(0, 1))
+from sklearn.cluster import KMeans
+from collections import Counter
 
+def _extract_torso_rgb(frame: np.ndarray, x: int, y: int, w: int, h: int) -> tuple | None:
+    """Extrae el color RGB dominante usando KMeans sobre el 30% central del torso."""
+    # 1. Definir región central (el "pecho") para evitar brazos, cabeza y piernas
+    cx = x
+    cy = y
+    
+    x1 = int(cx - w * 0.25)
+    x2 = int(cx + w * 0.25)
+    
+    # y va desde un 15% arriba del centro, hasta el centro (zona pecho, asumiendo cy es centro total)
+    # y1 es más alto, y2 es más bajo en coordenadas de imagen (y aumenta hacia abajo)
+    y1 = int(cy - h * 0.3)
+    y2 = int(cy + h * 0.1)
+
+    # Validar contornos
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+    x2 = min(frame.shape[1], x2)
+    y2 = min(frame.shape[0], y2)
+
+    roi = frame[y1:y2, x1:x2]
+    
+    if roi.size == 0 or roi.shape[0] < 2 or roi.shape[1] < 2:
+        return None
+
+    # Covertir a RGB
+    roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+    pixels = roi_rgb.reshape(-1, 3)
+
+    # Extraer mayoritario local (KMeans k=2 para separar logo/sombra del color base)
+    if len(pixels) < 4:
+        return None
+        
+    kmeans_local = KMeans(n_clusters=2, random_state=42, n_init=3)
+    labels = kmeans_local.fit_predict(pixels)
+    counts = Counter(labels)
+    # Color dominante
+    dominant_idx = counts.most_common(1)[0][0]
+    dominant_color = kmeans_local.cluster_centers_[dominant_idx]
+    
+    # Rechazar verde (césped puro)
+    # RGB aproximado del césped verde claro/oscuro
+    r, g, b = dominant_color
+    if g > r + 30 and g > b + 30: # Fuerte dominante verde
+        # Devolver el secundario si existe
+        sec_idx = counts.most_common(2)[-1][0]
+        if sec_idx != dominant_idx:
+            dominant_color = kmeans_local.cluster_centers_[sec_idx]
+
+    return tuple(map(int, dominant_color))
 
 def auto_detect_team_colors(frame: np.ndarray, detections: list) -> dict:
     """
-    Detecta automáticamente los 2 colores de equipo usando KMeans sobre
-    los colores HSV de todos los jugadores detectados.
-    Retorna: {'team_0': (h, s, v), 'team_1': (h, s, v)}
+    KMeans Global: Separa a todos los jugadores en 2 equipos basándose en su torso RGB.
+    Retorna: {'team_0': [r,g,b], 'team_1': [r,g,b]}
     """
-    try:
-        from sklearn.cluster import KMeans
-    except ImportError:
-        return {}
-
     colors = []
+    
     for det in detections:
-        if det.get("clase") in ("player", "goalkeeper"):
-            c = get_torso_color(frame, det["x"], det["y"], det["w"], det["h"])
+        # Excluimos árbitros explícitamente del clustering global
+        if det.get("clase") == "player":
+            c = _extract_torso_rgb(frame, det["x"], det["y"], det["w"], det["h"])
             if c is not None:
-                # Filtrar colores que probablemente sean césped (Verde: H 35-85, S > 30)
-                h, s, v = c
-                if 35 <= h <= 85 and s > 30:
-                    continue
                 colors.append(c)
 
+    # Si hay muy pocos jugadores, no definimos colores seguros
     if len(colors) < 4:
         return {}
 
     colors_arr = np.array(colors, dtype=np.float32)
+    # Clustering global en 2 equipos
     kmeans = KMeans(n_clusters=2, n_init=10, random_state=42)
     kmeans.fit(colors_arr)
     centers = kmeans.cluster_centers_
 
     return {
-        "team_0": centers[0].tolist(),
-        "team_1": centers[1].tolist(),
+        "team_0": tuple(map(int, centers[0])),
+        "team_1": tuple(map(int, centers[1])),
     }
-
 
 def classify_team(frame: np.ndarray, det: dict, team_colors: dict = None) -> int:
     """
-    Clasifica a qué equipo pertenece un jugador.
-    - Si hay team_colors (de auto_detect_team_colors), usa distancia al centroide.
-    - Si no, usa reglas HSV por defecto.
-    Retorna: 0 (equipo local), 1 (equipo visitante), 2 (árbitro), -1 (descartado)
+    Clasifica: 0 (local), 1 (visitante), 2 (árbitro), -1 (ignorado).
+    Usa la distancia euclidiana en el espacio RGB hacia el centroide de cada equipo.
     """
-    # 1. El árbitro suele detectarse por clase primero
+    # 1. El árbitro viene etiquetado por YOLO
     if det.get("clase") == "referee":
         return 2
 
-    # 2. Filtro por tamaño mínimo
+    # 2. Ignorar recortes enanos
     if det["w"] * det["h"] < 500:
         return -1
 
-    color = get_torso_color(frame, det["x"], det["y"], det["w"], det["h"])
-    if color is None:
+    color_rgb = _extract_torso_rgb(frame, det["x"], det["y"], det["w"], det["h"])
+    if color_rgb is None:
         return 0
 
-    h, s, v = color
-
-    # 3. Detectar árbitro por color (típicamente Rojo, Negro o Flúor)
-    # Rojo: H 0-10 o 170-180, S > 100
-    if ((0 <= h <= 10 or 170 <= h <= 180) and s > 120):
-        return 2
-    # Negro/Muy oscuro: V < 50
-    if v < 50:
+    # 3. Extra check de oscuros (árbitros no detectados)
+    r, g, b = color_rgb
+    if r < 40 and g < 40 and b < 40:
         return 2
 
-    # 4. Clasificar entre equipos usando KMeans si está disponible
+    # 4. Inferencia por distancia KMeans
     if team_colors and "team_0" in team_colors and "team_1" in team_colors:
         c0 = np.array(team_colors["team_0"])
         c1 = np.array(team_colors["team_1"])
+        c_target = np.array(color_rgb)
         
-        # Pesamos el Hue más que S y V para equipos con colores distintos
-        # pero para Blanco vs Otro, Saturation es clave.
-        dist0 = np.linalg.norm(color - c0)
-        dist1 = np.linalg.norm(color - c1)
+        dist0 = np.linalg.norm(c_target - c0)
+        dist1 = np.linalg.norm(c_target - c1)
+        
         return 0 if dist0 < dist1 else 1
 
-    # 5. Reglas de fallback (Amarillo vs Blanco/Verde)
-    # Amarillo
-    if 20 <= h <= 45 and s > 70:
-        return 0
-    # Blanco o Verde
-    if s < 70 or (50 <= h <= 95):
-        return 1
-        
     return 0

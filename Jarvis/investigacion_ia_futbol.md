@@ -42,4 +42,32 @@ Basado en la investigación, este es el plan para subir del 85% al 100%:
     *   El balón a veces desaparece por un rebote rápido. Añadiremos un filtro matemático simple (como un *Filtro de Kalman* 1D o interpolación pandas) para que si el modelo pierde el balón 3 fotogramas por ir muy rápido, rellene el hueco sabiendo la trayectoria que llevaba.
 
 ---
-Con esta munición técnica guardada en nuestro `Jarvis`, mañana estructuraremos el código para ir atacando estos puntos tácticos reales. ¡Vamos por el buen camino!
+Con esta munición técnica guardada en nuestro `Jarvis`, estructuraremos el código para ir atacando estos puntos tácticos reales. ¡Vamos por el buen camino!
+
+---
+
+## 🔮 4. Arquitectura Futurista: El "Santo Grial" del Análisis Inmune a Fallos
+*(Investigación impulsada por la teoría de Continual Learning de Andrej Karpathy)*
+
+Para lograr que nuestro modelo **NUNCA** falle, independientemente de si el vídeo está grabado en 4K en el Bernabéu o con un móvil temblando en un campo de tierra lloviendo, no basta con entrenar un YOLO clásico con más fotos. Necesitamos una **Arquitectura Híbrida de Siguiente Generación**:
+
+### A. Modelos Fundacionales y Zero-Shot (Entendimiento de Conceptos)
+En lugar de enseñarle al modelo qué es una "camiseta roja" píxel a píxel, usamos modelos como **YOLO-World** o **GroundingDINO**. Estos modelos combinan texto y visión. El modelo entiende el concepto semántico *"jugador de fútbol corriendo"*. Al basarse en billones de imágenes de internet, son casi inmunes a cambios de iluminación o estadios raros porque ya han visto todos los contextos posibles del mundo real.
+
+### B. Representaciones Self-Supervised (DINOv2 de Meta)
+Los modelos clásicos se confunden si el césped cambia de un verde brillante a un verde seco. **DINOv2** (algoritmo desarrollado por Yann LeCun en Meta) aprende la estructura profunda (profundidad, bordes, semántica) sin usar etiquetas humanas. Si pasamos nuestros recortes de jugadores por DINOv2, el sistema sabrá emparejar al mismo jugador en el minuto 1 y en el minuto 90 aunque esté cubierto de barro, resolviendo el problema del Tracking para siempre.
+
+### C. Contexto Spatio-Temporal con GNNs (Grafos Neuronales)
+¿Qué pasa si la cámara es tan mala que el balón desaparece literalmente de los píxeles? 
+Aquí entran las **Graph Neural Networks (GNN)**. Un GNN no mira los píxeles, mira la relación abstracta entre entidades. 
+*   *El truco mágico:* Los 22 jugadores reaccionan al balón. Si el balón no se ve, el GNN analiza la dirección hacia la que corren y miran los 22 jugadores, y puede triangular matemáticamente (con un 99% de acierto) la coordenada oculta del balón basándose en la "física de la intención" humana.
+
+### D. Entrenamiento con Datos Sintéticos (NeRFs y Motores Físicos)
+Para que el modelo no falle bajo la nieve o lluvia extrema, no esperamos a que llueva para grabar un partido. Usamos motores gráficos (Unreal Engine 5) o IA generativa de vídeo (Sora, Stable Diffusion) para generar millones de fotogramas artificiales de nuestro estadio base bajo condiciones climáticas imposibles. Entrenamos al "Modelo Base" con estos datos sintéticos, haciéndolo robusto a cualquier artefacto visual.
+
+### E. El Bucle de Auto-Mejora (Shadow Mode + TTT)
+Implementar la filosofía de Karpathy:
+1. El modelo Base (entrenado con todo lo anterior) procesa el partido.
+2. Un módulo inyectado evalúa la "Confianza Física" (ej. si un jugador se teletransporta 5 metros en 1 frame, el modelo sabe que se ha equivocado).
+3. Esos errores se empaquetan y, por la noche, un algoritmo de *Test-Time Training (LoRA)* reajusta los pesos del cerebro neuronal.
+4. Al día siguiente, el modelo ha "evolucionado" sin que ningún programador humano haya tocado el código.

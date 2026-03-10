@@ -53,3 +53,7 @@ Thumbs.db
 combined_dataset/
 roboflow_dataset/
 venv_training/
+venv_cuda/
+
+03_Imagenes_Ejemplo/
+04_Datasets_Entrenamiento/

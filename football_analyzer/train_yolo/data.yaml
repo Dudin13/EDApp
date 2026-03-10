@@ -1,5 +1,0 @@
-train: c:/apped/04_Datasets_Entrenamiento/roboflow_dataset/train/images
-val: c:/apped/04_Datasets_Entrenamiento/roboflow_dataset/valid/images
-
-nc: 8
-names: ['goalkeeper', 'player', 'ball', 'referee', 'goalpost', 'corner_flag', 'line', 'ball_aerial']

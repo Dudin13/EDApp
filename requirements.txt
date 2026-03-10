@@ -19,6 +19,7 @@ ultralytics>=8.0.0
 # Visualización
 matplotlib>=3.7.0
 pandas>=2.0.0
+streamlit-drawable-canvas>=0.9.0
 
 # Exportación (para futuros PDF/Excel)
 # reportlab>=4.0.0

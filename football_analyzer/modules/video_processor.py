@@ -25,6 +25,7 @@ from modules.identity_reader import IdentityReader
 from modules.event_spotter_tdeed import EventSpotterTDEED
 from modules.calibration_pnl import PnLCalibrator
 
+from modules.camera_motion import CameraMotionEstimator
 
 class VideoProcessor:
     def __init__(self, video_path: str, config: dict):
@@ -72,12 +73,12 @@ class VideoProcessor:
             pitch_height=self.config.get("pitch_height", 68)
         )
         self.event_spotter = EventSpotterTDEED()
+        self.camera_estimator = CameraMotionEstimator()
         
         # Estado cinemático del balón
         self.last_ball_pos = None  # (x, y)
         self.last_ball_minute = -1
         self.ball_history = []  # lista de tuplas (minuto, x, y)
-        self.prev_gray = None   # Frame anterior para Optical Flow
 
     def process(self):
         """
@@ -146,24 +147,7 @@ class VideoProcessor:
 
             try:
                 # ── Optical Flow (Compensación de Movimiento de Cámara) ────
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                dx, dy = 0.0, 0.0
-                if self.prev_gray is not None:
-                    # Encontrar puntos clave en el frame anterior
-                    p0 = cv2.goodFeaturesToTrack(self.prev_gray, mask=None, maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
-                    if p0 is not None:
-                        # Calcular el flujo óptico hacia el frame actual
-                        p1, st, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, p0, None, 
-                                                               winSize=(15, 15), maxLevel=2, 
-                                                               criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-                        if p1 is not None and st is not None:
-                            good_new = p1[st == 1]
-                            good_old = p0[st == 1]
-                            if len(good_new) > 0 and len(good_old) > 0:
-                                movements = good_new - good_old
-                                dx = float(np.median(movements[:, 0]))
-                                dy = float(np.median(movements[:, 1]))
-                self.prev_gray = gray
+                dx, dy = self.camera_estimator.compute_offset(frame)
 
                 dets = detect_frame(frame, mode=self.detection_mode, confidence=self.confidence)
 
@@ -225,35 +209,50 @@ class VideoProcessor:
                         video_second = frame_pos / fps
 
                 else:
-                    # ── Interpolación del Balón ──────────────────────────
+                    # ── Interpolación del Balón Avanzada (Con Pandas) ────────
                     best_ball = None
                     if len(self.ball_history) >= 2:
-                        # Usamos los últimos 2 puntos para extrapolar
-                        m1, x1, y1 = self.ball_history[-2]
-                        m2, x2, y2 = self.ball_history[-1]
-                        dm = m2 - m1
-                        dt = minute - m2
+                        import pandas as pd
+                        # Usar hasta los últimos 10 puntos conocidos
+                        hist = self.ball_history[-10:]
+                        df_ball = pd.DataFrame(hist, columns=["m", "x", "y"])
                         
-                        # Máximo tiempo permitido para interpolar: 5 segundos (aprox 10 frames de 0.5s)
-                        max_lost_time = 5.0 / 60.0
+                        m_last = df_ball["m"].iloc[-1]
+                        dt = minute - m_last
                         
-                        if 0 < dm <= max_lost_time and 0 < dt <= max_lost_time:
-                            # Extrapolación lineal simple
-                            pred_x = x2 + (x2 - x1) * (dt / dm)
-                            pred_y = y2 + (y2 - y1) * (dt / dm)
+                        max_lost_time = 5.0 / 60.0 # 5 segundos de pérdida permitidos
+                        
+                        if 0 < dt <= max_lost_time:
+                            # Añadir fila vacía (NaN) para el minuto actual
+                            df_ball.loc[len(df_ball)] = [minute, np.nan, np.nan]
+                            df_ball = df_ball.set_index("m")
                             
-                            # Compensar por movimiento de cámara
-                            pred_x += dx
-                            pred_y += dy
+                            # Interpolar posición X e Y respecto al tiempo (minuto)
+                            # Usamos slinear (lineal) o quadratic si tenemos suficientes puntos
+                            method = "quadratic" if len(hist) >= 3 else "slinear"
                             
-                            best_ball = {
-                                "x": pred_x, "y": pred_y, "w": 25, "h": 25, 
-                                "clase": "ball", "confianza": 0.05, 
-                                "is_interpolated": True
-                            }
-                            bx, by = pred_x, pred_y
-                            ball = best_ball
-                            video_second = frame_pos / fps
+                            try:
+                                df_ball["x"] = df_ball["x"].interpolate(method=method, fill_value="extrapolate", limit_direction="both")
+                                df_ball["y"] = df_ball["y"].interpolate(method=method, fill_value="extrapolate", limit_direction="both")
+                                
+                                pred_x = float(df_ball.loc[minute, "x"])
+                                pred_y = float(df_ball.loc[minute, "y"])
+                                
+                                # Compensar por movimiento de cámara del frame actual
+                                pred_x += dx
+                                pred_y += dy
+                                
+                                best_ball = {
+                                    "x": pred_x, "y": pred_y, "w": 25, "h": 25, 
+                                    "clase": "ball", "confianza": 0.05, 
+                                    "is_interpolated": True
+                                }
+                                bx, by = pred_x, pred_y
+                                ball = best_ball
+                                video_second = frame_pos / fps
+                            except Exception as interp_err:
+                                # Fallback silencioso si falla la extrapolación compleja
+                                pass
 
                 if best_ball:
                     # Comprobar qué jugador está más cerca del balón

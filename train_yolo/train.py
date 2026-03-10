@@ -21,23 +21,24 @@ from pathlib import Path
 # ── Rutas ──────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).parent.parent          # C:/apped
 TRAIN_DIR = Path(__file__).parent           # C:/apped/train_yolo
-IMAGES_DIR = ROOT / "combined_dataset" / "train" / "images"
-LABELS_DIR = ROOT / "combined_dataset" / "train" / "labels"
-DATA_YAML = ROOT / "combined_dataset" / "data.yaml"
+DATASET_ROOT = ROOT / "04_Datasets_Entrenamiento" / "hybrid_dataset"
+IMAGES_DIR = DATASET_ROOT / "train" / "images"
+LABELS_DIR = DATASET_ROOT / "train" / "labels"
+DATA_YAML = DATASET_ROOT / "data.yaml"
 OUTPUT_DIR = TRAIN_DIR / "runs"
 
 # ── Verificación ───────────────────────────────────────────────────────────
 def check_dataset():
     images = list(IMAGES_DIR.glob("*.jpg")) + list(IMAGES_DIR.glob("*.png"))
     labels = list(LABELS_DIR.glob("*.txt"))
-    print(f"✓ Imágenes encontradas: {len(images)}")
-    print(f"✓ Etiquetas encontradas: {len(labels)}")
+    print(f"[OK] Imagenes encontradas: {len(images)}")
+    print(f"[OK] Etiquetas encontradas: {len(labels)}")
 
     if len(images) == 0:
-        print("❌ No hay imágenes. Ejecuta primero extraer_frames.py")
+        print("[ERROR] No hay imagenes. Ejecuta primero extraer_frames.py")
         sys.exit(1)
     if len(labels) == 0:
-        print("❌ No hay etiquetas. Ejecuta primero auto_label.py")
+        print("[ERROR] No hay etiquetas. Ejecuta primero auto_label.py")
         sys.exit(1)
 
     # Verificar que cada imagen tiene su etiqueta
@@ -73,11 +74,11 @@ def train(
         print("❌ ultralytics no instalado. Ejecuta: pip install ultralytics")
         sys.exit(1)
 
-    print(f"\n🚀 Iniciando entrenamiento YOLOv8{model_size}")
+    print(f"\n[START] Iniciando entrenamiento YOLOv8{model_size}")
     print(f"   epochs={epochs} | imgsz={imgsz} | batch={batch}")
     print(f"   data={DATA_YAML}\n")
 
-    model = YOLO(f"yolov8{model_size}.pt")  # descarga el modelo base automáticamente
+    model = YOLO(f"{model_size}.pt")  # YOLO11x
 
     results = model.train(
         data=str(DATA_YAML),
@@ -85,9 +86,10 @@ def train(
         imgsz=imgsz,
         batch=batch,
         workers=workers,
-        project=str(OUTPUT_DIR / "segment"),
-        name="train",
+        project=str(OUTPUT_DIR / "detect"),
+        name="EDudin_v1",
         exist_ok=True,
+        optimizer='AdamW',  # Recomendado para modelos grandes
 
         # Augmentación agresiva (compensa dataset pequeño)
         augment=True,
@@ -106,20 +108,20 @@ def train(
         copy_paste=0.1,
 
         # Otras opciones
-        patience=20,     # early stopping
+        patience=30,     # early stopping aumentado para 200 epochs
         save=True,
         plots=True,
         verbose=True,
     )
 
-    best_model = OUTPUT_DIR / "segment" / "train" / "weights" / "best.pt"
+    best_model = OUTPUT_DIR / "detect" / "EDudin_v1" / "weights" / "best.pt"
     if best_model.exists():
         size_mb = best_model.stat().st_size / 1024 / 1024
-        print(f"\n✅ Entrenamiento completado!")
+        print(f"\n[DONE] Entrenamiento completado!")
         print(f"   Mejor modelo: {best_model} ({size_mb:.1f} MB)")
-        print(f"   Para usarlo en la app: Settings → Motor: 'yolo (local)'")
+        print(f"   Para usarlo en la app: Settings -> Motor: 'yolo (local)'")
     else:
-        print("\n⚠️ No se encontró best.pt. Revisa los logs de entrenamiento.")
+        print("\n[WARN] No se encontró best.pt. Revisa los logs de entrenamiento.")
 
     return results
 
@@ -139,10 +141,10 @@ def validate(model_path: str = None):
         print(f"❌ Modelo no encontrado: {model_path}")
         return
 
-    print(f"\n🔍 Validando modelo: {model_path}")
+    print(f"\n[VAL] Validando modelo: {model_path}")
     model = YOLO(model_path)
     metrics = model.val(data=str(DATA_YAML), verbose=True)
-    print(f"\n📊 mAP50: {metrics.box.map50:.3f}")
+    print(f"\n[METRICS] mAP50: {metrics.box.map50:.3f}")
     print(f"   mAP50-95: {metrics.box.map:.3f}")
     return metrics
 
@@ -161,18 +163,19 @@ if __name__ == "__main__":
         print("   Continuando de todas formas...\n")
 
     # Ajustar epochs según cantidad de datos
-    epochs = 50
-    batch = 16  # Aumentado para aprovechar RTX 2070 (8GB VRAM)
+    epochs = 200
+    batch = 4  # Reducido de 8 a 4 para evitar errores de acceso a memoria en Windows/CUDA
+    workers = 0  # 0 en Windows evita bloqueos del DataLoader
 
-    print(f"\n📐 Configuración: epochs={epochs}, batch={batch}, model=yolov8s-seg")
+    print(f"\n[CONFIG] Configuracion: epochs={epochs}, batch={batch}, workers={workers}, model=yolo11m-seg")
 
     train(
-        model_size="s-seg",   # small-segmentation: Para siluetas precisas de jugadores
+        model_size="yolo11m-seg", # Cambiado a -seg para detectar siluetas (Instance Segmentation)
         epochs=epochs,
         imgsz=640,
         batch=batch,
-        workers=4,        # Aumentado para acelerar la carga de datos
+        workers=workers,
     )
 
-    print("\n🎯 Ejecutando validación final...")
+    print("\n[VERIFY] Ejecutando validacion final...")
     validate()

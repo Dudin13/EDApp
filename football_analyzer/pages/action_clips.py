@@ -173,11 +173,56 @@ def render():
     """, unsafe_allow_html=True)
 
     if not st.session_state.get("analysis_done"):
-        st.markdown("""
-        <div style="background:rgba(17, 24, 39, 0.4); backdrop-filter:blur(15px); border:1px solid rgba(255, 77, 109, 0.2); border-radius:16px; padding:48px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
-            <div style="font-size:48px; margin-bottom:16px; filter: drop-shadow(0 0 10px rgba(255, 77, 109, 0.3));">✂️</div>
-            <div style="font-size:18px; font-weight:700; color:#fff; margin-bottom:8px; letter-spacing:0.5px;">SIN DATOS DE ANÁLISIS</div>
-            <div style="font-size:14px; color:#8899aa;">Primero completa el proceso en <strong>Nuevo Análisis</strong> para generar fragmentos de vídeo.</div>
+        ffmpeg_ok = Path(_get_ffmpeg_path()).exists()
+        ffmpeg_warning = ""
+        if not ffmpeg_ok:
+            ffmpeg_warning = """
+            <div style="margin-top:20px; background:rgba(255, 77, 109, 0.1); border:1px solid rgba(255, 77, 109, 0.4); border-radius:12px; padding:16px; text-align:left;">
+                <div style="font-size:14px; font-weight:800; color:#ff4d6d; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:18px;">⚠️</span> ATENCIÓN: FFMPEG NO DETECTADO
+                </div>
+                <div style="font-size:13px; color:#e2e8f0; line-height:1.6;">
+                    El motor de fragmentación de vídeo <b>FFmpeg</b> no se encuentra en la ruta configurada (<code>C:\\ffmpeg\\bin\\ffmpeg.exe</code>).<br>
+                    Sin este componente, no se podrán exportar los cortes de vídeo en MP4.<br>
+                    <a href="https://ffmpeg.org/download.html" target="_blank" style="color:#00d4aa; text-decoration:none; font-weight:600;">Descargar FFmpeg</a> y asegúrate de configurar su ruta en la sección de Ajustes ⚙️.
+                </div>
+            </div>
+            """
+
+        st.markdown(f"""
+        <div style="background:rgba(17, 24, 39, 0.6); backdrop-filter:blur(15px); border:1px solid rgba(0, 212, 170, 0.2); border-radius:16px; padding:40px 30px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <div style="font-size:48px; margin-bottom:12px; filter: drop-shadow(0 0 15px rgba(0, 212, 170, 0.3));">🎬</div>
+            <div style="font-size:22px; font-weight:800; color:#fff; margin-bottom:6px; letter-spacing:0.5px;">Panel de Clips de Acción</div>
+            <div style="font-size:14px; color:#8899aa; margin-bottom:32px;">Exporta los mejores momentos detectados por la Inteligencia Artificial.</div>
+            
+            <div style="display:flex; justify-content:center; gap:30px; margin-bottom:20px; flex-wrap:wrap;">
+                
+                <!-- Paso 1 -->
+                <div style="flex:1; min-width:200px; max-width:250px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:24px 16px;">
+                    <div style="width:40px; height:40px; background:#1e293b; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-weight:900; color:#00d4aa; font-size:18px; border:2px solid #00d4aa44;">1</div>
+                    <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:8px;">Nuevo Análisis</div>
+                    <div style="font-size:12px; color:#5a6a7e; line-height:1.5;">Ve a la pestaña <b>Análisis de Vídeo</b> y selecciona un partido para procesar.</div>
+                </div>
+
+                <!-- Paso 2 -->
+                <div style="flex:1; min-width:200px; max-width:250px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:24px 16px;">
+                    <div style="width:40px; height:40px; background:#1e293b; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-weight:900; color:#00d4aa; font-size:18px; border:2px solid #00d4aa44;">2</div>
+                    <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:8px;">Motor IA</div>
+                    <div style="font-size:12px; color:#5a6a7e; line-height:1.5;">El motor <b>YOLO V8</b> detectará acciones, jugadores y el balón frame a frame.</div>
+                </div>
+
+                <!-- Paso 3 -->
+                <div style="flex:1; min-width:200px; max-width:250px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:24px 16px; position:relative;">
+                    <div style="position:absolute; top:-10px; right:-10px; font-size:24px; filter: drop-shadow(0 0 10px rgba(0,212,170,0.5));">✨</div>
+                    <div style="width:40px; height:40px; background:rgba(0,212,170,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-weight:900; color:#00d4aa; font-size:18px; border:2px solid #00d4aa;">3</div>
+                    <div style="font-size:14px; font-weight:700; color:#00d4aa; margin-bottom:8px;">Exportar Clips</div>
+                    <div style="font-size:12px; color:#a2b9ce; line-height:1.5;">Vuelve aquí para filtrar eventos por jugador/acción visualizarlos al instante.</div>
+                </div>
+
+            </div>
+            
+            {ffmpeg_warning}
+            
         </div>
         """, unsafe_allow_html=True)
         return

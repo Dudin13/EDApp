@@ -91,7 +91,7 @@ def render():
     st.write("Ahora, escribe las coordenadas físicas (0 a 105, 0 a 68) de esos mismos 4 puntos en orden.")
     
     # Template estándar
-    st.code(\"\"\"
+    st.code("""
 # Ejemplo de configuración para video_processor.py:
 config = {
     ...
@@ -108,6 +108,6 @@ config = {
         [105, 0]   # Top Right
     ]
 }
-\"\"\")
+""")
     
     st.info("💡 Una vez tengas `src_pts` y `dst_pts`, añádelos a la configuración del análisis al instanciar VideoProcessor.")
