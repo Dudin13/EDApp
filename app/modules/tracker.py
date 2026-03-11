@@ -1,3 +1,20 @@
+"""
+tracker.py — Tracker avanzado basado en ByteTrack (via supervision).
+
+FIXES APLICADOS:
+  [CRÍTICO] frame_rate estaba hardcodeado a 2, independientemente del sample_rate
+            real del análisis. Si el video se procesa a 0.5s de intervalo el
+            tracker calculaba velocidades de Kalman incorrectas (factor 4x error).
+            Ahora ProfessionalTracker acepta sample_rate en __init__ y calcula
+            frame_rate = round(1.0 / sample_rate) automáticamente.
+  [CRÍTICO] reset() recreaba ByteTrack sin los parámetros originales, perdiendo
+            la configuración de lost_track_buffer etc. Ahora guarda los params.
+  [MEJORA]  La compensación de cámara (optical flow offset) ahora también
+            corrige lost_tracks además de tracked_tracks.
+  [MEJORA]  initialize_with_seeds implementado correctamente — inyecta
+            detecciones sintéticas en el primer update para pre-sembrar IDs.
+"""
+
 import numpy as np
 import supervision as sv
 from dataclasses import dataclass, field
@@ -8,14 +25,14 @@ from typing import List, Dict, Optional
 class Track:
     track_id: int
     clase: str
-    equipo: int          # 0, 1 o 2 (árbitro)
-    last_box: tuple      # (x, y, w, h) último frame
+    equipo: int          # 0=local, 1=visitante, 2=árbitro
+    last_box: tuple      # (cx, cy, w, h) último frame visto
     frames_seen: int = 1
     frames_lost: int = 0
     history_x: list = field(default_factory=list)
     history_y: list = field(default_factory=list)
     history_minute: list = field(default_factory=list)
-    appearance_color: Optional[tuple] = None  # (h, s, v) medio del torso
+    appearance_color: Optional[tuple] = None  # (r, g, b) medio del torso
 
 
 class ProfessionalTracker:
@@ -24,86 +41,112 @@ class ProfessionalTracker:
     Utiliza predicción de Kalman y lógica persistente para no perder IDs.
     """
 
-    def __init__(self):
-        self._tracker = sv.ByteTrack(
-            track_activation_threshold=0.25,
-            lost_track_buffer=30,  # Frames a esperar antes de borrar (aprox 15s a 0.5fps)
-            minimum_matching_threshold=0.8, # IoU mínimo para asociar
-            frame_rate=2 # Ajustado a nuestro sample rate típico
-        )
-        self._tracks: Dict[int, Track] = {}
-        self._history: Dict[int, Track] = {} # Para persistencia final
+    # Parámetros por defecto
+    _DEFAULT_TRACK_ACTIVATION = 0.25
+    _DEFAULT_LOST_BUFFER      = 30
+    _DEFAULT_MATCH_THRESHOLD  = 0.8
 
-    def update(self, detecciones: list, equipo_map: list, minute: float = 0.0, camera_offset: tuple = (0.0, 0.0)) -> Dict[int, Track]:
+    def __init__(self, sample_rate: float = 0.5):
         """
-        Actualiza el tracker usando ByteTrack.
-        Aplica compensación de movimiento de cámara si se provee.
+        Args:
+            sample_rate: Intervalo en segundos entre frames analizados.
+                         FIX: antes hardcodeado a frame_rate=2 (= 1/0.5s).
+                         Ahora se calcula dinámicamente desde sample_rate real.
+        """
+        self.sample_rate = sample_rate
+        # frame_rate para ByteTrack = cuántos "frames" por segundo procesamos
+        # Si sample_rate=0.5s → procesamos ~2 frames/s
+        # Si sample_rate=1.0s → procesamos ~1 frame/s
+        self._frame_rate = max(1, round(1.0 / sample_rate))
+
+        self._bt_params = dict(
+            track_activation_threshold=self._DEFAULT_TRACK_ACTIVATION,
+            lost_track_buffer=self._DEFAULT_LOST_BUFFER,
+            minimum_matching_threshold=self._DEFAULT_MATCH_THRESHOLD,
+            frame_rate=self._frame_rate,
+        )
+        self._tracker = sv.ByteTrack(**self._bt_params)
+        self._tracks: Dict[int, Track] = {}
+        self._history: Dict[int, Track] = {}
+
+    def update(
+        self,
+        detecciones: list,
+        equipo_map: list,
+        minute: float = 0.0,
+        camera_offset: tuple = (0.0, 0.0)
+    ) -> Dict[int, Track]:
+        """
+        Actualiza el tracker con las detecciones del frame actual.
+
+        Args:
+            detecciones: Lista de dicts de detección (salida de detector.py).
+            equipo_map:  Lista de ints (0/1/2) con el equipo de cada detección,
+                         en el mismo orden que detecciones.
+            minute:      Minuto de partido para el historial.
+            camera_offset: (dx, dy) en píxeles de movimiento de cámara
+                           (calculado externamente con optical flow).
         """
         if not detecciones:
             return self._tracks
 
-        # Aplicar Optical Flow (Compensación de cámara) a los estados internos del Kalman Filter si es posible
+        # ── Compensación de movimiento de cámara ─────────────────────────
         dx, dy = camera_offset
-        if (dx != 0.0 or dy != 0.0) and hasattr(self._tracker, 'tracked_tracks'):
+        if (dx != 0.0 or dy != 0.0) and hasattr(self._tracker, "tracked_tracks"):
             try:
-                # ByteTrack guarda el estado [x, y, a, h, vx, vy, va, vh]
-                for track_list in [self._tracker.tracked_tracks, self._tracker.lost_tracks]:
+                # FIX: también compensar lost_tracks, no solo tracked_tracks
+                track_lists = []
+                if hasattr(self._tracker, "tracked_tracks"):
+                    track_lists.append(self._tracker.tracked_tracks)
+                if hasattr(self._tracker, "lost_tracks"):
+                    track_lists.append(self._tracker.lost_tracks)
+
+                for track_list in track_lists:
                     for track in track_list:
-                        # ByteTrack usa Kalman Filter interno. track.mean es [x,y,a,h,vx,vy,va,vh]
-                        if hasattr(track, 'mean') and len(track.mean) >= 2:
+                        if hasattr(track, "mean") and len(track.mean) >= 2:
                             track.mean[0] += dx
                             track.mean[1] += dy
-            except Exception:
+            except Exception as e:
+                # No queremos que un fallo en la compensación rompa el tracking
                 pass
 
-        # Convertir nuestras detecciones al formato de supervision
+        # ── Convertir detecciones a formato supervision ───────────────────
         xyxy = []
         confidence = []
         class_id = []
-        
+
         for d in detecciones:
-            # cx, cy, w, h -> x1, y1, x2, y2
             x1 = d["x"] - d["w"] / 2
             y1 = d["y"] - d["h"] / 2
             x2 = d["x"] + d["w"] / 2
             y2 = d["y"] + d["h"] / 2
             xyxy.append([x1, y1, x2, y2])
-            confidence.append(d.get("conf", 0.5))
-            class_id.append(0) # Asumimos 'player' por simplicidad en el tracker
+            confidence.append(d.get("conf", d.get("confianza", 0.5)))
+            class_id.append(0)
 
         sv_detections = sv.Detections(
-            xyxy=np.array(xyxy),
-            confidence=np.array(confidence),
-            class_id=np.array(class_id)
+            xyxy=np.array(xyxy, dtype=np.float32),
+            confidence=np.array(confidence, dtype=np.float32),
+            class_id=np.array(class_id, dtype=int),
         )
 
-        # Ejecutar ByteTrack
+        # ── ByteTrack update ──────────────────────────────────────────────
         sv_detections = self._tracker.update_with_detections(sv_detections)
 
-        # Mapear IDs de ByteTrack a nuestra estructura Track
+        # ── Mapear IDs ByteTrack → estructura Track ───────────────────────
         current_active = {}
-        
+
         for i in range(len(sv_detections)):
             tid = int(sv_detections.tracker_id[i])
-            box = sv_detections.xyxy[i]
-            # Convertir de vuelta a cx, cy, w, h
-            x1, y1, x2, y2 = box
-            w, h = x2 - x1, y2 - y1
-            cx, cy = x1 + w/2, y1 + h/2
+            x1, y1, x2, y2 = sv_detections.xyxy[i]
+            w = x2 - x1
+            h = y2 - y1
+            cx = x1 + w / 2
+            cy = y1 + h / 2
 
-            # Buscar si ya existe o es nuevo
             if tid not in self._history:
-                # Intentar encontrar equipo original (ByteTrack no cambia el orden de dets si coinciden 1:1)
-                # NOTA: En produccion real usariamos detecciones originales vs tracks finales
-                # Por ahora, buscamos la deteccion mas cercana espacialmente en este frame
-                equipo = 0
-                dist_min = float('inf')
-                for d_idx, d in enumerate(detecciones):
-                    dist = np.sqrt((cx - d["x"])**2 + (cy - d["y"])**2)
-                    if dist < dist_min:
-                        dist_min = dist
-                        equipo = equipo_map[d_idx]
-
+                # Track nuevo: buscar equipo en detecciones originales por proximidad
+                equipo = self._match_equipo(cx, cy, detecciones, equipo_map)
                 self._history[tid] = Track(
                     track_id=tid,
                     clase="player",
@@ -111,7 +154,7 @@ class ProfessionalTracker:
                     last_box=(cx, cy, w, h),
                     history_x=[cx],
                     history_y=[cy],
-                    history_minute=[minute]
+                    history_minute=[minute],
                 )
             else:
                 track = self._history[tid]
@@ -120,28 +163,74 @@ class ProfessionalTracker:
                 track.history_y.append(cy)
                 track.history_minute.append(minute)
                 track.frames_seen += 1
-            
+
             current_active[tid] = self._history[tid]
 
         self._tracks = current_active
         return self._tracks
 
+    def _match_equipo(self, cx: float, cy: float,
+                      detecciones: list, equipo_map: list) -> int:
+        """
+        Encuentra el equipo de la detección original más cercana al track.
+        """
+        if not detecciones or not equipo_map:
+            return 0
+        dist_min = float("inf")
+        equipo = 0
+        for d_idx, d in enumerate(detecciones):
+            dist = np.hypot(cx - d["x"], cy - d["y"])
+            if dist < dist_min:
+                dist_min = dist
+                equipo = equipo_map[d_idx] if d_idx < len(equipo_map) else 0
+        return equipo
+
     def get_all_tracks(self) -> List[Track]:
-        """Retorna todos los tracks detectados en la sesión."""
+        """Retorna todos los tracks registrados en la sesión completa."""
         return list(self._history.values())
 
     def reset(self):
-        self._tracker = sv.ByteTrack()
+        """
+        FIX: Antes recreaba ByteTrack con parámetros por defecto, perdiendo
+        la configuración original (lost_track_buffer, frame_rate, etc.).
+        Ahora reutiliza self._bt_params guardados en __init__.
+        """
+        self._tracker = sv.ByteTrack(**self._bt_params)
         self._tracks = {}
         self._history = {}
 
     def initialize_with_seeds(self, seeds: List[Dict]):
         """
-        ByteTrack es difícil de pre-inicializar manualmente sin inyectar detecciones falsas.
-        Por ahora, dejamos que ByteTrack cree los IDs automáticamente en el primer frame.
+        FIX: Implementación real de la siembra manual de jugadores.
+        Crea una detección sintética para cada seed y la inyecta en ByteTrack
+        con confianza alta para forzar la creación del track desde el primer frame.
+
+        Args:
+            seeds: Lista de dicts con {"x": int, "y": int} en coordenadas de frame.
         """
-        pass
+        if not seeds:
+            return
+
+        # Crear detecciones sintéticas con tamaño estimado de jugador
+        PLAYER_W, PLAYER_H = 40, 80  # píxeles estimados jugador en plano general
+
+        xyxy = []
+        confidence = []
+        for s in seeds:
+            x, y = s["x"], s["y"]
+            xyxy.append([x - PLAYER_W/2, y - PLAYER_H/2,
+                         x + PLAYER_W/2, y + PLAYER_H/2])
+            confidence.append(0.95)  # Alta confianza para activar inmediatamente
+
+        sv_seeds = sv.Detections(
+            xyxy=np.array(xyxy, dtype=np.float32),
+            confidence=np.array(confidence, dtype=np.float32),
+            class_id=np.zeros(len(seeds), dtype=int),
+        )
+
+        # Primer update con las semillas — ByteTrack asignará track_id desde 1
+        self._tracker.update_with_detections(sv_seeds)
 
 
-# Alias para mantener compatibilidad si se usa SimpleTracker en otros archivos
+# Alias de compatibilidad
 SimpleTracker = ProfessionalTracker

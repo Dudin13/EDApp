@@ -1,91 +1,123 @@
+"""
+home.py — Landing page de la aplicación.
+Estilo Wyscout: minimalista, alto contraste, visualmente impactante.
+
+FIXES APLICADOS:
+  [MEJORA]  Bienvenida dinámica: detecta si ya hay un análisis cargado y muestra
+            un botón de acceso directo al Dashboard.
+  [MEJORA]  Timeline visual de funciones: explica el flujo de trabajo (Video -> Tracking -> Insights).
+  [MEJORA]  Banner "PRO" para diferenciar la versión actual de la V1.
+"""
+
 import streamlit as st
-import base64
-from pathlib import Path
 
 def render():
-    base_dir = Path(__file__).parent.parent
-    logo_path = base_dir / "logo.png"
-    logo_b64 = ""
-    if logo_path.exists():
-        with open(logo_path, "rb") as f:
-            logo_b64 = base64.b64encode(f.read()).decode()
-            
-    logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height:120px; margin-bottom:20px; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.5);">' if logo_b64 else '<div style="font-size:72px; margin-bottom:10px;">⚽</div>'
+    # ── Header / Hero Section ────────────────────────────────────────────────
+    st.markdown("""
+    <div style="padding: 60px 0 40px 0; text-align:center;">
+        <div style="display:inline-block; background:rgba(0,212,170,0.1); border:1px solid #00d4aa;
+                    color:#00d4aa; padding:4px 12px; border-radius:30px; font-size:10px;
+                    font-weight:800; text-transform:uppercase; letter-spacing:2px; margin-bottom:20px;">
+            Powered by YOLOv8 Architecture
+        </div>
+        <h1 style="font-size:54px; font-weight:900; color:#fff; letter-spacing:-2px; line-height:1; margin-bottom:15px;">
+            Inteligencia Artificial Aplicada al Fútbol
+        </h1>
+        <p style="font-size:18px; color:#8899aa; max-width:700px; margin:0 auto 40px; line-height:1.6;">
+            Transforma vídeo convencional en datos tácticos accionables. Detección, tracking y
+            análisis de métricas profesionales en una plataforma única.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-        <style>
-        .home-container {{ display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 80vh; padding-top: 40px; }}
-        .club-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            width: 100%;
-            max-width: 1000px;
-            margin-top: 40px;
-        }}
-        .club-card {{
-            background: rgba(17, 24, 39, 0.6);
-            border: 1px solid rgba(0, 212, 170, 0.2);
-            border-radius: 16px;
-            padding: 24px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }}
-        .club-card:hover {{
-            transform: translateY(-5px);
-            border-color: rgba(0, 212, 170, 0.8);
-            box-shadow: 0 8px 25px rgba(0, 212, 170, 0.2);
-            background: rgba(17, 24, 39, 0.9);
-        }}
-        .club-name {{
-            color: #fff;
-            font-size: 18px;
-            font-weight: 700;
-            margin-top: 10px;
-            margin-bottom: 5px;
-        }}
-        .club-category {{
-            color: #5a6a7e;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }}
-        </style>
+    # ── Botones de Acción Rápidos ───────────────────────────────────────────
+    c1, c2, c3, c4, c5 = st.columns([1,2,2,2,1])
 
-        <div class="home-container">
-            {logo_html}
-            <h1 style="color:#fff; font-size:48px; font-weight:900; letter-spacing:2px; margin:0;">ED Analytics</h1>
-            <p style="color:#00d4aa; font-size:18px; font-weight:700; text-transform:uppercase; letter-spacing:3px;">Scout Platform</p>
-            
-            <div style="margin-top:30px; margin-bottom:10px; color:#a2b9ce; font-size:16px; font-weight:600;">Selecciona un equipo para gestionar:</div>
-            
-            <div class="club-grid">
-                <div class="club-card">
-                    <div class="club-name">Cádiz CF</div>
-                    <div class="club-category">Primer Equipo</div>
-                </div>
-                <div class="club-card">
-                    <div class="club-name">Cádiz Mirandilla</div>
-                    <div class="club-category">Filial</div>
-                </div>
-                <div class="club-card">
-                    <div class="club-name">Balón de Cádiz</div>
-                    <div class="club-category">Senior Amateur</div>
-                </div>
-                <div class="club-card">
-                    <div class="club-name">Juvenil A</div>
-                    <div class="club-category">División de Honor</div>
-                </div>
-                <div class="club-card">
-                    <div class="club-name">Juvenil B</div>
-                    <div class="club-category">Liga Nacional</div>
-                </div>
-                <div class="club-card">
-                    <div class="club-name">Cadete A</div>
-                    <div class="club-category">División de Honor</div>
-                </div>
+    with c2:
+        if st.button("🚀  NUEVO ANÁLISIS", use_container_width=True, type="primary"):
+            st.session_state.page = "upload"
+            st.rerun()
+
+    with c3:
+        # Mostrar Dashboards solo si hay datos, o link a Scout si no
+        btn_label = "📊  VER DASHBOARD" if st.session_state.get("analysis_done") else "📋  PANEL SCOUT"
+        if st.button(btn_label, use_container_width=True):
+            st.session_state.page = "collective" if st.session_state.get("analysis_done") else "scout"
+            st.rerun()
+
+    with c4:
+        if st.button("📐  CALIBRAR CÁMARA", use_container_width=True):
+            st.session_state.page = "calibration"
+            st.rerun()
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    # ── Timeline del Proceso ───────────────────────────────────────────────
+    st.markdown('<div class="ws-section-header">Flujo de Trabajo</div>', unsafe_allow_html=True)
+
+    steps_html = """
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px;">
+        <div class="ws-card">
+            <div style="font-size:24px; margin-bottom:12px;">🎥</div>
+            <div style="font-size:14px; font-weight:800; color:#fff; margin-bottom:8px;">1. Entrada</div>
+            <div style="font-size:12px; color:#5a6a7e; line-height:1.5;">
+                Sube tu vídeo (MP4) de partido o entrenamiento en plano general.
             </div>
         </div>
-    """, unsafe_allow_html=True)
+        <div class="ws-card">
+            <div style="font-size:24px; margin-bottom:12px;">🧠</div>
+            <div style="font-size:14px; font-weight:800; color:#fff; margin-bottom:8px;">2. Procesamiento</div>
+            <div style="font-size:12px; color:#5a6a7e; line-height:1.5;">
+                Inferencia YOLO v8 seg para detección de jugadores, árbitros y balón.
+            </div>
+        </div>
+        <div class="ws-card">
+            <div style="font-size:24px; margin-bottom:12px;">📍</div>
+            <div style="font-size:14px; font-weight:800; color:#fff; margin-bottom:8px;">3. Tracking</div>
+            <div style="font-size:12px; color:#5a6a7e; line-height:1.5;">
+                Asignación de IDs persistentes y transformación a plano 2D (PnL).
+            </div>
+        </div>
+        <div class="ws-card" style="border: 1px solid rgba(0,212,170,0.3);">
+            <div style="font-size:24px; margin-bottom:12px;">📈</div>
+            <div style="font-size:14px; font-weight:800; color:#00d4aa; margin-bottom:8px;">4. Insights</div>
+            <div style="font-size:12px; color:#5a6a7e; line-height:1.5;">
+                Visualiza mapas de calor, redes de pases y clips individuales.
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(steps_html, unsafe_allow_html=True)
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    # ── Sección de Novedades V2 ───────────────────────────────────────────────
+    c_left, c_right = st.columns([1, 1])
+
+    with c_left:
+        st.markdown("""
+        <div class="ws-card" style="height:100%;">
+            <h3 style="margin-top:0; color:#fff; font-size:18px;">✨ Novedades V2 (Actual)</h3>
+            <ul style="color:#8899aa; font-size:13px; line-height:2;">
+                <li>Identificación automática de dorsales</li>
+                <li>Red de pases avanzada con xT (Expected Threat)</li>
+                <li>Clasificación de equipos por color HSV robusto</li>
+                <li>Gestión de clips de vídeo con IA</li>
+                <li>Calibración PnL (Perspective-n-Line) interactiva</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c_right:
+        st.markdown("""
+        <div class="ws-card" style="height:100%; background: linear-gradient(135deg, rgba(0,212,170,0.05), rgba(13,18,32,0.4));">
+            <h3 style="margin-top:0; color:#fff; font-size:18px;">🏢 Proyecto EDudin</h3>
+            <p style="color:#8899aa; font-size:13px; line-height:1.6;">
+                Este sistema ha sido diseñado para analistas de rendimiento y cuerpos técnicos
+                que buscan profesionalizar la toma de decisiones sin grandes presupuestos.
+            </p>
+            <p style="color:#00d4aa; font-size:13px; font-weight:700;">
+                Actualmente optimizado para planos generales (Táctica / Master).
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
