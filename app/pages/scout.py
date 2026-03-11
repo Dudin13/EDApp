@@ -245,8 +245,13 @@ def view_dashboard():
             if st.button("Continuar a Configuración ➡️", use_container_width=True, type="primary", disabled=not uploaded_file):
                 save_path = Path("uploads") / uploaded_file.name
                 save_path.parent.mkdir(exist_ok=True)
+                # Buffering for large files (10GB+)
                 with open(save_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                    while True:
+                        chunk = uploaded_file.read(8192)
+                        if not chunk:
+                            break
+                        f.write(chunk)
                 
                 # Get real duration
                 cap = cv2.VideoCapture(str(save_path))

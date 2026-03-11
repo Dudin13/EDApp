@@ -1,60 +1,113 @@
 """
-detector.py — Motor de detección de jugadores con doble backend:
-  - Roboflow (modo por defecto, inmediato)
-  - YOLOv8 local (si existe best.pt entrenado)
+detector.py — Motor de detección con arquitectura de 3 modelos especializados.
 
-Incluye clasificación de equipos por color HSV.
+ARQUITECTURA (inspirada en notebook Kaggle akrambelha):
+  - PLAYER_MODEL: YOLO para jugadores, porteros y árbitros (resolución estándar)
+  - BALL_MODEL:   YOLO para el balón a resolución 1280px (60% mejor detección)
+  - PITCH_MODEL:  YOLO pose para keypoints del campo (homografía automática)
 
-FIXES APLICADOS:
-  [CRÍTICO] detect_frame_roboflow: mitad derecha no incluía torso_color,
-            pitch_coords ni dorsal — dict incompleto causaba KeyError silencioso
-            en classify_team y en la capa de identidad.
-  [CRÍTICO] detect_frame_roboflow: offset X de mitad derecha era incorrecto.
-            Usaba w_zona//2 pero debería ser x_min + w_zona//2 para coordenadas
-            absolutas correctas en el frame original.
-  [MEJORA]  _extract_torso_rgb: rechaza verde ahora también en HSV para mayor
-            robustez con diferentes iluminaciones.
-  [MEJORA]  detect_frame: el escalado de confidence de int→float era inconsistente
-            entre backends. Normalizado en la fachada principal.
-  [MEJORA]  Lazy loading protegido con threading.Lock para evitar race conditions
-            si se llama desde múltiples hilos (ej: background processing de clips).
+CLASIFICACIÓN DE EQUIPOS:
+  - Modo 'siglip': SigLIP embeddings + UMAP + KMeans (SOTA, robusto con VEO)
+  - Modo 'kmeans': KMeans RGB fallback (rápido, funciona sin GPU grande)
+  - Portero: asignado por proximidad geométrica al centroide de su equipo
+
+COMPATIBILIDAD: API pública (detect_frame, classify_team, auto_detect_team_colors)
+  totalmente compatible con video_processor.py existente.
+
+MODELOS PREENTRENADOS (descargar con scripts/download_kaggle_models.py):
+  - detect_players.pt  -> jugadores/portero/arbitro
+  - detect_ball.pt     -> balon a 1280px
+  - pose_field.pt      -> keypoints del campo (opcional, para calibracion auto)
 """
 
 import cv2
 import numpy as np
 import os
-import tempfile
 import logging
 import threading
 from pathlib import Path
+from collections import Counter
+from sklearn.cluster import KMeans
+
 from modules.calibration_pnl import PnLCalibrator
 from modules.identity_reader import IdentityReader
 
 logger = logging.getLogger(__name__)
 
-# Singletons para calibración e identidad
 _calibrator = PnLCalibrator()
-_id_reader = IdentityReader()
+_id_reader  = IdentityReader()
 
-# ── Configuración ──────────────────────────────────────────────────────────
-ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "")
+# Rutas de modelos
+_BASE      = Path(os.getenv("APPED_ROOT", "c:/apped"))
+_MODELS    = _BASE / "ml" / "models"
+
+PLAYER_MODEL_PATH = _MODELS / "detect_players.pt"
+BALL_MODEL_PATH   = _MODELS / "detect_ball.pt"
+PITCH_MODEL_PATH  = _MODELS / "pose_field.pt"
+YOLO_LEGACY_PATH  = _MODELS / "best_football_seg.pt"
+YOLO_COCO_MODEL   = str(_MODELS / "yolov8n.pt")
+
+BALL_ID=0; GOALKEEPER_ID=1; PLAYER_ID=2; REFEREE_ID=3
+VALID_CLASSES = {"player","goalkeeper","referee","ball"}
+
+ROBOFLOW_API_KEY   = os.getenv("ROBOFLOW_API_KEY","")
 ROBOFLOW_WORKSPACE = "roboflow-jvuqo"
-ROBOFLOW_PROJECT = "football-players-detection-3zvbc"
-ROBOFLOW_VERSION = 1
+ROBOFLOW_PROJECT   = "football-players-detection-3zvbc"
+ROBOFLOW_VERSION   = 1
 
-YOLO_MODEL_PATH = Path("c:/apped/ml/models/best_football_seg.pt")
-YOLO_COCO_MODEL = "c:/apped/ml/models/yolov8n.pt"
+_player_model=None; _ball_model=None; _pitch_model=None
+_coco_model=None; _roboflow_model=None
+_player_lock=threading.Lock(); _ball_lock=threading.Lock()
+_pitch_lock=threading.Lock(); _coco_lock=threading.Lock()
+_roboflow_lock=threading.Lock()
 
-VALID_CLASSES = {"player", "goalkeeper", "referee", "ball"}
 
-# ── Carga de modelos (thread-safe) ─────────────────────────────────────────
-_roboflow_model = None
-_yolo_model = None
-_yolo_coco_model = None
+def _load_player_model():
+    global _player_model
+    with _player_lock:
+        if _player_model is None:
+            from ultralytics import YOLO
+            path = PLAYER_MODEL_PATH if PLAYER_MODEL_PATH.exists() else YOLO_LEGACY_PATH
+            if path.exists():
+                _player_model = YOLO(str(path))
+                logger.info(f"Modelo jugadores: {path.name}")
+            else:
+                _player_model = _load_coco_model()
+    return _player_model
 
-_roboflow_lock = threading.Lock()
-_yolo_lock = threading.Lock()
-_yolo_coco_lock = threading.Lock()
+
+def _load_ball_model():
+    global _ball_model
+    with _ball_lock:
+        if _ball_model is None:
+            from ultralytics import YOLO
+            if BALL_MODEL_PATH.exists():
+                _ball_model = YOLO(str(BALL_MODEL_PATH))
+                logger.info("Modelo balon: detect_ball.pt (1280px)")
+            elif YOLO_LEGACY_PATH.exists():
+                _ball_model = YOLO(str(YOLO_LEGACY_PATH))
+                logger.warning("detect_ball.pt no encontrado, usando best_football_seg.pt para balon")
+    return _ball_model
+
+
+def _load_pitch_model():
+    global _pitch_model
+    with _pitch_lock:
+        if _pitch_model is None:
+            from ultralytics import YOLO
+            if PITCH_MODEL_PATH.exists():
+                _pitch_model = YOLO(str(PITCH_MODEL_PATH))
+                logger.info("Modelo campo: pose_field.pt")
+    return _pitch_model
+
+
+def _load_coco_model():
+    global _coco_model
+    with _coco_lock:
+        if _coco_model is None:
+            from ultralytics import YOLO
+            _coco_model = YOLO(YOLO_COCO_MODEL)
+    return _coco_model
 
 
 def _load_roboflow():
@@ -68,381 +121,353 @@ def _load_roboflow():
     return _roboflow_model
 
 
-def _load_yolo():
-    global _yolo_model
-    with _yolo_lock:
-        if _yolo_model is None:
-            from ultralytics import YOLO
-            if YOLO_MODEL_PATH.exists():
-                _yolo_model = YOLO(str(YOLO_MODEL_PATH))
-            else:
-                logger.warning(
-                    f"Modelo entrenado no encontrado, usando YOLOv8n COCO: {YOLO_COCO_MODEL}"
-                )
-                _yolo_model = YOLO(YOLO_COCO_MODEL)
-    return _yolo_model
+def kaggle_models_available():
+    return PLAYER_MODEL_PATH.exists() and BALL_MODEL_PATH.exists()
 
+def yolo_model_available():
+    return PLAYER_MODEL_PATH.exists() or YOLO_LEGACY_PATH.exists()
 
-def _load_yolo_coco():
-    global _yolo_coco_model
-    with _yolo_coco_lock:
-        if _yolo_coco_model is None:
-            from ultralytics import YOLO
-            _yolo_coco_model = YOLO(YOLO_COCO_MODEL)
-    return _yolo_coco_model
-
-
-def yolo_model_available() -> bool:
-    return YOLO_MODEL_PATH.exists()
-
-
-# ── Detección ──────────────────────────────────────────────────────────────
 
 def _build_detection_dict(frame, x_abs, y_abs, w, h, clase, confidence,
-                           extract_dorsal=True) -> dict:
-    """
-    FIX CRÍTICO: Función helper centralizada para construir el dict de detección.
-    Antes, la mitad derecha de detect_frame_roboflow construía el dict manualmente
-    sin torso_color, pitch_coords ni dorsal — causando KeyErrors downstream.
-    Ahora ambas mitades usan esta función y el dict es siempre completo.
-    """
+                           extract_dorsal=True):
     dorsal_num = None
-    if extract_dorsal and clase in ("player", "goalkeeper"):
-        cx, cy = x_abs, y_abs
-        x1_crop = max(0, cx - w // 4)
-        y1_crop = max(0, cy - h // 3)
-        x2_crop = min(frame.shape[1], cx + w // 4)
-        y2_crop = min(frame.shape[0], cy + h // 6)
-        torso_roi = frame[y1_crop:y2_crop, x1_crop:x2_crop]
-        if torso_roi.size > 0:
-            dorsal_num, _ = _id_reader.extract_dorsal(torso_roi)
-
+    if extract_dorsal and clase in ("player","goalkeeper"):
+        cx,cy=x_abs,y_abs
+        x1c=max(0,cx-w//4); y1c=max(0,cy-h//3)
+        x2c=min(frame.shape[1],cx+w//4); y2c=min(frame.shape[0],cy+h//6)
+        roi=frame[y1c:y2c,x1c:x2c]
+        if roi.size>0:
+            dorsal_num,_=_id_reader.extract_dorsal(roi)
     return {
-        "x": int(x_abs),
-        "y": int(y_abs),
-        "w": int(w),
-        "h": int(h),
-        "clase": clase,
-        "confianza": round(confidence, 3),
-        "conf": round(confidence, 3),
-        "torso_color": _extract_torso_rgb(frame, int(x_abs), int(y_abs), int(w), int(h)),
-        "pitch_coords": _calibrator.transform_point(int(x_abs), int(y_abs)),
-        "dorsal": dorsal_num,
-        "mask": None,
+        "x":int(x_abs),"y":int(y_abs),"w":int(w),"h":int(h),
+        "clase":clase,"confianza":round(confidence,3),"conf":round(confidence,3),
+        "torso_color":_extract_torso_rgb(frame,int(x_abs),int(y_abs),int(w),int(h)),
+        "pitch_coords":_calibrator.transform_point(int(x_abs),int(y_abs)),
+        "dorsal":dorsal_num,"mask":None,
     }
 
 
-def detect_frame_roboflow(frame: np.ndarray, confidence: int = 40,
-                           overlap: int = 25) -> list:
+def detect_frame_kaggle(frame, confidence=0.3):
     """
-    Detecta jugadores usando Roboflow.
-    Divide el frame en dos mitades para mejorar detecciones en encuadres amplios.
-
-    FIX CRÍTICO: El offset X de las detecciones de la mitad derecha era incorrecto.
-    Antes: x = int(pred["x"]) + w_zona//2 + x_min
-    Ahora: x = int(pred["x"]) + x_min + w_zona//2
-    (mismo resultado matemático pero ahora se usa _build_detection_dict que
-    garantiza que torso_color, pitch_coords y dorsal siempre están presentes)
+    Deteccion con 3 modelos especializados del notebook Kaggle.
+    PLAYER_MODEL: jugadores/porteros/arbitros a resolucion estandar.
+    BALL_MODEL:   balon a 1280px — detecta balones de ~8px en VEO panoramica.
     """
-    h_img, w_img = frame.shape[:2]
+    import supervision as sv
+    h_frame,w_frame=frame.shape[:2]
+    detecciones=[]
+    id_to_name={BALL_ID:"ball",GOALKEEPER_ID:"goalkeeper",PLAYER_ID:"player",REFEREE_ID:"referee"}
 
-    y_min = int(h_img * 0.20)
-    y_max = int(h_img * 0.85)
-    x_min = int(w_img * 0.01)
-    x_max = int(w_img * 0.99)
+    # 1. Jugadores / porteros / arbitros
+    pm=_load_player_model()
+    if pm is not None:
+        try:
+            r=pm.predict(frame,conf=confidence,verbose=False)[0]
+            d=sv.Detections.from_ultralytics(r).with_nms(threshold=0.5,class_agnostic=True)
+            for i,xyxy in enumerate(d.xyxy):
+                x1,y1,x2,y2=map(int,xyxy)
+                w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
+                cls_id=int(d.class_id[i]) if d.class_id is not None else PLAYER_ID
+                conf_v=float(d.confidence[i]) if d.confidence is not None else confidence
+                clase=id_to_name.get(cls_id,"player")
+                if clase=="ball": continue
+                if cy<h_frame*0.15 or w*h<400: continue
+                if h>0 and (h/max(w,1))>7.0: continue
+                detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v))
+        except Exception as e:
+            logger.error(f"Error modelo jugadores: {e}")
 
-    zona = frame[y_min:y_max, x_min:x_max]
-    h_zona, w_zona = zona.shape[:2]
-
-    mitad_izq = zona[:, :w_zona // 2]
-    mitad_der = zona[:, w_zona // 2:]
-
-    tmp_dir = tempfile.gettempdir()
-    tmp_izq = os.path.join(tmp_dir, "_ed_det_izq.jpg")
-    tmp_der = os.path.join(tmp_dir, "_ed_det_der.jpg")
-
-    if not cv2.imwrite(tmp_izq, mitad_izq):
-        logger.error(f"No se pudo escribir imagen temporal: {tmp_izq}")
-        return []
-    if not cv2.imwrite(tmp_der, mitad_der):
-        logger.error(f"No se pudo escribir imagen temporal: {tmp_der}")
-        return []
-
-    try:
-        model = _load_roboflow()
-        result_izq = model.predict(tmp_izq, confidence=confidence, overlap=overlap)
-        result_der = model.predict(tmp_der, confidence=confidence, overlap=overlap)
-    except Exception as e:
-        logger.error(f"Error Roboflow API: {e}")
-        return []
-
-    detecciones = []
-
-    # ── Mitad izquierda ────────────────────────────────────────────────────
-    for pred in result_izq.predictions:
-        if pred["class"] not in VALID_CLASSES:
-            continue
-        x_abs = int(pred["x"]) + x_min
-        y_abs = int(pred["y"]) + y_min
-        det = _build_detection_dict(
-            frame, x_abs, y_abs,
-            int(pred["width"]), int(pred["height"]),
-            pred["class"], pred["confidence"]
-        )
-        detecciones.append(det)
-
-    # ── Mitad derecha ──────────────────────────────────────────────────────
-    # FIX: antes faltaban torso_color, pitch_coords y dorsal en este bloque
-    for pred in result_der.predictions:
-        if pred["class"] not in VALID_CLASSES:
-            continue
-        # La pred["x"] es relativa a mitad_der, hay que sumar el offset completo
-        x_abs = int(pred["x"]) + x_min + w_zona // 2
-        y_abs = int(pred["y"]) + y_min
-        det = _build_detection_dict(
-            frame, x_abs, y_abs,
-            int(pred["width"]), int(pred["height"]),
-            pred["class"], pred["confidence"]
-        )
-        detecciones.append(det)
+    # 2. Balon a 1280px
+    bm=_load_ball_model()
+    if bm is not None:
+        try:
+            scale=1280/w_frame
+            fhd=cv2.resize(frame,(1280,int(h_frame*scale)))
+            rb=bm.predict(fhd,conf=0.1,verbose=False,imgsz=1280)[0]
+            db=sv.Detections.from_ultralytics(rb).with_nms(threshold=0.3,class_agnostic=True)
+            for i,xyxy in enumerate(db.xyxy):
+                x1,y1,x2,y2=map(int,xyxy)
+                x1=int(x1/scale); y1=int(y1/scale)
+                x2=int(x2/scale); y2=int(y2/scale)
+                w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
+                cls_id=int(db.class_id[i]) if db.class_id is not None else BALL_ID
+                conf_v=float(db.confidence[i]) if db.confidence is not None else 0.1
+                if id_to_name.get(cls_id,"ball")!="ball": continue
+                if h>0 and (h/max(w,1))>3.0: continue
+                if w>int(w_frame*0.07) or cy<h_frame*0.15: continue
+                det=_build_detection_dict(frame,cx,cy,max(w,20),max(h,20),"ball",conf_v,extract_dorsal=False)
+                detecciones.append(det)
+        except Exception as e:
+            logger.error(f"Error modelo balon: {e}")
 
     return detecciones
 
 
-def detect_frame_yolo(frame: np.ndarray, confidence: float = 0.45) -> list:
-    """
-    Detecta jugadores usando YOLOv8-seg entrenado localmente.
-    Extrae bounding box y polígono de segmentación.
-    """
-    model = _load_yolo()
-    h_frame, w_frame = frame.shape[:2]
-
-    results = model(frame, conf=0.10, verbose=False)
-
-    class_names = {0: "goalkeeper", 1: "player", 2: "ball", 3: "referee"}
-    detecciones = []
-
+def detect_frame_yolo(frame, confidence=0.45):
+    model=_load_player_model()
+    h_frame,w_frame=frame.shape[:2]
+    results=model(frame,conf=0.10,verbose=False)
+    class_names={0:"goalkeeper",1:"player",2:"ball",3:"referee"}
+    detecciones=[]
     for r in results:
-        boxes = r.boxes
-        masks = r.masks
-
-        if boxes is None:
-            continue
-
-        for i, box in enumerate(boxes):
-            cls = int(box.cls[0])
-            clase = class_names.get(cls, "player")
-            box_conf = float(box.conf[0])
-
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            w = x2 - x1
-            h = y2 - y1
-            cx = (x1 + x2) // 2
-            cy = (y1 + y2) // 2
-
-            if clase == "ball":
-                if box_conf < 0.15:
-                    continue
-                if h > 0 and (h / max(w, 1)) > 3.0:
-                    continue
-                max_ball_size = int(w_frame * 0.06)
-                if w > max_ball_size or h > max_ball_size:
-                    continue
-                if cy < h_frame * 0.30:
-                    continue
-
-            elif clase in ("player", "goalkeeper", "referee"):
-                if box_conf < confidence:
-                    continue
-                if cy < h_frame * 0.22:
-                    continue
-                if h > 0 and (h / max(w, 1)) > 6.5:
-                    continue
-                if w * h < 500:
-                    continue
-
+        boxes=r.boxes; masks=r.masks
+        if boxes is None: continue
+        for i,box in enumerate(boxes):
+            cls=int(box.cls[0]); clase=class_names.get(cls,"player")
+            box_conf=float(box.conf[0])
+            x1,y1,x2,y2=map(int,box.xyxy[0])
+            w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
+            if clase=="ball":
+                if box_conf<0.15 or cy<h_frame*0.30: continue
+                if h>0 and (h/max(w,1))>3.0: continue
+                if w>int(w_frame*0.06): continue
+            elif clase in ("player","goalkeeper","referee"):
+                if box_conf<confidence or cy<h_frame*0.22: continue
+                if h>0 and (h/max(w,1))>6.5 or w*h<500: continue
             else:
-                if box_conf < confidence:
-                    continue
-
-            det = _build_detection_dict(
-                frame, cx, cy, w, h, clase, float(box.conf[0])
-            )
-
-            # Polígono de segmentación
-            if masks is not None and i < len(masks.xy):
-                polygon = masks.xy[i]
-                if len(polygon) > 0:
-                    det["mask"] = polygon.astype(np.int32)
-
+                if box_conf<confidence: continue
+            det=_build_detection_dict(frame,cx,cy,w,h,clase,float(box.conf[0]))
+            if masks is not None and i<len(masks.xy):
+                poly=masks.xy[i]
+                if len(poly)>0: det["mask"]=poly.astype(np.int32)
             detecciones.append(det)
-
     return detecciones
 
 
-def detect_frame_coco(frame: np.ndarray, confidence: float = 0.35) -> list:
-    """
-    Detecta personas usando YOLOv8n COCO (clase 0 = person).
-    Fallback cuando Roboflow no está disponible y no hay modelo local.
-    """
-    model = _load_yolo_coco()
-    results = model(frame, conf=confidence, classes=[0], verbose=False)
+def detect_frame_roboflow(frame, confidence=40, overlap=25):
+    import tempfile
+    h_img,w_img=frame.shape[:2]
+    y_min=int(h_img*0.20); y_max=int(h_img*0.85)
+    x_min=int(w_img*0.01); x_max=int(w_img*0.99)
+    zona=frame[y_min:y_max,x_min:x_max]
+    _,w_zona=zona.shape[:2]
+    mitad_izq=zona[:,:w_zona//2]; mitad_der=zona[:,w_zona//2:]
+    tmp=tempfile.gettempdir()
+    ti=os.path.join(tmp,"_ed_izq.jpg"); td=os.path.join(tmp,"_ed_der.jpg")
+    if not cv2.imwrite(ti,mitad_izq) or not cv2.imwrite(td,mitad_der): return []
+    try:
+        m=_load_roboflow()
+        ri=m.predict(ti,confidence=confidence,overlap=overlap)
+        rd=m.predict(td,confidence=confidence,overlap=overlap)
+    except Exception as e:
+        logger.error(f"Roboflow error: {e}"); return []
+    dets=[]
+    for p in ri.predictions:
+        if p["class"] not in VALID_CLASSES: continue
+        dets.append(_build_detection_dict(frame,int(p["x"])+x_min,int(p["y"])+y_min,
+                    int(p["width"]),int(p["height"]),p["class"],p["confidence"]))
+    for p in rd.predictions:
+        if p["class"] not in VALID_CLASSES: continue
+        dets.append(_build_detection_dict(frame,int(p["x"])+x_min+w_zona//2,int(p["y"])+y_min,
+                    int(p["width"]),int(p["height"]),p["class"],p["confidence"]))
+    return dets
 
-    detecciones = []
+
+def detect_frame_coco(frame, confidence=0.35):
+    model=_load_coco_model()
+    results=model(frame,conf=confidence,classes=[0],verbose=False)
+    dets=[]
     for r in results:
         for box in r.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            w = x2 - x1
-            h = y2 - y1
-            cx = (x1 + x2) // 2
-            cy = (y1 + y2) // 2
-            if w * h < 800:
-                continue
-            det = _build_detection_dict(
-                frame, cx, cy, w, h, "player", float(box.conf[0]),
-                extract_dorsal=False  # COCO no tiene dorsales fiables
-            )
-            detecciones.append(det)
-    return detecciones
+            x1,y1,x2,y2=map(int,box.xyxy[0])
+            w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
+            if w*h<800: continue
+            dets.append(_build_detection_dict(frame,cx,cy,w,h,"player",float(box.conf[0]),extract_dorsal=False))
+    return dets
 
 
-def detect_frame(frame: np.ndarray, mode: str = "auto", confidence=40) -> list:
+def detect_frame(frame, mode="auto", confidence=40):
     """
-    Fachada principal de detección.
-    mode: 'auto' | 'roboflow' | 'yolo'
-
-    FIX: El escalado confidence int→float era inconsistente entre backends.
-    Ahora se normaliza aquí una sola vez antes de pasar a cada backend.
+    Fachada principal. Orden de prioridad:
+      kaggle/auto+modelos -> yolo -> roboflow -> coco
     """
-    # Normalizar confidence a float [0,1] para YOLO o int [0,100] para Roboflow
-    conf_float = confidence / 100.0 if isinstance(confidence, int) and confidence > 1 else float(confidence)
-    conf_int = int(conf_float * 100)
-
-    if mode == "yolo" or (mode == "auto" and yolo_model_available()):
-        return detect_frame_yolo(frame, confidence=conf_float)
-
-    if mode in ("roboflow", "auto"):
-        result = detect_frame_roboflow(frame, confidence=conf_int)
-        if result is not None:
-            return result
-        logger.warning("Roboflow no disponible, usando YOLOv8n COCO como fallback")
-        return detect_frame_coco(frame, confidence=conf_float)
-
-    return detect_frame_coco(frame, confidence=conf_float)
+    conf_float=confidence/100.0 if isinstance(confidence,int) and confidence>1 else float(confidence)
+    conf_int=int(conf_float*100)
+    if mode=="kaggle" or (mode=="auto" and kaggle_models_available()):
+        return detect_frame_kaggle(frame,confidence=conf_float)
+    if mode=="yolo" or (mode=="auto" and yolo_model_available()):
+        return detect_frame_yolo(frame,confidence=conf_float)
+    if mode in ("roboflow","auto"):
+        result=detect_frame_roboflow(frame,confidence=conf_int)
+        if result is not None: return result
+        return detect_frame_coco(frame,confidence=conf_float)
+    return detect_frame_coco(frame,confidence=conf_float)
 
 
-# ── Clasificación de equipos ───────────────────────────────────────────────
+def detect_pitch_homography(frame):
+    """Homografia automatica con pose_field.pt. Retorna H (3x3) o None."""
+    pm=_load_pitch_model()
+    if pm is None: return None
+    try:
+        import supervision as sv
+        from sports.configs.soccer import SoccerPitchConfiguration
+        CONFIG=SoccerPitchConfiguration()
+        result=pm.predict(frame,conf=0.3,verbose=False)[0]
+        kp=sv.KeyPoints.from_ultralytics(result)
+        mask=kp.confidence[0]>0.5
+        frame_pts=kp.xy[0][mask]
+        pitch_pts=np.array(CONFIG.vertices)[mask]
+        if len(frame_pts)<4: return None
+        H,_=cv2.findHomography(pitch_pts.astype(np.float32),frame_pts.astype(np.float32),cv2.RANSAC,5.0)
+        return H
+    except Exception as e:
+        logger.error(f"Homografia automatica error: {e}"); return None
 
-from sklearn.cluster import KMeans
-from collections import Counter
 
+# Clasificacion de equipos
 
-def _extract_torso_rgb(frame: np.ndarray, x: int, y: int, w: int, h: int) -> tuple | None:
-    """
-    Extrae el color RGB dominante del torso usando KMeans k=2.
-
-    FIX MEJORA: El rechazo de verde ahora también usa HSV para mayor robustez
-    con diferentes temperaturas de color de iluminación (no solo RGB).
-    """
-    x1 = max(0, int(x - w * 0.25))
-    x2 = min(frame.shape[1], int(x + w * 0.25))
-    y1 = max(0, int(y - h * 0.3))
-    y2 = min(frame.shape[0], int(y + h * 0.1))
-
-    roi = frame[y1:y2, x1:x2]
-
-    if roi.size == 0 or roi.shape[0] < 2 or roi.shape[1] < 2:
-        return None
-
-    roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
-    pixels = roi_rgb.reshape(-1, 3)
-
-    if len(pixels) < 4:
-        return None
-
-    kmeans_local = KMeans(n_clusters=2, random_state=42, n_init=3)
-    labels = kmeans_local.fit_predict(pixels)
-    counts = Counter(labels)
-    dominant_idx = counts.most_common(1)[0][0]
-    dominant_color = kmeans_local.cluster_centers_[dominant_idx]
-
-    # FIX: Rechazo de verde en RGB Y en HSV
-    r, g, b = dominant_color
-    is_green_rgb = (g > r + 30 and g > b + 30)
-
-    # Comprobación adicional en HSV (más robusta con distintas iluminaciones)
-    color_bgr = np.uint8([[[int(b), int(g), int(r)]]])
-    color_hsv = cv2.cvtColor(color_bgr, cv2.COLOR_BGR2HSV)[0][0]
-    hue = color_hsv[0]
-    sat = color_hsv[1]
-    is_green_hsv = (35 <= hue <= 85 and sat > 60)  # Rango verde en OpenCV HSV
-
+def _extract_torso_rgb(frame, x, y, w, h):
+    x1=max(0,int(x-w*0.25)); x2=min(frame.shape[1],int(x+w*0.25))
+    y1=max(0,int(y-h*0.3));  y2=min(frame.shape[0],int(y+h*0.1))
+    roi=frame[y1:y2,x1:x2]
+    if roi.size==0 or roi.shape[0]<2 or roi.shape[1]<2: return None
+    roi_rgb=cv2.cvtColor(roi,cv2.COLOR_BGR2RGB)
+    pixels=roi_rgb.reshape(-1,3)
+    if len(pixels)<4: return None
+    km=KMeans(n_clusters=2,random_state=42,n_init=3)
+    labels=km.fit_predict(pixels)
+    counts=Counter(labels)
+    dom=counts.most_common(1)[0][0]
+    dc=km.cluster_centers_[dom]
+    r,g,b=dc
+    is_green_rgb=(g>r+30 and g>b+30)
+    hsv=cv2.cvtColor(np.uint8([[[int(b),int(g),int(r)]]]),cv2.COLOR_BGR2HSV)[0][0]
+    is_green_hsv=(35<=hsv[0]<=85 and hsv[1]>60)
     if is_green_rgb or is_green_hsv:
-        sec_candidates = counts.most_common(2)
-        if len(sec_candidates) > 1:
-            sec_idx = sec_candidates[1][0]
-            dominant_color = kmeans_local.cluster_centers_[sec_idx]
-
-    return tuple(map(int, dominant_color))
+        if len(counts)>1:
+            dc=km.cluster_centers_[counts.most_common(2)[1][0]]
+    return tuple(map(int,dc))
 
 
-def auto_detect_team_colors(frame: np.ndarray, detections: list) -> dict:
+class TeamClassifierSigLIP:
     """
-    KMeans Global: Separa todos los jugadores en 2 equipos por torso RGB.
-    Retorna: {'team_0': (r,g,b), 'team_1': (r,g,b)}
+    Clasificador SOTA con SigLIP + UMAP + KMeans.
+    Robusto con VEO, iluminacion artificial y camisetas de colores similares.
+    Requiere: pip install transformers umap-learn
     """
-    colors = []
+    def __init__(self):
+        self.model=None; self.processor=None
+        self.reducer=None; self.clustering=None
+        self._fitted=False; self.device=None
 
-    for det in detections:
-        if det.get("clase") == "player":
-            c = det.get("torso_color") or _extract_torso_rgb(
-                frame, det["x"], det["y"], det["w"], det["h"]
-            )
-            if c is not None:
-                colors.append(c)
+    def _load(self):
+        if self.model is not None: return True
+        try:
+            import torch
+            from transformers import AutoProcessor,SiglipVisionModel
+            import umap
+            self.device="cuda" if torch.cuda.is_available() else "cpu"
+            self.model=SiglipVisionModel.from_pretrained("google/siglip-base-patch16-224").to(self.device)
+            self.processor=AutoProcessor.from_pretrained("google/siglip-base-patch16-224")
+            self.reducer=umap.UMAP(n_components=3,random_state=42)
+            self.clustering=KMeans(n_clusters=2,random_state=42,n_init="auto")
+            logger.info(f"SigLIP cargado en {self.device}")
+            return True
+        except ImportError as e:
+            logger.warning(f"SigLIP no disponible: {e}"); return False
 
-    if len(colors) < 4:
-        return {}
+    def _embeddings(self,crops):
+        import torch
+        from PIL import Image
+        pils=[Image.fromarray(cv2.cvtColor(c,cv2.COLOR_BGR2RGB)) if isinstance(c,np.ndarray) else c for c in crops]
+        embs=[]
+        with torch.no_grad():
+            for i in range(0,len(pils),32):
+                b=pils[i:i+32]
+                inp=self.processor(images=b,return_tensors="pt").to(self.device)
+                out=self.model(**inp)
+                embs.append(torch.mean(out.last_hidden_state,dim=1).cpu().numpy())
+        return np.concatenate(embs)
 
-    colors_arr = np.array(colors, dtype=np.float32)
-    kmeans = KMeans(n_clusters=2, n_init=10, random_state=42)
-    kmeans.fit(colors_arr)
-    centers = kmeans.cluster_centers_
+    def fit(self,crops):
+        if not self._load() or len(crops)<4: return []
+        embs=self._embeddings(crops)
+        proj=self.reducer.fit_transform(embs)
+        labels=self.clustering.fit_predict(proj)
+        self._fitted=True
+        return labels.tolist()
 
-    return {
-        "team_0": tuple(map(int, centers[0])),
-        "team_1": tuple(map(int, centers[1])),
-    }
+    def predict(self,crops):
+        if not self._fitted or not crops: return [0]*len(crops)
+        embs=self._embeddings(crops)
+        proj=self.reducer.transform(embs)
+        return self.clustering.predict(proj).tolist()
 
 
-def classify_team(frame: np.ndarray, det: dict, team_colors: dict = None) -> int:
+_siglip_classifier=TeamClassifierSigLIP()
+
+
+def _get_crop(frame,det):
+    x,y,w,h=det["x"],det["y"],det["w"],det["h"]
+    x1=max(0,x-w//2); y1=max(0,y-h//2)
+    x2=min(frame.shape[1],x+w//2); y2=min(frame.shape[0],y+h//2)
+    c=frame[y1:y2,x1:x2]
+    return c if c.size>0 else None
+
+
+def resolve_goalkeeper_team(players_dets, goalkeeper_dets):
+    """Asigna portero al equipo geometricamente mas cercano (centroide del equipo)."""
+    if not goalkeeper_dets or not players_dets: return [0]*len(goalkeeper_dets)
+    t0=np.array([(d["x"],d["y"]) for d in players_dets if d.get("equipo")==0])
+    t1=np.array([(d["x"],d["y"]) for d in players_dets if d.get("equipo")==1])
+    if not len(t0) or not len(t1): return [0]*len(goalkeeper_dets)
+    c0=t0.mean(axis=0); c1=t1.mean(axis=0)
+    result=[]
+    for gk in goalkeeper_dets:
+        p=np.array([gk["x"],gk["y"]])
+        result.append(0 if np.linalg.norm(p-c0)<np.linalg.norm(p-c1) else 1)
+    return result
+
+
+def auto_detect_team_colors(frame, detections, mode="kmeans"):
     """
-    Clasifica: 0 (local), 1 (visitante), 2 (árbitro), -1 (ignorado).
-    Distancia euclidiana en espacio RGB hacia centroide de cada equipo.
+    Detecta y separa los dos equipos.
+    mode='siglip': SigLIP embeddings (robusto, requiere transformers+umap)
+    mode='kmeans': KMeans RGB (rapido, siempre disponible)
     """
-    if det.get("clase") == "referee":
-        return 2
+    pdets=[d for d in detections if d.get("clase") in ("player","goalkeeper")]
+    if len(pdets)<4: return {}
 
-    if det["w"] * det["h"] < 500:
-        return -1
+    if mode=="siglip":
+        crops=[c for d in pdets if (c:=_get_crop(frame,d)) is not None]
+        if len(crops)>=4:
+            labels=_siglip_classifier.fit(crops)
+            if labels:
+                c0=[]; c1=[]
+                for det,lbl in zip(pdets,labels):
+                    c=det.get("torso_color") or _extract_torso_rgb(frame,det["x"],det["y"],det["w"],det["h"])
+                    if c: (c0 if lbl==0 else c1).append(c)
+                t0=tuple(map(int,np.mean(c0,axis=0))) if c0 else (255,0,0)
+                t1=tuple(map(int,np.mean(c1,axis=0))) if c1 else (0,0,255)
+                return {"team_0":t0,"team_1":t1,"_siglip_fitted":True}
 
-    # Reusar torso_color ya calculado si existe (evita re-calcular KMeans)
-    color_rgb = det.get("torso_color") or _extract_torso_rgb(
-        frame, det["x"], det["y"], det["w"], det["h"]
-    )
-    if color_rgb is None:
-        return 0
+    colors=[det.get("torso_color") or _extract_torso_rgb(frame,det["x"],det["y"],det["w"],det["h"]) for det in pdets]
+    colors=[c for c in colors if c is not None]
+    if len(colors)<4: return {}
+    km=KMeans(n_clusters=2,n_init=10,random_state=42)
+    km.fit(np.array(colors,dtype=np.float32))
+    centers=km.cluster_centers_
+    return {"team_0":tuple(map(int,centers[0])),"team_1":tuple(map(int,centers[1]))}
 
-    r, g, b = color_rgb
-    if r < 40 and g < 40 and b < 40:
-        return 2
 
+def classify_team(frame, det, team_colors=None):
+    """
+    Clasifica: 0 (local), 1 (visitante), 2 (arbitro), -1 (ignorado).
+    Usa SigLIP si esta entrenado, KMeans RGB si no.
+    """
+    if det.get("clase")=="referee": return 2
+    if det["w"]*det["h"]<500: return -1
+    if team_colors and team_colors.get("_siglip_fitted") and _siglip_classifier._fitted:
+        crop=_get_crop(frame,det)
+        if crop is not None:
+            labels=_siglip_classifier.predict([crop])
+            return labels[0] if labels else 0
+    color_rgb=det.get("torso_color") or _extract_torso_rgb(frame,det["x"],det["y"],det["w"],det["h"])
+    if color_rgb is None: return 0
+    r,g,b=color_rgb
+    if r<40 and g<40 and b<40: return 2
     if team_colors and "team_0" in team_colors and "team_1" in team_colors:
-        c0 = np.array(team_colors["team_0"])
-        c1 = np.array(team_colors["team_1"])
-        c_target = np.array(color_rgb)
-        dist0 = np.linalg.norm(c_target - c0)
-        dist1 = np.linalg.norm(c_target - c1)
-        return 0 if dist0 < dist1 else 1
-
+        c0=np.array(team_colors["team_0"]); c1=np.array(team_colors["team_1"])
+        ct=np.array(color_rgb)
+        return 0 if np.linalg.norm(ct-c0)<np.linalg.norm(ct-c1) else 1
     return 0
