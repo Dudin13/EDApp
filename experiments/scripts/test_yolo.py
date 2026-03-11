@@ -25,11 +25,11 @@ if ret:
     mitad_izq = zona_campo[:, :w_zona//2]
     mitad_der = zona_campo[:, w_zona//2:]
 
-    cv2.imwrite('C:/apped/frame_izq.jpg', mitad_izq)
-    cv2.imwrite('C:/apped/frame_der.jpg', mitad_der)
+    cv2.imwrite('C:/apped/data/samples/frame_izq.jpg', mitad_izq)
+    cv2.imwrite('C:/apped/data/samples/frame_der.jpg', mitad_der)
 
-    result_izq = model.predict('C:/apped/frame_izq.jpg', confidence=40, overlap=25)
-    result_der = model.predict('C:/apped/frame_der.jpg', confidence=40, overlap=25)
+    result_izq = model.predict('C:/apped/data/samples/frame_izq.jpg', confidence=40, overlap=25)
+    result_der = model.predict('C:/apped/data/samples/frame_der.jpg', confidence=40, overlap=25)
 
     detecciones = []
     for pred in result_izq.predictions:

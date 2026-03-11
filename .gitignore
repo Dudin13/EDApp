@@ -15,6 +15,8 @@ ED/
 venv/
 .venv/
 env/
+venv_cuda/
+venv_training/
 
 # Streamlit
 .streamlit/secrets.toml
@@ -49,11 +51,15 @@ output/
 .DS_Store
 Thumbs.db
 
+# Data and Models
+data/datasets/
+data/samples/*.mp4
+data/samples/videos
+# ml/models/     <-- Handled by *.pt
+
 # YOLO Training
 combined_dataset/
 roboflow_dataset/
-venv_training/
-venv_cuda/
 
 03_Imagenes_Ejemplo/
 04_Datasets_Entrenamiento/

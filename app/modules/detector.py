@@ -28,8 +28,8 @@ ROBOFLOW_PROJECT = "football-players-detection-3zvbc"
 ROBOFLOW_VERSION = 1
 
 # Modelo entrenado localmente (YOLOv8 segmentación)
-YOLO_MODEL_PATH = Path(__file__).parent / "best_football_seg.pt"
-YOLO_COCO_MODEL = "yolov8n.pt"   # modelo base COCO, detecta 'person' sin entrenamiento
+YOLO_MODEL_PATH = Path("c:/apped/ml/models/best_football_seg.pt")
+YOLO_COCO_MODEL = "c:/apped/ml/models/yolov8n.pt"   # modelo base COCO, detecta 'person' sin entrenamiento
 
 VALID_CLASSES = {"player", "goalkeeper", "referee", "ball"}
 
