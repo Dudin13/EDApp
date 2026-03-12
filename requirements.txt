@@ -1,0 +1,28 @@
+# EDudin Football Analytics Dependencies
+
+# Core
+pydantic-settings
+loguru
+pathlib
+python-dotenv
+
+# Computer Vision & ML
+ultralytics
+opencv-python
+supervision
+torch
+torchvision
+numpy
+pandas
+
+# Classification & Analysis
+transformers
+scikit-learn
+umap-learn
+
+# UI
+streamlit
+plotly
+
+# Utilities
+tqdm

@@ -18,16 +18,31 @@ except Exception:
 
 os.environ.setdefault("ROBOFLOW_API_KEY", os.getenv("ROBOFLOW_API_KEY", ""))
 
+@st.cache_data(show_spinner=False)
+def _get_diagnostic_frame(video_path, target_second):
+    import cv2
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return None
+    cap.set(cv2.CAP_PROP_POS_MSEC, target_second * 1000)
+    ret, frame = cap.read()
+    cap.release()
+    if not ret:
+        return None
+    return frame
+
 
 def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: int):
     """Muestra que detecta el modelo en un frame de muestra del video cargado."""
     import cv2
     import numpy as np
     from pathlib import Path
-    from modules.detector import yolo_model_available, detect_frame
-    from modules.detector import PLAYER_MODEL_PATH
+    from core.config.settings import settings
+    from ai.detector.detector import DetectorEngine
     
-    yolo_ok = yolo_model_available()
+    detector = DetectorEngine()
+    
+    yolo_ok = Path(settings.PLAYER_MODEL_PATH).exists()
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -37,7 +52,7 @@ def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: 
                 <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#00d4aa;font-weight:700;">
                     MODELO YOLO V8 ACTIVO
                 </div>
-                <div style="font-size:13px;color:#fff;margin-top:4px;">{Path(str(PLAYER_MODEL_PATH)).name}</div>
+                <div style="font-size:13px;color:#fff;margin-top:4px;">{Path(settings.PLAYER_MODEL_PATH).name}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -64,22 +79,16 @@ def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: 
         st.info("Carga un vídeo para ver el diagnóstico.")
         return
 
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # Optimizar lectura de frame con cache y búsqueda por msec
+    target_second = 10.0 # Estático para diagnóstico rápido
+    frame = _get_diagnostic_frame(video_path, target_second)
 
-    target_second = min(180, total_frames / fps * 0.2) if fps > 0 else 0
-    target_frame = int(target_second * fps)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-    ret, frame = cap.read()
-    cap.release()
-
-    if not ret:
-        st.error("No se pudo leer el frame.")
+    if frame is None:
+        st.error("No se pudo leer el frame para el diagnóstico.")
         return
 
     with st.spinner("⏳ Ejecutando diagnóstico..."):
-        dets = detect_frame(frame, mode=detection_mode, confidence=confidence / 100)
+        dets = detector.detect_frame(frame, confidence=confidence / 100)
 
     CLASS_COLORS = {"ball": (0, 255, 255), "player": (0, 212, 170), "goalkeeper": (255, 200, 0), "referee": (0, 0, 255)}
     vis_frame = frame.copy()
@@ -99,7 +108,7 @@ def render():
         st.session_state["analysis_step"] = 1
 
     # --- Loading Persistence ---
-    results_file = Path("c:/apped/football_analyzer/output/results.json")
+    results_file = settings.OUTPUT_DIR / "results.json"
     if not st.session_state.get("analysis_done") and results_file.exists():
         try:
             with open(results_file, "r", encoding="utf-8") as f:
@@ -500,11 +509,11 @@ def run_analysis_real(config: dict):
     video_path = st.session_state.get("video_path", "")
 
     try:
-        from modules.video_processor import VideoProcessor
-        processor = VideoProcessor(video_path, config)
+        from core.pipeline.video_pipeline import VideoAnalysisPipeline
+        pipeline = VideoAnalysisPipeline(config)
         resultados_finales = {}
 
-        for progreso, estado, resultados in processor.process():
+        for progreso, estado, resultados in pipeline.process(video_path):
             progress_bar.progress(int(progreso))
             status_box.markdown(f"""
             <div style="background:rgba(17, 24, 25, 0.5);border:1px solid rgba(0, 212, 170, 0.2);border-radius:12px;padding:12px 20px;font-size:13px;color:#00d4aa; font-weight:600;">
@@ -515,18 +524,15 @@ def run_analysis_real(config: dict):
 
         if resultados_finales:
             st.session_state["analysis_done"] = True
-            st.session_state["resultados_jugadores"] = resultados_finales.get("resultados_jugadores", {})
-            st.session_state["heatmap_x"] = resultados_finales.get("heatmap_x", [])
-            st.session_state["heatmap_y"] = resultados_finales.get("heatmap_y", [])
-            st.session_state["ball_events"] = resultados_finales.get("ball_events", [])
-            st.session_state["total_detecciones"] = resultados_finales.get("total_detecciones", 0)
-            st.session_state["frames_analizados"] = resultados_finales.get("frames_analizados", 0)
+            st.session_state["resultados_jugadores"] = resultados_finales.get("tracks", {})
+            st.session_state["ball_history"] = resultados_finales.get("ball_history", [])
             
             # Persistence save
-            results_file = Path("c:/apped/football_analyzer/output/results.json")
+            results_file = settings.OUTPUT_DIR / "results.json"
             results_file.parent.mkdir(parents=True, exist_ok=True)
             with open(results_file, "w", encoding="utf-8") as f:
-                json.dump(resultados_finales, f, ensure_ascii=False, indent=2)
+                # Convert Path objects to strings for JSON serializability if any
+                json.dump(resultados_finales, f, ensure_ascii=False, indent=2, default=str)
                 
             st.success("✅ Análisis completado y guardado.")
     except Exception as e:

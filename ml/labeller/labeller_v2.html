@@ -3,347 +3,845 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dataset Reviewer - Super Focused (50)</title>
+    <title>EDudin Pro Labeller v3 - Dual Pane</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
         :root {
-            --bg: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --accent: #00d4aa;
-            --text: #f8fafc;
-            --danger: #ef4444;
+            --primary: #00d4aa;
+            --secondary: #ffc800;
+            --bg-dark: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #e2e8f0;
+            --text-dim: #8899aa;
         }
+
         body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
             margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
         }
+
+        /* Toolbar */
         header {
             background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
+            padding: 10px 20px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid var(--accent);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 212, 170, 0.2);
+            backdrop-filter: blur(10px);
         }
-        .main-container {
+
+        .logo {
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: -0.5px;
+        }
+        .logo span { color: var(--primary); }
+
+        .status-badge {
+            background: rgba(0, 212, 170, 0.1);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Layout */
+        main {
             display: flex;
             flex: 1;
             overflow: hidden;
         }
-        .sidebar {
-            width: 300px;
-            background: rgba(15, 23, 42, 0.5);
-            border-right: 1px solid rgba(255,255,255,0.1);
+
+        /* Sidebar */
+        aside {
+            width: 280px;
+            background: var(--panel-bg);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
             flex-direction: column;
-            padding: 1rem;
+            padding: 20px;
         }
-        .image-list {
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 12px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+        
+        select, input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+
+        .img-list {
             flex: 1;
             overflow-y: auto;
-            margin-top: 1rem;
+            margin-top: 10px;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            background: #0f172a;
         }
-        .image-item {
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            border-radius: 8px;
+        .img-item {
+            padding: 8px 12px;
+            font-size: 13px;
             cursor: pointer;
-            background: rgba(255,255,255,0.05);
-            transition: all 0.2s;
-            font-size: 0.9rem;
+            border-bottom: 1px solid #1e293b;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .image-item:hover { background: rgba(0,212,170,0.1); }
-        .image-item.active { background: var(--accent); color: #000; font-weight: bold; }
+        .img-item:hover { background: rgba(0, 212, 170, 0.1); }
+        .img-item.active { background: var(--primary); color: #0f172a; font-weight: 600; }
 
-        .editor-area {
+        /* Workspace */
+        .workspace {
             flex: 1;
-            position: relative;
-            background: #000;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+            background: #05070a;
+            gap: 20px;
+        }
+
+        .pane-container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .pane {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             overflow: hidden;
         }
+
+        .pane-header {
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+        }
+
         canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            display: block;
+            touch-action: none;
             cursor: crosshair;
         }
-        .controls {
-            position: absolute;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
+
+        /* Class Selector */
+        .classes-bar {
             display: flex;
-            gap: 1rem;
-            background: rgba(15, 23, 42, 0.8);
-            padding: 1rem;
+            gap: 10px;
+            padding: 15px;
+            background: var(--panel-bg);
             border-radius: 12px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(0,212,170,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        button {
-            background: var(--accent);
-            color: #000;
+
+        .class-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .class-btn.active {
+            border-color: var(--primary);
+            color: white;
+            background: rgba(0, 212, 170, 0.1);
+            box-shadow: 0 0 10px rgba(0, 212, 170, 0.2);
+        }
+
+        /* Action Buttons */
+        .pane-actions {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        button.primary {
+            background: var(--primary);
+            color: #0f172a;
             border: none;
-            padding: 0.6rem 1.2rem;
+            padding: 10px 20px;
             border-radius: 6px;
-            font-weight: bold;
+            font-family: inherit;
+            font-weight: 700;
             cursor: pointer;
             transition: transform 0.1s;
         }
-        button:hover { transform: scale(1.05); }
-        button.secondary { background: #475569; color: white; }
-        
-        .class-selector {
+        button.primary:active { transform: scale(0.98); }
+
+        button.outline {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid #334155;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        button.outline:hover { background: rgba(255,255,255,0.05); }
+
+        .footer-controls {
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
         }
-        .class-btn {
-            text-align: left;
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            background: #1e293b;
-            color: #fff;
-            border: 1px solid transparent;
-        }
-        .class-btn.active { border-color: var(--accent); background: rgba(0,212,170,0.2); }
-        
-        .legend {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
+
+        #coords { font-size: 11px; color: var(--text-dim); font-family: monospace; }
+
+        .class-0 { color: #ff0000; } /* Local */
+        .class-1 { color: #0000ff; } /* Visitante */
+        .class-2 { color: #ffa500; } /* GK */
+        .class-3 { color: #ffff00; } /* Referee */
+        .class-4 { color: #ffffff; } /* Ball */
     </style>
 </head>
 <body>
 
 <header>
-    <div>
-        <h2 style="margin:0; font-size: 1.2rem;">⚽ Dataset Researcher <span style="color: var(--accent); font-size: 0.9rem; margin-left: 10px;">SUPER FOCUSED (50)</span></h2>
-    </div>
-    <div id="status">Cargando...</div>
+    <div class="logo">E<span>DUDIN</span> PRO LABELLER</div>
+    <div id="status" class="status-badge">Conectando...</div>
 </header>
 
-<div class="main-container">
-    <div class="sidebar">
-        <h3>Imágenes</h3>
-        <select id="subsetSelect" onchange="loadImages()" style="padding: 0.5rem; border-radius: 4px; background: #1e293b; color: #fff; border: 1px solid #334155;">
-            <option value="super_focused_50">Super Focused (50)</option>
-            <option value="valid">Validación</option>
-            <option value="train">Entrenamiento</option>
-        </select>
-        <div class="image-list" id="image-list"></div>
-        
-        <div class="class-selector">
-            <strong>Clases (0-5)</strong>
-            <button class="class-btn active" data-cls="0">0: Team 1</button>
-            <button class="class-btn" data-cls="1">1: Team 2</button>
-            <button class="class-btn" data-cls="2">2: Goalkeeper 1</button>
-            <button class="class-btn" data-cls="3">3: Referee</button>
-            <button class="class-btn" data-cls="4">4: Ball</button>
-            <button class="class-btn" data-cls="5">5: Goalkeeper 2</button>
+<main>
+    <aside style="display: flex; flex-direction: column; height: 100%;">
+        <div style="flex-shrink: 0; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;">
+            <button onclick="aiPredict()" class="primary" style="width: 100%; margin-bottom: 10px;">🤖 IA PREDICT (YOLO)</button>
+            <button onclick="nextImage()" class="primary" style="width: 100%; margin-bottom: 10px; background: #6366f1;">⏭️ SIGUIENTE IMAGEN</button>
+            <div style="background: rgba(255, 200, 0, 0.1); padding: 10px; border-radius: 8px; border: 1px solid var(--secondary);">
+                <p style="font-size: 11px; margin: 0 0 8px 0; color: var(--secondary); font-weight: 700;">MODO CLICK AUTOMÁTICO (SAM)</p>
+                <p style="font-size: 10px; margin: 0; color: var(--text-dim);">Haz CLICK NORMAL en un jugador para que la IA cree la caja sola.</p>
+            </div>
         </div>
-        
-        <div class="legend">
-            A/D: Navegar | S: Guardar | Z: Magic Click (SAM) | P: Predecir IA
+
+        <div class="form-group">
+            <label>Conjunto de Datos</label>
+            <select id="subsetSelect" onchange="loadImages()">
+                <option value="combined">Todo el Dataset (Mix)</option>
+                <option value="nuevas_muestras_marzo">Nuevas Muestras (Marzo)</option>
+                <option value="super_focused_50">Super Focused (50)</option>
+                <option value="train">Entrenamiento</option>
+                <option value="val">Validación</option>
+            </select>
+        </div>
+        <div class="form-group" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <label>Imágenes (<span id="imgCount">0</span>)</label>
+            <div id="imageList" class="img-list"></div>
+        </div>
+        <div style="padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 15px;">
+            <button onclick="clearLabels()" class="outline" style="width: 100%;">🗑️ Limpiar Imagen</button>
+        </div>
+    </aside>
+
+    <div class="workspace">
+        <div class="classes-bar">
+            <button class="class-btn active" data-id="0" onclick="setClass(0)">🔴 LOCAL</button>
+            <button class="class-btn" data-id="1" onclick="setClass(1)">🔵 VISITANTE</button>
+            <button class="class-btn" data-id="2" onclick="setClass(2)">🟠 PORTERO</button>
+            <button class="class-btn" data-id="3" onclick="setClass(3)">🟡 ÁRBITRO</button>
+            <button class="class-btn" data-id="4" onclick="setClass(4)">⚪ BALÓN</button>
+        </div>
+
+        <div class="pane-container">
+            <!-- Left Pane: AI Reference -->
+            <div class="pane">
+                <div class="pane-header">
+                    <span>PANEL IZQUIERDA: IA ASISTIDA</span>
+                    <span style="color: var(--primary);">MODO LECTURA</span>
+                </div>
+                <div class="canvas-area">
+                    <canvas id="canvas_ai"></canvas>
+                </div>
+            </div>
+
+            <!-- Right Pane: Manual Tool -->
+            <div class="pane" style="border-color: var(--secondary);">
+                <div class="pane-header">
+                    <span>PANEL DERECHA: ENTRENAMIENTO MANUAL</span>
+                    <span style="color: var(--secondary);">MODO EDICIÓN</span>
+                </div>
+                <div class="canvas-area">
+                    <canvas id="canvas_manual"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-controls">
+            <div id="coords">X: 0, Y: 0 | Zoom: 100%</div>
+            <div style="font-size: 10px; color: var(--text-dim);" id="savePath">Guardando en: ml/data/datasets/...</div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="margin:0; font-size:10px;">ZOOM:</label>
+                <input type="range" id="zoomRange" min="10" max="2000" value="100" oninput="updateZoomForce(this.value)" style="width: 120px;">
+                <button onclick="deleteSelected()" id="deleteBtn" class="outline" style="color: #ff4444; border-color: rgba(255,68,68,0.3); display: none;">❌ BORRAR</button>
+                <button onclick="saveFromIA()" class="outline">📥 USAR IA (IZQ)</button>
+                <button onclick="saveManual()" class="primary">💾 GUARDAR MANUAL (DER)</button>
+            </div>
         </div>
     </div>
-    
-    <div class="editor-area">
-        <canvas id="canvas"></canvas>
-        <div class="controls">
-            <button onclick="predictIA()">P: Predecir con IA</button>
-            <button onclick="useSAM()" class="secondary">Z: Magic Click (SAM)</button>
-            <button onclick="saveLabels()">S: Guardar Etiquetas</button>
-        </div>
-    </div>
-</div>
+</main>
 
 <script>
-    const API_BASE = "http://localhost:5000/api";
+    const API_URL = window.location.origin;
+    let currentSubset = "combined";
+    let currentFile = "";
     let images = [];
-    let currentIndex = 0;
-    let currentSubset = "super_focused_50";
-    let polygons = [];
-    let selectedClass = 0;
+    let labelsAI = [];
+    let labelsManual = [];
+    let currentClass = 0;
+    
+    // Canvas & Zoom State
+    const cAI = document.getElementById('canvas_ai');
+    const cManual = document.getElementById('canvas_manual');
+    const ctxAI = cAI.getContext('2d');
+    const ctxManual = cManual.getContext('2d');
+    let bgImg = new Image();
+    
+    let scale = 1.0;
+    let offsetX = 0;
+    let offsetY = 0;
 
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const imgObj = new Image();
+    // Mouse Tracking
+    let isDrawing = false;
+    let isPanning = false;
+    let isSpacePressed = false;
+    let startX, startY;
+    let panStartX, panStartY;
+    let samPoint = null;
+    let samLoadingPoint = null;
+    let selectedIdx = -1;
 
-    async function loadImages() {
+    const classColors = ["#ff0000", "#0000ff", "#ffa500", "#ffff00", "#ffffff"];
+
+    async function init() {
         try {
-            const resp = await fetch(`${API_BASE}/images/${currentSubset}`);
-            images = await resp.json();
-            renderImageList();
-            if (images.length > 0) loadImage(0);
-        } catch (err) {
-            document.getElementById('status').innerText = "Error: Backend no conectado";
+            const resp = await fetch(`${API_URL}/api/images/${currentSubset}`);
+            if (!resp.ok) throw new Error("API Offline");
+            document.getElementById('status').innerText = "Backend Conectado";
+            loadImages();
+        } catch (e) {
+            document.getElementById('status').innerText = "Error: Backend Offline";
+            document.getElementById('status').style.background = "rgba(255,0,0,0.1)";
+            document.getElementById('status').style.color = "#ff4444";
         }
     }
 
-    function renderImageList() {
-        const list = document.getElementById('image-list');
-        list.innerHTML = images.map((img, i) => `
-            <div class="image-item ${i === currentIndex ? 'active' : ''}" onclick="loadImage(${i})">
-                ${img}
-            </div>
-        `).join('');
-    }
-
-    function loadImage(index) {
-        currentIndex = index;
-        const filename = images[currentIndex];
-        imgObj.src = `${API_BASE}/image/${currentSubset}/${filename}`;
-        imgObj.onload = () => {
-            canvas.width = imgObj.width;
-            canvas.height = imgObj.height;
-            draw();
-            renderImageList();
-            document.getElementById('status').innerText = `Revisando: ${filename}`;
-        };
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(imgObj, 0, 0);
+    async function loadImages() {
+        currentSubset = document.getElementById('subsetSelect').value;
+        const resp = await fetch(`${API_URL}/api/images/${currentSubset}`);
+        images = await resp.json();
+        document.getElementById('imgCount').innerText = images.length;
         
-        // Draw polygons
-        polygons.forEach((poly, i) => {
-            ctx.beginPath();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = varToColor(poly.cls);
-            ctx.fillStyle = varToColor(poly.cls, 0.3);
-            
-            poly.points.forEach((p, j) => {
-                if (j === 0) ctx.moveTo(p[0] * canvas.width, p[1] * canvas.height);
-                else ctx.lineTo(p[0] * canvas.width, p[1] * canvas.height);
-            });
-            ctx.closePath();
-            ctx.stroke();
-            ctx.fill();
+        const list = document.getElementById('imageList');
+        list.innerHTML = "";
+        images.forEach(img => {
+            const div = document.createElement('div');
+            div.className = "img-item";
+            div.innerText = img;
+            div.onclick = () => selectImage(img, div);
+            list.appendChild(div);
         });
+
+        if (images.length > 0 && !currentFile) {
+            selectImage(images[0], list.firstChild);
+        }
     }
 
-    function varToColor(cls, alpha = 1) {
-        const colors = [
-            `rgba(255, 0, 0, ${alpha})`,   // 0: Red (Team 1)
-            `rgba(0, 0, 255, ${alpha})`,   // 1: Blue (Team 2)
-            `rgba(255, 165, 0, ${alpha})`, // 2: Orange (GK 1)
-            `rgba(255, 255, 0, ${alpha})`, // 3: Yellow (Ref)
-            `rgba(255, 255, 255, ${alpha})`, // 4: White (Ball)
-            `rgba(0, 255, 0, ${alpha})`    // 5: Green (GK 2)
-        ];
-        return colors[cls] || `rgba(255,255,255,${alpha})`;
-    }
-
-    async function predictIA() {
-        const filename = images[currentIndex];
-        document.getElementById('status').innerText = "IA pensando...";
-        // In reviewer we just show the predicted image directly for verification
-        const predUrl = `${API_BASE}/predict/${currentSubset}/${filename}`;
-        const predImg = new Image();
-        predImg.src = predUrl;
-        predImg.onload = () => {
-            ctx.drawImage(predImg, 0, 0);
-            document.getElementById('status').innerText = "Predicción IA cargada";
+    function selectImage(filename, el) {
+        currentFile = filename;
+        document.querySelectorAll('.img-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        
+        bgImg.onload = () => {
+            resetCanvases();
+            draw();
         };
+        bgImg.src = `${API_URL}/api/image/${currentSubset}/${filename}`;
+        
+        labelsAI = [];
+        labelsManual = [];
+        selectedIdx = -1;
+        document.getElementById('deleteBtn').style.display = "none";
+        document.getElementById('savePath').innerText = `Guardando en: ml/data/datasets/${currentSubset}/labels/`;
     }
 
-    async function useSAM() {
-        // Simple placeholder for SAM interaction logic
-        document.getElementById('status').innerText = "Pulsa en la imagen para Magic Click (SAM)";
-        canvas.onclick = async (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / rect.width;
-            const y = (e.clientY - rect.top) / rect.height;
+    function resetCanvases() {
+        const aspect = bgImg.height / bgImg.width;
+        const container = cAI.parentElement;
+        const w = container.clientWidth;
+        const h = w * aspect;
+        
+        [cAI, cManual].forEach(c => {
+            c.width = w;
+            c.height = h;
+        });
+        
+        scale = 1.0;
+        offsetX = 0;
+        offsetY = 0;
+        selectedIdx = -1;
+        document.getElementById('zoomRange').value = 100;
+    }
+
+    function updateZoomForce(val) {
+        // Simple slider zoom (centered)
+        const oldScale = scale;
+        const newScale = val / 100;
+        const factor = newScale / oldScale;
+        
+        const centerX = cManual.width / 2;
+        const centerY = cManual.height / 2;
+        
+        offsetX = centerX - (centerX - offsetX) * factor;
+        offsetY = centerY - (centerY - offsetY) * factor;
+        scale = newScale;
+
+        document.getElementById('zoomRange').value = val;
+        draw();
+    }
+
+    // Helper: get image coordinates from mouse event
+    function getImgCoords(e, canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Transform mouse coords to image space
+        const x = (mouseX - offsetX) / (canvas.width * scale);
+        const y = (mouseY - offsetY) / (canvas.height * scale);
+        return { x, y };
+    }
+
+    function setClass(id) {
+        currentClass = id;
+        document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-id="${id}"]`).classList.add('active');
+        // Unselect when changing class for new boxes
+        selectedIdx = -1;
+        document.getElementById('deleteBtn').style.display = "none";
+        draw();
+    }
+
+    // AI Prediction
+    async function aiPredict() {
+        if (!currentFile) return;
+        document.getElementById('status').innerText = "🤖 IA Pensando...";
+        try {
+            const resp = await fetch(`${API_URL}/api/predict_data/${currentSubset}/${currentFile}`);
+            const detections = await resp.json();
             
-            document.getElementById('status').innerText = "SAM trabajando...";
-            const resp = await fetch(`${API_BASE}/segment`, {
+            // Populate AI Pane
+            labelsAI = detections.map(d => ({
+                cls: d.cls,
+                points: d.points
+            }));
+
+            // Copy to Manual Pane for refinement
+            labelsManual = detections.map(d => {
+                // Convert polygon (points) to bounding box for simpler manual editing
+                const points = d.points;
+                const xs = points.map(p => p[0]);
+                const ys = points.map(p => p[1]);
+                return {
+                    cls: d.cls,
+                    x1: Math.min(...xs),
+                    y1: Math.min(...ys),
+                    x2: Math.max(...xs),
+                    y2: Math.max(...ys)
+                };
+            });
+
+            document.getElementById('status').innerText = "✅ IA Lista";
+            draw();
+        } catch (e) { 
+            console.error(e); 
+            document.getElementById('status').innerText = "❌ Error en IA";
+        }
+    }
+
+    async function samPredict(point) {
+        if (!currentFile || !point) return;
+        samLoadingPoint = point; // Show pulsing feedback
+        samPoint = point; // Show permanent target
+        draw();
+        
+        console.log("Segmenting point:", point);
+        document.getElementById('status').innerText = "✨ SAM Autodetectando...";
+        try {
+            const resp = await fetch(`${API_URL}/api/segment`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     subset: currentSubset,
-                    filename: images[currentIndex],
-                    point: {x, y}
+                    filename: currentFile,
+                    point: { x: point.x, y: point.y }
                 })
             });
             const data = await resp.json();
+            samLoadingPoint = null; 
+            
             if (data.polygon) {
-                polygons.push({cls: selectedClass, points: data.polygon});
-                draw();
-                document.getElementById('status').innerText = "Segmento añadido";
+                console.log("SAM Match! Polygon found.");
+                const xs = data.polygon.map(p => p[0]);
+                const ys = data.polygon.map(p => p[1]);
+                labelsManual.push({
+                    cls: currentClass,
+                    x1: Math.min(...xs), y1: Math.min(...ys),
+                    x2: Math.max(...xs), y2: Math.max(...ys)
+                });
+                document.getElementById('status').innerText = "✨ SAM Listo";
             } else {
-                document.getElementById('status').innerText = "No se encontró máscara";
+                console.warn("SAM Error:", data.error || "No mask found");
+                document.getElementById('status').innerText = "❌ No se detectó jugador";
             }
-            canvas.onclick = null;
-        };
+            draw();
+        } catch (e) {
+            console.error("SAM API Failed:", e);
+            samLoadingPoint = null;
+            document.getElementById('status').innerText = "❌ Error SAM (API)";
+            draw();
+        }
     }
 
-    async function saveLabels() {
-        const filename = images[currentIndex];
-        const labels = polygons.map(p => {
-            const pts = p.points.map(pt => `${pt[0].toFixed(5)} ${pt[1].toFixed(5)}`).join(" ");
-            return `${p.cls} ${pts}`;
+    // Event Handling with Zoom/Pan Support
+    cManual.oncontextmenu = (e) => e.preventDefault(); // Disable for Right-Click Pan
+
+    cManual.onmousedown = (e) => {
+        const coords = getImgCoords(e, cManual);
+        
+        // Pan with Right Click (button 2) OR Middle Click (button 1) OR Spacebar
+        if (e.button === 2 || e.button === 1 || isSpacePressed) { 
+            isPanning = true;
+            panStartX = e.clientX - offsetX;
+            panStartY = e.clientY - offsetY;
+            return;
+        }
+
+        if (e.button !== 0) return; // Only Left Click for interaction
+
+        // Selection Check (More sensitive)
+        let hit = -1;
+        const pad = 0.02 / scale;
+        labelsManual.forEach((l, idx) => {
+            if (coords.x >= l.x1 - pad && coords.x <= l.x2 + pad && coords.y >= l.y1 - pad && coords.y <= l.y2 + pad) {
+                hit = idx;
+            }
         });
         
-        await fetch(`${API_BASE}/save_labels`, {
+        if (hit !== -1) {
+            selectedIdx = hit;
+            document.getElementById('deleteBtn').style.display = "block";
+            isDrawing = false;
+        } else {
+            selectedIdx = -1;
+            document.getElementById('deleteBtn').style.display = "none";
+            
+            // Start tracking for potential drag (manual box) or click (SAM)
+            startX = coords.x;
+            startY = coords.y;
+            isDrawing = true;
+        }
+        draw();
+    };
+
+    cManual.onmousemove = (e) => {
+        const coords = getImgCoords(e, cManual);
+        document.getElementById('coords').innerText = `X: ${Math.round(coords.x * 100)}%, Y: ${Math.round(coords.y * 100)}% | Zoom: ${Math.round(scale*100)}%`;
+
+        if (isPanning) {
+            offsetX = e.clientX - panStartX;
+            offsetY = e.clientY - panStartY;
+            cManual.style.cursor = "move";
+            draw();
+            return;
+        }
+
+        // Update cursor visual
+        if (isSpacePressed) {
+            cManual.style.cursor = "grab";
+        } else {
+            // Check if hovering over a box
+            let hit = false;
+            const pad = 0.02 / scale;
+            labelsManual.forEach(l => {
+                if (coords.x >= l.x1 - pad && coords.x <= l.x2 + pad && coords.y >= l.y1 - pad && coords.y <= l.y2 + pad) hit = true;
+            });
+            cManual.style.cursor = hit ? "pointer" : "crosshair";
+        }
+
+        if (isDrawing) draw();
+    };
+
+    cManual.onmouseup = (e) => {
+        if (isPanning) { 
+            isPanning = false; 
+            return; 
+        }
+        if (!isDrawing) return;
+        isDrawing = false;
+        
+        const coords = getImgCoords(e, cManual);
+        const endX = coords.x;
+        const endY = coords.y;
+        
+        const dist = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        
+        // If it was a CLICK -> Trigger SAM (Threshold increased to 0.01 for better usability)
+        if (dist < 0.01) {
+             samPredict({x: startX, y: startY});
+        } 
+        // If it was a drag -> Normal Box
+        else if (Math.abs(endX - startX) > 0.005 && Math.abs(endY - startY) > 0.005) {
+            labelsManual.push({
+                cls: currentClass,
+                x1: Math.min(startX, endX),
+                y1: Math.min(startY, endY),
+                x2: Math.max(startX, endX),
+                y2: Math.max(startY, endY)
+            });
+        }
+        draw();
+    };
+
+    // Keyboard Events
+    window.onkeydown = (e) => {
+        if (e.code === "Space") {
+            isSpacePressed = true;
+        }
+        if (e.key === "Delete" || e.key === "Backspace") {
+            if (selectedIdx !== -1) {
+                deleteSelected();
+            }
+        }
+    };
+
+    window.onkeyup = (e) => {
+        if (e.code === "Space") {
+            isSpacePressed = false;
+        }
+    };
+
+    // Zoom with scrollwheel (Zoom to cursor) - ONLY WITH CTRL
+    cManual.onwheel = (e) => {
+        if (!e.ctrlKey) return; // REQUIRED: Hold CTRL to zoom
+        
+        e.preventDefault();
+        const rect = cManual.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const zoomIntensity = 0.1;
+        const delta = e.deltaY > 0 ? -zoomIntensity : zoomIntensity;
+        const newScale = Math.min(Math.max(0.1, scale * (1 + delta)), 25);
+        
+        const factor = newScale / scale;
+        offsetX = mouseX - (mouseX - offsetX) * factor;
+        offsetY = mouseY - (mouseY - offsetY) * factor;
+        
+        scale = newScale;
+        document.getElementById('zoomRange').value = Math.round(scale * 100);
+        draw();
+    };
+
+    function updateZoomForce(newScaleValue) {
+        const oldScale = scale;
+        scale = Math.min(Math.max(0.1, newScaleValue / 100), 25); // Convert percentage to scale
+        
+        const factor = scale / oldScale;
+
+        // Center of the canvas for slider zoom
+        const centerX = cManual.width / 2;
+        const centerY = cManual.height / 2;
+
+        // The point under the cursor should remain at the same position relative to the cursor
+        // (mouseX - offsetX_new) = (mouseX - offsetX_old) * factor
+        offsetX = centerX - (centerX - offsetX) * factor;
+        offsetY = centerY - (centerY - offsetY) * factor;
+        
+        document.getElementById('zoomRange').value = Math.round(scale * 100);
+        draw();
+    }
+
+    function deleteSelected() {
+        if (selectedIdx !== -1) {
+            labelsManual.splice(selectedIdx, 1);
+            selectedIdx = -1;
+            document.getElementById('deleteBtn').style.display = "none";
+            draw();
+        }
+    }
+
+    function draw() {
+        [ctxAI, ctxManual].forEach(ctx => {
+            const canvas = ctx.canvas;
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+            
+            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+        });
+
+        // Draw AI Labels (Left)
+        labelsAI.forEach(l => {
+            ctxAI.strokeStyle = classColors[l.cls] || "#fff";
+            ctxAI.lineWidth = 1/scale * 2;
+            ctxAI.beginPath();
+            l.points.forEach((p, i) => {
+                if (i === 0) ctxAI.moveTo(p[0] * cAI.width, p[1] * cAI.height);
+                else ctxAI.lineTo(p[0] * cAI.width, p[1] * cAI.height);
+            });
+            ctxAI.closePath();
+            ctxAI.stroke();
+        });
+
+        // Draw Manual Labels (Right)
+        labelsManual.forEach((l, idx) => {
+            const isSelected = (idx === selectedIdx);
+            ctxManual.strokeStyle = isSelected ? "#00ff00" : (classColors[l.cls] || "#fff");
+            ctxManual.lineWidth = (isSelected ? 4 : 3) / scale;
+            
+            const x = l.x1 * cManual.width;
+            const y = l.y1 * cManual.height;
+            const w = (l.x2 - l.x1) * cManual.width;
+            const h = (l.y2 - l.y1) * cManual.height;
+            ctxManual.strokeRect(x, y, w, h);
+            
+            ctxManual.fillStyle = classColors[l.cls] || "#fff";
+            ctxManual.globalAlpha = isSelected ? 0.4 : 0.2;
+            ctxManual.fillRect(x, y, w, h);
+            ctxManual.globalAlpha = 1.0;
+        });
+
+        // Update zoom text info
+        document.getElementById('coords').innerText = `X: ${Math.round(offsetX)}, Y: ${Math.round(offsetY)} | Zoom: ${Math.round(scale*100)}%`;
+
+        // Draw SAM Loading/Point
+        if (samLoadingPoint || samPoint) {
+            const p = samLoadingPoint || samPoint;
+            ctxManual.fillStyle = samLoadingPoint ? "rgba(0, 212, 170, 0.8)" : "#ff0";
+            ctxManual.beginPath();
+            ctxManual.arc(p.x * cManual.width, p.y * cManual.height, 8/scale, 0, Math.PI * 2);
+            ctxManual.fill();
+            ctxManual.strokeStyle = "white";
+            ctxManual.lineWidth = 2/scale;
+            ctxManual.stroke();
+            
+            if (samLoadingPoint) {
+                // Pulse effect
+                const pulse = (Date.now() % 1000) / 1000;
+                ctxManual.beginPath();
+                ctxManual.arc(p.x * cManual.width, p.y * cManual.height, (10 + pulse * 10)/scale, 0, Math.PI * 2);
+                ctxManual.stroke();
+                requestAnimationFrame(draw); // Keep pulse moving
+            }
+        }
+    }
+
+    async function saveFromIA() {
+        // Just copy AI labels exactly if needed
+        const yoloLabels = labelsAI.map(l => {
+            // Logic to convert polygon to YOLO format (assuming class x1 y1 x2 y2... for segment)
+            const ptsStr = l.points.map(p => `${p[0].toFixed(6)} ${p[1].toFixed(6)}`).join(" ");
+            return `${l.cls} ${ptsStr}`;
+        });
+        saveGeneric(yoloLabels);
+    }
+
+    function nextImage() {
+        const idx = images.indexOf(currentFile);
+        if (idx !== -1 && idx < images.length - 1) {
+            const nextFile = images[idx + 1];
+            const items = document.querySelectorAll('.img-item');
+            selectImage(nextFile, items[idx + 1]);
+            // Scroll into view
+            items[idx + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    async function saveManual() {
+        const yoloLabels = labelsManual.map(l => {
+            const cx = (l.x1 + l.x2) / 2;
+            const cy = (l.y1 + l.y2) / 2;
+            const w = l.x2 - l.x1;
+            const h = l.y2 - l.y1;
+            return `${l.cls} ${cx.toFixed(6)} ${cy.toFixed(6)} ${w.toFixed(6)} ${h.toFixed(6)}`;
+        });
+        saveGeneric(yoloLabels);
+    }
+
+    async function saveGeneric(yoloLabels) {
+        if (!currentFile) return;
+        const resp = await fetch(`${API_URL}/api/save_labels`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 subset: currentSubset,
-                filename: filename,
-                labels: labels
+                filename: currentFile,
+                labels: yoloLabels
             })
         });
-        document.getElementById('status').innerText = "ETIQUETAS GUARDADAS ✅";
+        if (resp.ok) {
+            document.getElementById('status').innerText = "💾 Guardadas: " + currentFile;
+            document.getElementById('status').style.color = "var(--primary)";
+        }
     }
 
-    // Navegación
-    window.onkeydown = (e) => {
-        if (e.key === 'd' || e.key === 'D') loadImage((currentIndex + 1) % images.length);
-        if (e.key === 'a' || e.key === 'A') loadImage((currentIndex - 1 + images.length) % images.length);
-        if (e.key === 's' || e.key === 'S') saveLabels();
-        if (e.key === 'z' || e.key === 'Z') useSAM();
-        if (e.key === 'p' || e.key === 'P') predictIA();
-        if (e.key >= '0' && e.key <= '5') {
-            selectedClass = parseInt(e.key);
-            document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`[data-cls="${selectedClass}"]`).classList.add('active');
+    function st_initial_labels() {
+        // Mocking AI for demo of the pane
+        labelsAI = []; 
+    }
+
+    function clearLabels() {
+        if (confirm("¿Borrar TODAS las marcas de esta imagen?")) {
+            labelsManual = [];
+            selectedIdx = -1;
+            document.getElementById('deleteBtn').style.display = "none";
+            draw();
         }
-    };
+    }
 
-    document.querySelectorAll('.class-btn').forEach(btn => {
-        btn.onclick = () => {
-            selectedClass = parseInt(btn.dataset.cls);
-            document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        };
-    });
-
-    document.getElementById('subset-select').onchange = (e) => {
-        currentSubset = e.target.value;
-        loadImages();
-    };
-
-    loadImages();
+    init();
 </script>
 
 </body>
