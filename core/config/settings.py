@@ -41,9 +41,16 @@ class Settings(BaseSettings):
     # Hardware
     DEVICE: str = "cuda" # 'cpu', 'cuda', 'mps'
 
+    # External APIs & Tools
+    ROBOFLOW_API_KEY: Optional[str] = None
+    SOCCERNET_EMAIL: Optional[str] = None
+    SOCCERNET_PASSWORD: Optional[str] = None
+    FFMPEG_PATH: Optional[str] = None
+
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 # Create instance
 settings = Settings()

@@ -13,7 +13,6 @@ FIXES APLICADOS:
 """
 
 import streamlit as st
-import os
 import sys
 from pathlib import Path
 

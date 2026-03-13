@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
+from core.config.settings import settings
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -104,6 +105,7 @@ def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: 
 
 
 def render():
+    from core.config.settings import settings
     if "analysis_step" not in st.session_state:
         st.session_state["analysis_step"] = 1
 
