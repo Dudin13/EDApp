@@ -29,10 +29,10 @@ from pathlib import Path
 
 # ── Rutas base ─────────────────────────────────────────────────────────────
 BASE         = Path(os.environ.get("APPED_ROOT", "C:/apped"))
-DATASET_ROOT = BASE / "04_Datasets_Entrenamiento" / "hybrid_dataset"
-SUPER_ROOT   = BASE / "04_Datasets_Entrenamiento" / "super_focused_50"
-OUTPUT_DIR   = BASE / "train_yolo" / "runs"
-WEIGHTS_DIR  = BASE / "EDApp" / "assets" / "weights"
+DATASET_ROOT = BASE / "data" / "datasets" / "hybrid_dataset"
+SUPER_ROOT   = BASE / "data" / "datasets" / "super_focused_50"
+OUTPUT_DIR   = BASE / "ml" / "training" / "runs"
+WEIGHTS_DIR  = BASE / "assets" / "weights"
 
 # ── Configuración por modo ─────────────────────────────────────────────────
 CONFIGS = {
@@ -104,7 +104,7 @@ def print_gpu_info():
         print(f"  GPU:  {name}")
         print(f"  VRAM: {vram:.1f} GB")
     else:
-        print("  ⚠️  CUDA no disponible — entrenando en CPU (será muy lento)")
+        print("  WARNING: CUDA no disponible - entrenando en CPU (sera muy lento)")
 
 
 def find_previous_best(target: str) -> Path | None:
@@ -128,19 +128,19 @@ def find_players_best() -> Path | None:
 def validate_data_yaml(yaml_path: Path) -> bool:
     """Comprueba que el data.yaml tiene val separado de train."""
     if not yaml_path.exists():
-        print(f"  ❌ data.yaml no encontrado: {yaml_path}")
-        print(f"     Ejecuta build_hybrid_dataset.py y create_val_split.py primero.")
+        print(f"  ERROR: data.yaml no encontrado: {yaml_path}")
+        print(f"     Ejecuta build_hybrid_dataset.py e create_val_split.py primero.")
         return False
 
     content = yaml_path.read_text(encoding="utf-8")
 
     # Detectar el bug clásico: val apuntando a train
     if "val: train" in content or "val: images/train" in content:
-        print(f"  ❌ data.yaml tiene val == train → las métricas serán falsas")
+        print(f"  ERROR: data.yaml tiene val == train -> las metricas seran falsas")
         print(f"     Ejecuta: python ml/training/create_val_split.py")
         return False
 
-    print(f"  ✅ data.yaml OK: {yaml_path.name}")
+    print(f"  SUCCESS: data.yaml OK: {yaml_path.name}")
     return True
 
 
@@ -176,7 +176,7 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
             print(f"  Fine-tuning desde: {players_best.name}")
         else:
             model_base = "yolo11m-seg.pt"
-            print(f"  ⚠️  No se encontró best.pt de players — usando modelo base")
+            print(f"  WARNING: No se encontro best.pt de players - usando modelo base")
     elif resume:
         # Resume: buscar último checkpoint
         last_ckpt = OUTPUT_DIR / "segment" / cfg["output_name"] / "weights" / "last.pt"
@@ -184,7 +184,7 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
             model_base = str(last_ckpt)
             print(f"  Resumiendo desde: {last_ckpt}")
         else:
-            print(f"  ⚠️  No se encontró last.pt para resume — empezando desde cero")
+            print(f"  WARNING: No se encontro last.pt para resume - empezando desde cero")
 
     # Parámetros finales
     _epochs = epochs if epochs is not None else cfg["epochs"]
@@ -208,7 +208,7 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
     try:
         from ultralytics import YOLO
     except ImportError:
-        print("  ❌ ultralytics no instalado: pip install ultralytics")
+        print("  ERROR: ultralytics no instalado: pip install ultralytics")
         return False
 
     model = YOLO(model_base)
@@ -246,7 +246,7 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
         map5095  = results.results_dict.get("metrics/mAP50-95(B)", "N/A")
 
         print(f"\n{'='*60}")
-        print(f"  ✅ ENTRENAMIENTO COMPLETADO — {target.upper()}")
+        print(f"  SUCCESS: ENTRENAMIENTO COMPLETADO - {target.upper()}")
         print(f"  Modelo: {best} ({size_mb:.1f} MB)")
         if isinstance(map50, float):
             print(f"  mAP50:    {map50:.3f}")
@@ -254,7 +254,7 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
             if map50 < 0.3:
                 print(f"  ⚠️  mAP50 bajo — considera añadir más imágenes al dataset")
             elif map50 >= 0.7:
-                print(f"  🎉 Excelente rendimiento")
+                print(f"  SUCCESS: Excelente rendimiento")
         print(f"{'='*60}")
 
         # Copiar best.pt a assets/weights/ para que la app lo use

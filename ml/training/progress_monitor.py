@@ -8,11 +8,25 @@ except ImportError:
     print("Por favor instala tqdm: pip install tqdm")
     exit(1)
 
-def get_latest_run(runs_dir="runs/detect"):
-    if not os.path.exists(runs_dir): return None
-    runs = [os.path.join(runs_dir, d) for d in os.listdir(runs_dir) if os.path.isdir(os.path.join(runs_dir, d))]
-    if not runs: return None
-    return max(runs, key=os.path.getmtime)
+from pathlib import Path
+
+def get_latest_run(base_dir="ml/training/runs"):
+    if not os.path.exists(base_dir): 
+        return None
+    
+    all_runs = []
+    # Buscar en detect y segment
+    for sub in ["detect", "segment"]:
+        d = os.path.join(base_dir, sub)
+        if os.path.exists(d):
+            runs = [os.path.join(d, o) for o in os.listdir(d) 
+                    if os.path.isdir(os.path.join(d, o))]
+            all_runs.extend(runs)
+            
+    if not all_runs: 
+        return None
+        
+    return max(all_runs, key=os.path.getmtime)
 
 def monitor_training():
     run_dir = get_latest_run()
