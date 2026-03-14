@@ -1,0 +1,19 @@
+# INSTRUCCIONES DE REVISIÓN - DATASET VEO
+
+Este paquete contiene las imágenes extraídas de los vídeos de fútbol y las etiquetas auto-generadas por la IA.
+
+## Cómo empezar:
+1. Asegúrate de tener Python instalado.
+2. Ejecuta el archivo 'instalar_y_lanzar.bat'.
+   - Esto instalará Flask (si no lo tienes) y abrirá el navegador.
+3. En el navegador (http://127.0.0.1:5000), verás las imágenes.
+4. Revisa que los recuadros verdes (jugadores) sean correctos.
+5. Si haces algún cambio, pulsa el botón 'GUARDAR'.
+6. Usa 'SIGUIENTE' para pasar a la siguiente imagen.
+
+## Estructura del paquete:
+- /imagenes: Fotogramas originales.
+- /etiquetas_auto: Archivos .txt en formato YOLO.
+- labeller_revision.py/html: Aplicación de visualización.
+
+Gracias por ayudar a mejorar el modelo EDudin!

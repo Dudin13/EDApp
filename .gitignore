@@ -63,3 +63,10 @@ roboflow_dataset/
 
 03_Imagenes_Ejemplo/
 04_Datasets_Entrenamiento/
+
+
+# Temporary and build artifacts
+logs/
+revision_veo/
+revision_veo.zip
+Include/
