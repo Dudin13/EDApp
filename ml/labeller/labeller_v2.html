@@ -257,6 +257,7 @@
         <div class="form-group">
             <label>Conjunto de Datos</label>
             <select id="subsetSelect" onchange="loadImages()">
+                <option value="veo_frames_raw">VEO Frames Nuevos</option>
                 <option value="combined">Todo el Dataset (Mix)</option>
                 <option value="nuevas_muestras_marzo">Nuevas Muestras (Marzo)</option>
                 <option value="super_focused_50">Super Focused (50)</option>
@@ -275,11 +276,12 @@
 
     <div class="workspace">
         <div class="classes-bar">
-            <button class="class-btn active" data-id="0" onclick="setClass(0)">🔴 LOCAL</button>
-            <button class="class-btn" data-id="1" onclick="setClass(1)">🔵 VISITANTE</button>
-            <button class="class-btn" data-id="2" onclick="setClass(2)">🟠 PORTERO</button>
-            <button class="class-btn" data-id="3" onclick="setClass(3)">🟡 ÁRBITRO</button>
-            <button class="class-btn" data-id="4" onclick="setClass(4)">⚪ BALÓN</button>
+            <button class="class-btn active" data-id="0" onclick="setClass(0)">🟢 PLAYER</button>
+            <button class="class-btn" data-id="1" onclick="setClass(1)">🟠 GOALKEEPER</button>
+            <button class="class-btn" data-id="2" onclick="setClass(2)">🔵 REFEREE</button>
+            <button class="class-btn" data-id="3" onclick="setClass(3)">🟡 BALL</button>
+            <button class="class-btn" data-id="4" onclick="setClass(4)">🔴 EQUIPO A</button>
+            <button class="class-btn" data-id="5" onclick="setClass(5)">🔵 EQUIPO B</button>
         </div>
 
         <div class="pane-container">
@@ -350,7 +352,7 @@
     let samLoadingPoint = null;
     let selectedIdx = -1;
 
-    const classColors = ["#ff0000", "#0000ff", "#ffa500", "#ffff00", "#ffffff"];
+    const classColors = ["#32c832", "#ffa532", "#3232ff", "#ffff00", "#ff0000", "#0088ff"];
 
     async function init() {
         try {
@@ -845,4 +847,3 @@
 </script>
 
 </body>
-</html>

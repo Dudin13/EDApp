@@ -20,10 +20,10 @@ DATASET_ROOT = (BASE / "data/datasets").absolute()
 MODEL_PATH = BASE / "yolo11m-seg.pt"
 
 # ✅ Subsets válidos
-VALID_SUBSETS = {"train", "val", "test", "super_focused_50", "nuevas_muestras_marzo", "dataset", "combined"}
+VALID_SUBSETS = {"train", "val", "test", "super_focused_50", "nuevas_muestras_marzo", "dataset", "combined", "veo_frames_raw"}
 
 # ✅ Clases de Fútbol
-CLASSES = ["Equipo Local", "Equipo Visitante", "Portero", "Árbitro", "Balón"]
+CLASSES = ["player", "goalkeeper", "referee", "ball", "equipo_a", "equipo_b"]
 
 print(f"Dataset Root: {DATASET_ROOT}")
 model = YOLO(MODEL_PATH)
@@ -80,6 +80,8 @@ def segment_image():
                 base_path = DATASET_ROOT / "nuevas_muestras_marzo"
             elif subset == "dataset":
                 base_path = DATASET_ROOT / "dataset/images/train"
+            elif subset == "veo_frames_raw":
+                base_path = DATASET_ROOT / "veo_frames_raw"
             else:
                 base_path = DATASET_ROOT / subset / "images"
             img_path = safe_resolve(base_path, filename)
@@ -127,7 +129,8 @@ def list_images(subset):
         folders = [
             DATASET_ROOT / "super_focused_50/train/images",
             DATASET_ROOT / "nuevas_muestras_marzo",
-            DATASET_ROOT / "dataset/images/train"
+            DATASET_ROOT / "dataset/images/train",
+            DATASET_ROOT / "veo_frames_raw"
         ]
         images = []
         for folder in folders:
@@ -144,6 +147,8 @@ def list_images(subset):
         img_dir = DATASET_ROOT / "nuevas_muestras_marzo"
     elif subset == "dataset":
         img_dir = DATASET_ROOT / "dataset/images/train"
+    elif subset == "veo_frames_raw":
+        img_dir = DATASET_ROOT / "veo_frames_raw"
     else:
         img_dir = DATASET_ROOT / subset / "images"
         
@@ -168,6 +173,8 @@ def get_image(subset, filename):
         safe_path = (DATASET_ROOT / "nuevas_muestras_marzo").absolute()
     elif subset == "dataset":
         safe_path = (DATASET_ROOT / "dataset" / "images" / "train").absolute()
+    elif subset == "veo_frames_raw":
+        safe_path = (DATASET_ROOT / "veo_frames_raw").absolute()
     else:
         safe_path = (DATASET_ROOT / subset / "images").absolute()
         
@@ -188,6 +195,8 @@ def predict(subset, filename):
             base_path = DATASET_ROOT / "nuevas_muestras_marzo"
         elif subset == "dataset":
             base_path = DATASET_ROOT / "dataset/images/train"
+        elif subset == "veo_frames_raw":
+            base_path = DATASET_ROOT / "veo_frames_raw"
         else:
             base_path = DATASET_ROOT / subset / "images"
         img_path = safe_resolve(base_path, filename)
@@ -195,7 +204,7 @@ def predict(subset, filename):
     if img_path is None or not img_path.exists():
         return "Image not found", 404
 
-    results = model.predict(img_path, conf=0.15, verbose=False)[0]
+    results = model.predict(img_path, conf=0.15, imgsz=1280, verbose=False)[0]
 
     pred_filename = f"pred_{uuid.uuid4().hex}.jpg"
     pred_path = Path(tempfile.gettempdir()) / pred_filename
@@ -228,6 +237,8 @@ def predict_data(subset, filename):
             base_path = DATASET_ROOT / "nuevas_muestras_marzo"
         elif subset == "dataset":
             base_path = DATASET_ROOT / "dataset/images/train"
+        elif subset == "veo_frames_raw":
+            base_path = DATASET_ROOT / "veo_frames_raw"
         else:
             base_path = DATASET_ROOT / subset / "images"
         img_path = safe_resolve(base_path, filename)
@@ -235,7 +246,7 @@ def predict_data(subset, filename):
     if img_path is None or not img_path.exists():
         return jsonify({"error": "Image not found"}), 404
 
-    results = model.predict(img_path, conf=0.25, verbose=False)[0]
+    results = model.predict(img_path, conf=0.25, imgsz=1280, verbose=False)[0]
     detections = []
     
     if results.masks is not None:
@@ -280,6 +291,8 @@ def save_labels():
         base_path = DATASET_ROOT / "nuevas_muestras_marzo/labels"
     elif subset == "dataset":
         base_path = DATASET_ROOT / "dataset/labels/train"
+    elif subset == "veo_frames_raw":
+        base_path = DATASET_ROOT / "labels_autolabel"
     else:
         base_path = DATASET_ROOT / subset / "labels"
         
@@ -293,6 +306,40 @@ def save_labels():
         f.write("\n".join(labels))
 
     return jsonify({"status": "success"})
+
+
+@app.route('/api/load_labels/<subset>/<path:filename>')
+def load_labels(subset, filename):
+    """Carga las etiquetas YOLO existentes para una imagen."""
+    if subset not in VALID_SUBSETS:
+        return jsonify({"error": "Invalid subset"}), 400
+
+    label_filename = Path(filename).stem + ".txt"
+
+    if subset == "combined":
+        # Inferir carpeta de labels desde la ruta de la imagen
+        img_path = DATASET_ROOT / filename
+        base_path = img_path.parent.parent / "labels"
+    elif subset == "super_focused_50":
+        base_path = DATASET_ROOT / "super_focused_50/train/labels"
+    elif subset == "nuevas_muestras_marzo":
+        base_path = DATASET_ROOT / "nuevas_muestras_marzo/labels"
+    elif subset == "dataset":
+        base_path = DATASET_ROOT / "dataset/labels/train"
+    elif subset == "veo_frames_raw":
+        base_path = DATASET_ROOT / "labels_autolabel"
+    else:
+        base_path = DATASET_ROOT / subset / "labels"
+
+    lab_path = safe_resolve(base_path, label_filename)
+    if lab_path is None or not lab_path.exists():
+        return jsonify({"labels": []})  # Sin etiquetas previas — no es error
+
+    try:
+        lines = [l.strip() for l in lab_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        return jsonify({"labels": lines})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
