@@ -342,3 +342,13 @@ APPED_ROOT=C:/apped
 
 *Desarrollado por Eduardo Pérez — Departamento de Datos, Cádiz CF Cantera*  
 *Developed by Eduardo Pérez — Data Department, Cádiz CF Cantera*
+
+### 2026-03-14
+- **Modelo**: Primer entrenamiento completado — mAP50 Box: 0.715 / Mask: 0.694 con `best.pt` (epoch 26)
+- **Diagnóstico**: Detectado problema con cámaras VEO — jugadores demasiado pequeños a imgsz=640
+- **Solución**: `imgsz=1280` resuelve el problema (de 0 a 9 detecciones en vídeos VEO reales)
+- **Dataset**: Extracción de frames de 13 partidos reales de cámaras VEO con auto-etiquetado (`extract_new_frames.py`)
+- **Entrenamiento**: `train_unified.py` actualizado con `imgsz=1280` nativo para modo `players` (v2)
+- **Herramienta**: `predict_test.py` mejorado con informe HTML visual por clase
+- **Contactos**: Email enviado a equipo FOOTPASS (SoccerNet 2026) para integración TAAD
+- **Acceso**: NDA SoccerNet firmado — acceso pendiente al dataset de 54 partidos profesionales
