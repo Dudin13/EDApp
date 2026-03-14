@@ -40,9 +40,9 @@ CONFIGS = {
         "description": "Detección de jugadores, porteros y árbitros",
         "model_base":  "yolo11m-seg.pt",          # modelo seg para siluetas
         "data_yaml":   DATASET_ROOT / "data.yaml",
-        "output_name": "players_v1",
+        "output_name": "players_v2",
         "epochs":      150,
-        "imgsz":       640,
+        "imgsz":       1280,                      # FIX: camaras VEO panoramicas
         "batch":       -1,                         # auto según VRAM
         "conf_thresh": 0.35,
         "augment": {
@@ -80,7 +80,7 @@ CONFIGS = {
         "data_yaml":   SUPER_ROOT / "data.yaml",
         "output_name": "focused_v1",
         "epochs":      100,
-        "imgsz":       640,
+        "imgsz":       1280,                      # FIX: camaras VEO panoramicas
         "batch":       -1,
         "conf_thresh": 0.25,
         "augment": {
