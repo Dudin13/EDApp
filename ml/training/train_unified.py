@@ -40,9 +40,9 @@ CONFIGS = {
         "description": "Detección de jugadores, porteros y árbitros",
         "model_base":  "yolo11m-seg.pt",          # modelo seg para siluetas
         "data_yaml":   DATASET_ROOT / "data.yaml",
-        "output_name": "players_v2",
+        "output_name": "players_v1",
         "epochs":      150,
-        "imgsz":       1280,                      # FIX: camaras VEO panoramicas
+        "imgsz":       640,
         "batch":       -1,                         # auto según VRAM
         "conf_thresh": 0.35,
         "augment": {
@@ -80,7 +80,7 @@ CONFIGS = {
         "data_yaml":   SUPER_ROOT / "data.yaml",
         "output_name": "focused_v1",
         "epochs":      100,
-        "imgsz":       1280,                      # FIX: camaras VEO panoramicas
+        "imgsz":       640,
         "batch":       -1,
         "conf_thresh": 0.25,
         "augment": {
@@ -144,7 +144,7 @@ def validate_data_yaml(yaml_path: Path) -> bool:
     return True
 
 
-def train_target(target: str, epochs: int = None, batch: int = None, resume: bool = False):
+def train_target(target: str, epochs: int = None, batch: int = None, resume: bool = False, imgsz: int = None):
     """
     Entrena un modelo para el target indicado.
 
@@ -189,7 +189,7 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
     # Parámetros finales
     _epochs = epochs if epochs is not None else cfg["epochs"]
     _batch  = batch  if batch  is not None else cfg["batch"]
-    _imgsz  = cfg["imgsz"]
+    _imgsz  = imgsz  if imgsz  is not None else cfg["imgsz"]
     _name   = cfg["output_name"]
 
     # Tipo de output: seg o detect
@@ -321,6 +321,7 @@ Ejemplos:
     )
     parser.add_argument("--epochs", type=int,  default=None, help="Sobreescribir nº de epochs")
     parser.add_argument("--batch",  type=int,  default=None, help="Sobreescribir batch size")
+    parser.add_argument("--imgsz", type=int,  default=None, help="Sobreescribir imagen size (ej: 640, 960, 1280)")
     parser.add_argument("--resume", action="store_true",     help="Continuar entrenamiento anterior")
     parser.add_argument("--val-only", action="store_true",   help="Solo validar, no entrenar")
     args = parser.parse_args()
@@ -331,7 +332,7 @@ Ejemplos:
         if args.val_only:
             validate_model(t)
         else:
-            ok = train_target(t, epochs=args.epochs, batch=args.batch, resume=args.resume)
+            ok = train_target(t, epochs=args.epochs, batch=args.batch, resume=args.resume, imgsz=args.imgsz)
             if not ok and args.target == "all":
                 print(f"\n  ❌ Fallo en {t} — abortando el resto")
                 sys.exit(1)

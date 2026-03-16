@@ -330,6 +330,32 @@ class VideoProcessor:
                             if self.event_spotter.validate_geometrical(event_data, (bx_p, by_p)):
                                 ball_events.append(event_data)
 
+                # ── EventSpotter: detectar posesion y pases ───────────────
+                ball_pos_px = (bx, by) if best_ball else None
+                bx_p, by_p  = self._pixel_to_pitch(bx, by) if best_ball else (0, 0)
+                ball_conf   = best_ball.get("confianza", 0) if best_ball else 0.0
+
+                new_events = self.event_spotter.update(
+                    frame_second = video_second,
+                    minute       = minute,
+                    tracks       = tracks,
+                    ball_pos     = ball_pos_px,
+                    pitch_pos    = (bx_p, by_p),
+                    ball_conf    = ball_conf,
+                )
+                for ev in new_events:
+                    ball_events.append({
+                        "track_id":     ev.track_id,
+                        "video_second": ev.timestamp,
+                        "minute":       ev.minute,
+                        "equipo":       ev.team,
+                        "ball_pos":     ev.ball_pos,
+                        "pitch_pos":    ev.pitch_pos,
+                        "action":       ev.action,
+                        "conf":         ev.confidence,
+                        "is_interpolated": False,
+                    })
+
                 # Guardar detecciones del minuto
                 minuto_key = int(minute)
                 detecciones_por_minuto[minuto_key].extend([
@@ -347,6 +373,13 @@ class VideoProcessor:
 
         yield 91, "Calculando estadisticas de jugadores...", {}
         resultados = self._build_results(track_stats, detecciones_por_minuto, ball_events=ball_events)
+
+        # Añadir estadisticas de posesion
+        possession = self.event_spotter.get_possession_stats(
+            {tid: {"equipo": s["equipo"]} for tid, s in track_stats.items()}
+        )
+        resultados["possession"] = possession
+
         yield 100, "Analisis completado", resultados
 
     # ── Construccion de resultados ─────────────────────────────────────────
