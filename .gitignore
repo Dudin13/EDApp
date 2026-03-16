@@ -52,7 +52,9 @@ output/
 Thumbs.db
 
 # Data and Models
-data/datasets/
+data/datasets/**
+!data/datasets/**/
+!data/datasets/**/*.dvc
 data/samples/*.mp4
 data/samples/videos
 # ml/models/     <-- Handled by *.pt

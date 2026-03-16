@@ -1,0 +1,6 @@
+outs:
+- md5: 4045d078c9b2ee51afbc386a145f2ed3.dir
+  size: 2226807935
+  nfiles: 14012
+  hash: md5
+  path: hybrid_dataset
