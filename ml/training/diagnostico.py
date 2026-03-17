@@ -277,7 +277,7 @@ def build_html(train_stats, val_stats, models, val_result, samples):
 
 <div class="card">
   <h1>Diagnostico EDApp</h1>
-  <p style="color:#6b7280;font-size:13px;margin-top:4px">Generado el {now} &mdash; Cadiz CF Cantera</p>
+  <p style="color:#6b7280;font-size:13px;margin-top:4px">Generado el {now} &mdash; Club de Cantera</p>
 </div>
 
 <div class="grid2">

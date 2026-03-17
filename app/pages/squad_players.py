@@ -154,7 +154,7 @@ def _render_player_detail(jugador):
                 ("Pie", jugador["pie"]),
                 ("Altura", jugador["altura"]),
                 ("País", jugador["pais"]),
-                ("Club", "Cadiz CF"),
+                ("Club", "Club Local"),
                 ("Posición", pos),
             ]:
                 st.markdown(f"""
@@ -274,7 +274,7 @@ def _render_player_detail(jugador):
             for i in range(6):
                 rival = rivales[i % len(rivales)]
                 local = bool(np.random.choice([True, False]))
-                enc = f"Cadiz CF – {rival}" if local else f"{rival} – Cadiz CF"
+                enc = f"Club Local – {rival}" if local else f"{rival} – Club Local"
                 res = f"{int(np.random.randint(0,3))} – {int(np.random.randint(0,3))}"
                 rows.append({
                     "Fecha": f"{int(np.random.randint(1,28)):02d}/{int(np.random.randint(1,4)):02d}/2026",

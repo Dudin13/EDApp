@@ -72,3 +72,7 @@ logs/
 revision_veo/
 revision_veo.zip
 Include/
+
+# Paquete de revision
+revision_compañero/
+revision_compañero.zip

@@ -258,6 +258,7 @@
             <label>Conjunto de Datos</label>
             <select id="subsetSelect" onchange="loadImages()">
                 <option value="veo_frames_raw">VEO Frames Nuevos</option>
+                <option value="imagenes_entrenamiento">Todas las Imagenes</option>
                 <option value="combined">Todo el Dataset (Mix)</option>
                 <option value="nuevas_muestras_marzo">Nuevas Muestras (Marzo)</option>
                 <option value="super_focused_50">Super Focused (50)</option>
@@ -370,16 +371,29 @@
     async function loadImages() {
         currentSubset = document.getElementById('subsetSelect').value;
         const resp = await fetch(`${API_URL}/api/images/${currentSubset}`);
-        images = await resp.json();
-        document.getElementById('imgCount').innerText = images.length;
-        
+        const data = await resp.json();
+
+        // Soporte para formato nuevo {name, corregida} y formato antiguo string
+        images = data.map(item => typeof item === "string" ? item : item.name);
+        const corregidas = new Set(
+            data.filter(item => typeof item === "object" && item.corregida)
+                .map(item => item.name)
+        );
+
+        const total = images.length;
+        const nCorregidas = corregidas.size;
+        document.getElementById('imgCount').innerText = `${total} (${nCorregidas} ✅)`;
+
         const list = document.getElementById('imageList');
         list.innerHTML = "";
-        images.forEach(img => {
+        data.forEach(item => {
+            const name = typeof item === "string" ? item : item.name;
+            const corregida = typeof item === "object" && item.corregida;
             const div = document.createElement('div');
             div.className = "img-item";
-            div.innerText = img;
-            div.onclick = () => selectImage(img, div);
+            div.style.color = corregida ? "#00d4aa" : "";
+            div.innerText = (corregida ? "✅ " : "") + name;
+            div.onclick = () => selectImage(name, div);
             list.appendChild(div);
         });
 

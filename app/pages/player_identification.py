@@ -14,7 +14,7 @@ Flujo:
 
 Los datos se guardan en st.session_state['match_players'] con estructura:
     {
-        "team_a": {"name": "Cadiz CF", "color_hex": "#ffff00",
+        "team_a": {"name": "Club Local", "color_hex": "#ffff00",
                    "players": [{"id": 1, "name": "Juan", "dorsal": 7, "position": "DC"}, ...]},
         "team_b": {"name": "Rival",    "color_hex": "#ffffff",
                    "players": [...]},

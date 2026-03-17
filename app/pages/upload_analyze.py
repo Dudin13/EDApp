@@ -182,7 +182,7 @@ def render():
                 st.session_state["video_name"] = selected_local
 
         with col2:
-            st.text_input("Equipo Local", value="Cadiz CF", key="step1_local")
+            st.text_input("Equipo Local", value="Club Local", key="step1_local")
             st.text_input("Equipo Visitante", placeholder="Ej: Real Madrid", key="step1_visit")
             st.date_input("Fecha", key="step1_date")
             st.text_input("Jornada/Competición", placeholder="Ej: Jornada 14", key="step1_jornada")
@@ -437,7 +437,7 @@ def render():
                 st.session_state["processing"] = True
                 params = st.session_state.get("analysis_params", {"rate": 0.5, "conf": 25})
                 config = {
-                    "team": st.session_state.get("step1_local", "Cadiz CF"),
+                    "team": st.session_state.get("step1_local", "Club Local"),
                     "rival": st.session_state.get("step1_visit", "Rival"),
                     "match_date": str(st.session_state.get("step1_date")),
                     "sample_rate": params["rate"],

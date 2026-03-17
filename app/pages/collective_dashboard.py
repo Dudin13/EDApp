@@ -20,9 +20,9 @@ from pathlib import Path
 
 # ── Partidos de ejemplo (se van acumulando con análisis reales) ───────────────
 PARTIDOS_MOCK = [
-    {"id": 1, "local": "Cadiz CF", "visitante": "Real Jaén",      "fecha": "01/03/2026", "comp": "3ª RFEF", "resultado": "2–1"},
-    {"id": 2, "local": "Cadiz CF", "visitante": "Lucena CF",      "fecha": "22/02/2026", "comp": "3ª RFEF", "resultado": "0–0"},
-    {"id": 3, "local": "Pozoblanco",         "visitante": "Cadiz CF","fecha":"15/02/2026","comp":"3ª RFEF", "resultado": "1–2"},
+    {"id": 1, "local": "Club Local", "visitante": "Real Jaén",      "fecha": "01/03/2026", "comp": "3ª RFEF", "resultado": "2–1"},
+    {"id": 2, "local": "Club Local", "visitante": "Lucena CF",      "fecha": "22/02/2026", "comp": "3ª RFEF", "resultado": "0–0"},
+    {"id": 3, "local": "Pozoblanco",         "visitante": "Club Local","fecha":"15/02/2026","comp":"3ª RFEF", "resultado": "1–2"},
 ]
 
 

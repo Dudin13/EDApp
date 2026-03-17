@@ -17,10 +17,10 @@ CORS(app, origins=["http://localhost:*", "http://127.0.0.1:*"])
 # ✅ Rutas actualizadas para la estructura de raíz
 BASE = Path(os.environ.get("APPED_ROOT", "C:/apped"))
 DATASET_ROOT = (BASE / "data/datasets").absolute()
-MODEL_PATH = BASE / "yolo11m-seg.pt"
+MODEL_PATH = BASE / "assets" / "weights" / "detect_players.pt"
 
 # ✅ Subsets válidos
-VALID_SUBSETS = {"train", "val", "test", "super_focused_50", "nuevas_muestras_marzo", "dataset", "combined", "veo_frames_raw"}
+VALID_SUBSETS = {"train", "val", "test", "super_focused_50", "nuevas_muestras_marzo", "dataset", "combined", "veo_frames_raw", "imagenes_entrenamiento"}
 
 # ✅ Clases de Fútbol
 CLASSES = ["player", "goalkeeper", "referee", "ball", "equipo_a", "equipo_b"]
@@ -124,8 +124,9 @@ def list_images(subset):
     if subset not in VALID_SUBSETS:
         return jsonify({"error": "Invalid subset"}), 400
 
+    CORREGIDAS_DIR = DATASET_ROOT / "etiquetas_corregidas"
+
     if subset == "combined":
-        # All images from all sources
         folders = [
             DATASET_ROOT / "super_focused_50/train/images",
             DATASET_ROOT / "nuevas_muestras_marzo",
@@ -135,13 +136,14 @@ def list_images(subset):
         images = []
         for folder in folders:
             if folder.exists():
-                # Store relative to DATASET_ROOT for retrieval
                 rel_path = folder.relative_to(DATASET_ROOT)
-                images.extend([str(rel_path / f.name) for f in folder.glob("*.jpg")] + 
+                images.extend([str(rel_path / f.name) for f in folder.glob("*.jpg")] +
                               [str(rel_path / f.name) for f in folder.glob("*.png")])
         return jsonify(sorted(images))
 
-    if subset == "super_focused_50":
+    if subset == "imagenes_entrenamiento":
+        img_dir = DATASET_ROOT / "imagenes_entrenamiento"
+    elif subset == "super_focused_50":
         img_dir = DATASET_ROOT / "super_focused_50/train/images"
     elif subset == "nuevas_muestras_marzo":
         img_dir = DATASET_ROOT / "nuevas_muestras_marzo"
@@ -151,12 +153,20 @@ def list_images(subset):
         img_dir = DATASET_ROOT / "veo_frames_raw"
     else:
         img_dir = DATASET_ROOT / subset / "images"
-        
+
     if not img_dir.exists():
         return jsonify({"error": "Images directory not found"}), 404
 
-    images = [f.name for f in img_dir.glob("*.jpg")] + [f.name for f in img_dir.glob("*.png")]
-    return jsonify(sorted(images))
+    # Devolver lista con estado de corrección
+    result = []
+    for f in sorted(img_dir.glob("*.jpg")):
+        corregida = (CORREGIDAS_DIR / (f.stem + "_CORREGIDA.txt")).exists()
+        result.append({"name": f.name, "corregida": corregida})
+    for f in sorted(img_dir.glob("*.png")):
+        corregida = (CORREGIDAS_DIR / (f.stem + "_CORREGIDA.txt")).exists()
+        result.append({"name": f.name, "corregida": corregida})
+
+    return jsonify(result)
 
 
 @app.route('/api/image/<subset>/<path:filename>')
@@ -175,9 +185,11 @@ def get_image(subset, filename):
         safe_path = (DATASET_ROOT / "dataset" / "images" / "train").absolute()
     elif subset == "veo_frames_raw":
         safe_path = (DATASET_ROOT / "veo_frames_raw").absolute()
+    elif subset == "imagenes_entrenamiento":
+        safe_path = (DATASET_ROOT / "imagenes_entrenamiento").absolute()
     else:
         safe_path = (DATASET_ROOT / subset / "images").absolute()
-        
+
     return send_from_directory(str(safe_path), filename)
 
 
@@ -239,6 +251,8 @@ def predict_data(subset, filename):
             base_path = DATASET_ROOT / "dataset/images/train"
         elif subset == "veo_frames_raw":
             base_path = DATASET_ROOT / "veo_frames_raw"
+        elif subset == "imagenes_entrenamiento":
+            base_path = DATASET_ROOT / "imagenes_entrenamiento"
         else:
             base_path = DATASET_ROOT / subset / "images"
         img_path = safe_resolve(base_path, filename)
@@ -279,8 +293,8 @@ def save_labels():
     if labels is None or not isinstance(labels, list):
         return jsonify({"error": "Invalid labels format"}), 400
 
-    label_filename = Path(filename).stem + ".txt"
-    
+    label_filename = Path(filename).stem + "_CORREGIDA.txt"
+
     if subset == "combined":
         # Resolve where to save based on image location
         img_path = DATASET_ROOT / filename
@@ -292,7 +306,9 @@ def save_labels():
     elif subset == "dataset":
         base_path = DATASET_ROOT / "dataset/labels/train"
     elif subset == "veo_frames_raw":
-        base_path = DATASET_ROOT / "labels_autolabel"
+        base_path = DATASET_ROOT / "etiquetas_corregidas"
+    elif subset == "imagenes_entrenamiento":
+        base_path = DATASET_ROOT / "etiquetas_corregidas"
     else:
         base_path = DATASET_ROOT / subset / "labels"
         
@@ -315,6 +331,7 @@ def load_labels(subset, filename):
         return jsonify({"error": "Invalid subset"}), 400
 
     label_filename = Path(filename).stem + ".txt"
+    DATASET_ROOT_local = (BASE / "data/datasets").absolute()
 
     if subset == "combined":
         # Inferir carpeta de labels desde la ruta de la imagen
@@ -327,7 +344,9 @@ def load_labels(subset, filename):
     elif subset == "dataset":
         base_path = DATASET_ROOT / "dataset/labels/train"
     elif subset == "veo_frames_raw":
-        base_path = DATASET_ROOT / "labels_autolabel"
+        base_path = DATASET_ROOT / "etiquetas_corregidas"
+    elif subset == "imagenes_entrenamiento":
+        base_path = DATASET_ROOT / "etiquetas_corregidas"
     else:
         base_path = DATASET_ROOT / subset / "labels"
 
