@@ -17,7 +17,7 @@ El sistema funciona en capas independientes:
 
 | Capa | Módulo | Tecnología | Estado |
 |------|--------|------------|--------|
-| Detección | `app/modules/detector.py` | YOLO11m-seg | ⚠️ Entrenando |
+| Detección | `app/modules/detector.py` | YOLO11m-seg | ✅ Listo (v3) |
 | Clasificación de equipos | `app/modules/team_classifier.py` | KMeans + HSV | ✅ Listo |
 | Tracking | `app/modules/tracker.py` | ByteTrack | ✅ Funcional |
 | Calibración de campo | `app/modules/calibration_pnl.py` | PnLCalib + Homografía | ⚠️ Manual |
@@ -160,7 +160,7 @@ The system works in independent layers:
 
 | Layer | Module | Technology | Status |
 |-------|--------|------------|--------|
-| Detection | `app/modules/detector.py` | YOLO11m-seg | ⚠️ Training |
+| Detection | `app/modules/detector.py` | YOLO11m-seg | ✅ Ready (v3) |
 | Team Classification | `app/modules/team_classifier.py` | KMeans + HSV | ✅ Ready |
 | Tracking | `app/modules/tracker.py` | ByteTrack | ✅ Working |
 | Field Calibration | `app/modules/calibration_pnl.py` | PnLCalib + Homography | ⚠️ Manual |
@@ -301,14 +301,15 @@ APPED_ROOT=C:/apped
 - [x] Clasificador de equipos por color de camiseta (`team_classifier.py`)
 - [x] UI de identificación de jugadores en Streamlit (`player_identification.py`)
 - [x] Repositorio limpio y documentado en GitHub
+- [x] Modelo players_v3 entrenado con datos VEO (mAP50=0.818)
 
 ### 🔜 Próximos pasos
 
 **Inmediato — esta noche**
-- [ ] Lanzar entrenamiento nocturno con GPU (`--resume`) y dejar correr ~10h
+- [x] Lanzar entrenamiento nocturno con GPU (v3) y dejar correr ~10h
 
 **Mañana — según métricas**
-- [ ] Evaluar mAP50 por clase (objetivo: > 0.5 global)
+- [x] Evaluar mAP50 por clase (objetivo: > 0.5 global) -> **mAP50=0.818**
 - [ ] Si OK → integrar `TeamClassifier` al `video_processor.py`
 - [ ] Si KO → revisar dataset y ajustar hiperparámetros
 - [ ] Segunda ronda `--target ball --imgsz 1280` para mejorar detección del balón
@@ -352,3 +353,11 @@ APPED_ROOT=C:/apped
 - **Herramienta**: `predict_test.py` mejorado con informe HTML visual por clase
 - **Contactos**: Email enviado a equipo FOOTPASS (SoccerNet 2026) para integración TAAD
 - **Acceso**: NDA SoccerNet firmado — acceso pendiente al dataset de 54 partidos profesionales
+
+---
+
+### 2026-03-17
+- **Modelo**: Entrenamiento `players_v3` completado con éxito.
+- **Rendimiento**: mAP50 Box: 0.818 / mAP50-95: 0.647 (mejoras significativas en jugadores 0.93 y árbitros 0.94).
+- **Despliegue**: Modelo automáticamente integrado en `assets/weights/detect_players.pt`.
+- **Validación**: Test de predicción visual completado con éxito sobre 20 frames de validación.

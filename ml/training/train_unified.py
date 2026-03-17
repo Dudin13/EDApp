@@ -38,12 +38,12 @@ WEIGHTS_DIR  = BASE / "assets" / "weights"
 CONFIGS = {
     "players": {
         "description": "Detección de jugadores, porteros y árbitros",
-        "model_base":  "yolo11m-seg.pt",          # modelo seg para siluetas
+        "model_base":  "yolo11m.pt",              # detect puro - estable, sin NaN en seg_loss
         "data_yaml":   DATASET_ROOT / "data.yaml",
-        "output_name": "players_v1",
-        "epochs":      150,
-        "imgsz":       640,
-        "batch":       -1,                         # auto según VRAM
+        "output_name": "players_v3",              # v3: detect puro + imgsz=960 + datos VEO
+        "epochs":      60,                        # suficiente con patience=20
+        "imgsz":       960,                       # optimo para camaras VEO panoramicas
+        "batch":       2,                          # estable en RTX 2070 SUPER (8GB)
         "conf_thresh": 0.35,
         "augment": {
             "hsv_h": 0.015, "hsv_s": 0.7, "hsv_v": 0.4,
@@ -178,8 +178,10 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
             model_base = "yolo11m-seg.pt"
             print(f"  WARNING: No se encontro best.pt de players - usando modelo base")
     elif resume:
-        # Resume: buscar último checkpoint
-        last_ckpt = OUTPUT_DIR / "segment" / cfg["output_name"] / "weights" / "last.pt"
+        # Resume: buscar ultimo checkpoint en detect o segment
+        last_ckpt = BASE / "ml" / "training" / "runs" / "detect" / cfg["output_name"] / "weights" / "last.pt"
+        if not last_ckpt.exists():
+            last_ckpt = BASE / "ml" / "training" / "runs" / "segment" / cfg["output_name"] / "weights" / "last.pt"
         if last_ckpt.exists():
             model_base = str(last_ckpt)
             print(f"  Resumiendo desde: {last_ckpt}")
@@ -220,10 +222,10 @@ def train_target(target: str, epochs: int = None, batch: int = None, resume: boo
         batch=_batch,
         workers=0,                          # 0 en Windows evita bloqueos
         optimizer="AdamW",
-        project=str(OUTPUT_DIR / project_type),
+        project=str(BASE / "ml" / "training" / "runs" / project_type),
         name=_name,
         exist_ok=True,
-        patience=30,                        # early stopping
+        patience=20,                        # early stopping
         save=True,
         save_period=10,                     # guardar checkpoint cada 10 epochs
         plots=True,
