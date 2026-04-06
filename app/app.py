@@ -16,17 +16,23 @@ import streamlit as st
 import sys
 from pathlib import Path
 
-# Garantizar que el directorio raíz de la app esté en el path para imports
-root_path = str(Path(__file__).parent)
-if root_path not in sys.path:
-    sys.path.append(root_path)
+# ── Fix 7: Configuración de sys.path ─────────────────────────────────────────
+# Este patch permite que los módulos en app/ sean importables con 'from modules.xxx'.
+# Alternativa limpia a largo plazo: convertir app/ en un paquete instalable
+# con pyproject.toml y eliminarlo. Por ahora es el enfoque más seguro para Streamlit.
+def _setup_sys_path() -> None:
+    root_path = str(Path(__file__).parent)
+    if root_path not in sys.path:
+        sys.path.insert(0, root_path)
+
+_setup_sys_path()
 
 # ── Configuración de Página ────────────────────────────────────────────────
 st.set_page_config(
     page_title="EDudin · Football Analytics",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ── Estilos Globales (Glassmorphism & Wyscout Style) ────────────────────────
@@ -39,23 +45,10 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
     }
 
-    /* Fondo principal oscuro profundo */
-    .stApp {
-        background: radial-gradient(circle at top right, #0d1220 0%, #05070a 100%);
-        color: #e2e8f0;
-    }
-
     /* Ocultar elementos innecesarios */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-
-    /* Sidebar minimalista */
-    [data-testid="stSidebar"] {
-        background-color: rgba(5, 7, 10, 0.95);
-        border-right: 1px solid rgba(0, 212, 170, 0.1);
-        width: 260px !important;
-    }
 
     /* Contenedor de navegación */
     .nav-container {
@@ -168,7 +161,8 @@ with st.sidebar:
     nav_btn("Dashboard Colectivo", "collective", "📊")
     nav_btn("Clips de Acción", "clips", "🎬")
 
-    st.markdown('<div class="nav-header">Configuración</div>', unsafe_allow_html=True)
+    st.markdown('<div class="nav-header">Herramientas IA</div>', unsafe_allow_html=True)
+    nav_btn("Corrección de Imágenes", "image_correction", "🔍")
     nav_btn("Calibración Campo", "calibration", "📐")
     nav_btn("Ajustes", "settings", "⚙️")
 
@@ -198,6 +192,9 @@ try:
     elif st.session_state.page == "clips":
         from pages import action_clips
         action_clips.render()
+    elif st.session_state.page == "image_correction":
+        from pages import image_correction
+        image_correction.main()
     elif st.session_state.page == "calibration":
         from pages import calibration
         calibration.render()

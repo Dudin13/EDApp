@@ -90,25 +90,34 @@ class ProfessionalTracker:
         if not detecciones:
             return self._tracks
 
-        # ── Compensación de movimiento de cámara ─────────────────────────
+        # ── Fix 6: Compensación de movimiento de cámara ───────────────────
+        # Usamos getattr(..., None) para acceder a tracked_tracks / lost_tracks
+        # de forma agnóstica a versiones de supervision (los atributos internos
+        # de ByteTrack pueden cambiar entre releases sin warning).
         dx, dy = camera_offset
-        if (dx != 0.0 or dy != 0.0) and hasattr(self._tracker, "tracked_tracks"):
+        if dx != 0.0 or dy != 0.0:
             try:
-                # FIX: también compensar lost_tracks, no solo tracked_tracks
-                track_lists = []
-                if hasattr(self._tracker, "tracked_tracks"):
-                    track_lists.append(self._tracker.tracked_tracks)
-                if hasattr(self._tracker, "lost_tracks"):
-                    track_lists.append(self._tracker.lost_tracks)
-
-                for track_list in track_lists:
+                for attr in ("tracked_tracks", "lost_tracks"):
+                    track_list = getattr(self._tracker, attr, None)
+                    if not track_list:
+                        continue
                     for track in track_list:
-                        if hasattr(track, "mean") and len(track.mean) >= 2:
-                            track.mean[0] += dx
-                            track.mean[1] += dy
-            except Exception as e:
-                # No queremos que un fallo en la compensación rompa el tracking
-                pass
+                        mean = getattr(track, "mean", None)
+                        if mean is None:
+                            continue
+                        # Proteger ante arrays de solo lectura o shapes inesperados
+                        try:
+                            if hasattr(mean, "__len__") and len(mean) >= 2:
+                                track.mean[0] += dx
+                                track.mean[1] += dy
+                        except (TypeError, IndexError, ValueError):
+                            pass  # mean no es mutable o tiene shape distinto
+            except Exception:  # noqa: BLE001
+                # Protección total ante cambios de versión de supervision
+                logger.warning(
+                    "[ProfessionalTracker] Compensación de cámara no aplicada "
+                    "(API interna de ByteTrack puede haber cambiado de versión)"
+                )
 
         # ── Convertir detecciones a formato supervision ───────────────────
         xyxy = []

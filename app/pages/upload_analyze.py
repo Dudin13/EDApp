@@ -3,6 +3,7 @@ st.set_page_config(page_title="Football Analyzer", layout="wide", initial_sideba
 import time
 import os
 import json
+import pandas as pd
 from pathlib import Path
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
@@ -39,10 +40,9 @@ def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: 
     import numpy as np
     from pathlib import Path
     from core.config.settings import settings
-    from ai.detector.detector import DetectorEngine
+    from modules.detector import detect_frame as _detect_frame_fn
     
-    detector = DetectorEngine()
-    
+
     yolo_ok = Path(settings.PLAYER_MODEL_PATH).exists()
 
     col_m1, col_m2 = st.columns(2)
@@ -89,7 +89,7 @@ def _render_model_diagnostics(video_path: str, detection_mode: str, confidence: 
         return
 
     with st.spinner("⏳ Ejecutando diagnóstico..."):
-        dets = detector.detect_frame(frame, confidence=confidence / 100)
+        dets = _detect_frame_fn(frame, mode="auto", confidence=confidence / 100)
 
     CLASS_COLORS = {"ball": (0, 255, 255), "player": (0, 212, 170), "goalkeeper": (255, 200, 0), "referee": (0, 0, 255)}
     vis_frame = frame.copy()
@@ -115,16 +115,20 @@ def render():
         try:
             with open(results_file, "r", encoding="utf-8") as f:
                 saved = json.load(f)
-            st.session_state["resultados_jugadores"] = saved.get("resultados_jugadores", {})
-            st.session_state["heatmap_x"] = saved.get("heatmap_x", [])
-            st.session_state["heatmap_y"] = saved.get("heatmap_y", [])
-            st.session_state["ball_events"] = saved.get("ball_events", [])
-            st.session_state["total_detecciones"] = saved.get("total_detecciones", 0)
-            st.session_state["frames_analizados"] = saved.get("frames_analizados", 0)
-            st.session_state["analysis_done"] = True
-            st.toast("⏳ Análisis previo cargado automáticamente", icon="💾")
+            # Fix: el JSON guarda como "tracks", no "resultados_jugadores"
+            st.session_state["resultados_jugadores"] = saved.get("tracks", {})
+            st.session_state["ball_events"]          = saved.get("ball_events", [])
+            st.session_state["ball_history"]         = saved.get("ball_history", [])
+            st.session_state["heatmap_x"]            = saved.get("heatmap_x", [])
+            st.session_state["heatmap_y"]            = saved.get("heatmap_y", [])
+            st.session_state["total_detecciones"]    = saved.get("total_detecciones", 0)
+            st.session_state["frames_analizados"]    = saved.get("frames_analizados", 0)
+            st.session_state["team_colors"]          = saved.get("team_colors", {})
+            st.session_state["analysis_done"]        = True
+            st.toast("💾 Análisis previo cargado automáticamente", icon="💾")
         except Exception:
             pass
+
 
     # --- STEPPER UI ---
     steps = ["Entrada", "Calibración", "Marcado", "Motor", "Resumen"]
@@ -430,52 +434,100 @@ def render():
 
         st.markdown("<br>", unsafe_allow_html=True)
         c_prev, c_next = st.columns(2)
-        if c_prev.button("← Volver", use_container_width=True):
+        if c_prev.button("← Volver", use_container_width=True, key="step3_volver"):
             st.session_state["analysis_step"] = 2
             st.rerun()
-            if st.button("LANZAR ANÁLISIS AHORA", use_container_width=True, type="primary"):
-                st.session_state["processing"] = True
-                params = st.session_state.get("analysis_params", {"rate": 0.5, "conf": 25})
-                config = {
-                    "team": st.session_state.get("step1_local", "Club Local"),
-                    "rival": st.session_state.get("step1_visit", "Rival"),
-                    "match_date": str(st.session_state.get("step1_date")),
-                    "sample_rate": params["rate"],
-                    "detection_mode": "yolo",
-                    "confidence": params["conf"],
-                    "manual_seeds": st.session_state.get("manual_seeds", []),
-                    "jugadores_local": st.session_state.get("jugadores_local", []),
-                    "jugadores_visit": st.session_state.get("jugadores_visit", []),
-                }
-                st.session_state["analysis_config"] = config
-                
-                # Reloj de arena animado durante el proceso
-                with st.spinner("⏳ Analizando vídeo..."):
-                    st.markdown("""
-                        <div style="text-align:center;padding:24px;background:rgba(0,212,170,0.05);border-radius:12px;border:1px dashed #00d4aa;margin-bottom:20px;">
-                            <div style="font-size:50px;animation: hourglass_spin 2.5s ease-in-out infinite;">⏳</div>
-                            <style>
-                                @keyframes hourglass_spin {
-                                    0% { transform: rotate(0deg); }
-                                    45% { transform: rotate(180deg); }
-                                    55% { transform: rotate(180deg); }
-                                    100% { transform: rotate(360deg); }
-                                }
-                            </style>
-                            <div style="font-size:14px;color:#00d4aa;font-weight:700;margin-top:12px;letter-spacing:1px;">IA PROCESANDO MOVIMIENTOS...</div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    run_analysis_real(config)
-                
-                st.session_state["processing"] = False
-                st.session_state["analysis_step"] = 5
-                st.rerun()
-        else:
-            st.warning("Ya hay un análisis en curso...")
+        # Fix 2: c_next lleva al paso 4 (Motor IA), ya no mezcla navegación con lanzamiento
+        if c_next.button("Siguiente: Motor IA →", use_container_width=True, key="step3_next", type="primary"):
+            st.session_state["analysis_step"] = 4
+            st.rerun()
 
-        if st.button("← Cancelar / Volver", use_container_width=True):
+    # --- STEP 4: MOTOR / LANZAR ANÁLISIS ---
+    # Fix 2: Este bloque estaba erroneamente dentro del if c_prev.button() del paso 3,
+    # precedido por st.rerun() que impedia que se ejecutara. Ahora es un elif propio.
+    elif st.session_state["analysis_step"] == 4:
+        st.markdown('<div class="ws-section-header">Motor de Análisis IA</div>', unsafe_allow_html=True)
+
+        # Fix 8: Validación robusta antes de permitir el lanzamiento
+        video_path_val = st.session_state.get("video_path", "")
+        params_val     = st.session_state.get("analysis_params", {})
+        seeds_val      = st.session_state.get("manual_seeds", [])
+        _errors = []
+        if not video_path_val:
+            _errors.append("❌ No hay ningún vídeo seleccionado. Vuelve al Paso 1.")
+        elif not Path(video_path_val).exists():
+            _errors.append(f"❌ El archivo de vídeo ya no existe en la ruta guardada ({video_path_val}).")
+        if not params_val:
+            _errors.append("⚠️ No se detectó configuración del motor (Paso 2). Se usarán valores por defecto.")
+
+        for err in _errors:
+            if err.startswith("❌"):
+                st.error(err)
+            else:
+                st.warning(err)
+
+        # Resumen de configuración
+        st.markdown("""
+        <div style="background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);
+                    border-radius:12px;padding:20px;margin-bottom:20px;">
+            <div style="font-size:14px;font-weight:700;color:#00d4aa;margin-bottom:12px;
+                         text-transform:uppercase;letter-spacing:1px;">RESUMEN DE ANÁLISIS</div>
+        """, unsafe_allow_html=True)
+
+        col_r1, col_r2, col_r3 = st.columns(3)
+        col_r1.metric("Vídeo", Path(video_path_val).name if video_path_val else "—")
+        col_r2.metric("Jugadores marcados", len(seeds_val))
+        col_r3.metric("Tasa de muestreo",
+                      f"{params_val.get('rate', 0.5)}s" if params_val else "0.5s")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        has_critical_error = any(e.startswith("❌") for e in _errors)
+
+        if not st.session_state.get("processing", False):
+            if not has_critical_error:
+                if st.button("🚀 LANZAR ANÁLISIS AHORA",
+                             use_container_width=True, type="primary",
+                             key="btn_lanzar_analisis"):
+                    st.session_state["processing"] = True
+                    params = params_val or {"rate": 0.5, "conf": 25}
+                    config = {
+                        "team":           st.session_state.get("step1_local", "Club Local"),
+                        "rival":          st.session_state.get("step1_visit", "Rival"),
+                        "match_date":     str(st.session_state.get("step1_date")),
+                        "sample_rate":    params["rate"],
+                        "detection_mode": "yolo",
+                        "confidence":     params["conf"],
+                        "manual_seeds":   seeds_val,
+                        "jugadores_local": st.session_state.get("jugadores_local", []),
+                        "jugadores_visit": st.session_state.get("jugadores_visit", []),
+                    }
+                    st.session_state["analysis_config"] = config
+
+                    with st.spinner("⏳ Analizando vídeo..."):
+                        st.markdown("""
+                        <div style="text-align:center;padding:24px;background:rgba(0,212,170,0.05);
+                                    border-radius:12px;border:1px dashed #00d4aa;margin-bottom:20px;">
+                            <div style="font-size:50px;">&#9203;</div>
+                            <div style="font-size:14px;color:#00d4aa;font-weight:700;
+                                         margin-top:12px;letter-spacing:1px;">
+                                IA PROCESANDO MOVIMIENTOS...
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        run_analysis_real(config)
+
+                    st.session_state["processing"] = False
+                    st.session_state["analysis_step"] = 5
+                    st.rerun()
+        else:
+            st.warning("⏳ Ya hay un análisis en curso...")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        c_p4_prev, _ = st.columns(2)
+        if c_p4_prev.button("← Volver al Marcado", use_container_width=True, key="step4_volver"):
             st.session_state["analysis_step"] = 3
             st.rerun()
+
 
     # --- STEP 5: RESUMEN ---
     elif st.session_state["analysis_step"] == 5:
@@ -496,6 +548,56 @@ def render():
             if col_d2.button("✂️ Ver Clips Generados", use_container_width=True):
                 st.session_state["page"] = "partido_clips"
                 st.rerun()
+
+            # NUEVO: Generación automática de clips
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_c1, col_c2 = st.columns(2)
+            if col_c1.button("🎬 Generar Clips Automáticos", use_container_width=True):
+                from modules.auto_clip_generator import AutoClipGenerator
+                from core.config.settings import settings
+
+                generator = AutoClipGenerator(
+                    clips_dir=settings.OUTPUT_DIR / "auto_clips",
+                    ffmpeg_path=settings.FFMPEG_PATH
+                )
+
+                events = st.session_state.get("ball_events", [])
+                if events:
+                    with st.spinner("Generando clips automáticos..."):
+                        clips = generator.generate_clips_from_events(
+                            st.session_state["video_path"],
+                            events,
+                            progress_callback=lambda current, total: st.progress(current/total)
+                        )
+
+                    st.success(f"✅ Generados {len(clips)} clips automáticos")
+                    st.session_state["auto_generated_clips"] = clips
+                else:
+                    st.warning("No se detectaron eventos para generar clips")
+
+            # NUEVO: Validación del sistema
+            if col_c2.button("🔍 Validar Sistema", use_container_width=True):
+                from modules.training_validator import EventDetectionTrainer
+
+                validator = EventDetectionTrainer(settings.OUTPUT_DIR / "validation")
+
+                # Crear dataset sintético para testing
+                synthetic_data = validator.create_synthetic_dataset(st.session_state["video_path"])
+
+                # Validar contra eventos detectados
+                detected_events_df = pd.DataFrame(st.session_state.get("ball_events", []))
+
+                if not detected_events_df.empty:
+                    results = validator.validate_predictions(
+                        predictions=detected_events_df,
+                        ground_truth=synthetic_data
+                    )
+
+                    validator.generate_training_report(results, settings.OUTPUT_DIR)
+
+                    st.success("✅ Validación completada. Revisa los reportes generados.")
+                else:
+                    st.warning("No hay eventos detectados para validar")
         else:
             st.error("No hay resultados cargados.")
 
@@ -522,20 +624,36 @@ def run_analysis_real(config: dict):
                 {estado}
             </div>
             """, unsafe_allow_html=True)
-            if resultados: resultados_finales = resultados
+            if resultados:
+                resultados_finales = resultados
 
         if resultados_finales:
-            st.session_state["analysis_done"] = True
+            st.session_state["analysis_done"]       = True
             st.session_state["resultados_jugadores"] = resultados_finales.get("tracks", {})
-            st.session_state["ball_history"] = resultados_finales.get("ball_history", [])
-            
-            # Persistence save
+
+            # Fix: mapear ball_events (antes se usaba ball_history con nombre incorrecto)
+            # Step 5 lee session_state["ball_events"] — ahora coincide.
+            st.session_state["ball_events"]          = resultados_finales.get("ball_events", [])
+            st.session_state["ball_history"]         = resultados_finales.get("ball_history", [])
+
+            # Fix: métricas antes no se transferían → Step 5 mostraba siempre 0
+            st.session_state["frames_analizados"]    = resultados_finales.get("frames_analizados", 0)
+            st.session_state["total_detecciones"]    = resultados_finales.get("total_detecciones", 0)
+
+            # Heatmap coords para collective_dashboard
+            st.session_state["heatmap_x"]            = resultados_finales.get("heatmap_x", [])
+            st.session_state["heatmap_y"]            = resultados_finales.get("heatmap_y", [])
+
+            # Team colors para páginas de análisis
+            st.session_state["team_colors"]          = resultados_finales.get("team_colors", {})
+
+            # Persistencia: guardar todo el bloque para re-carga automática
             results_file = settings.OUTPUT_DIR / "results.json"
             results_file.parent.mkdir(parents=True, exist_ok=True)
             with open(results_file, "w", encoding="utf-8") as f:
-                # Convert Path objects to strings for JSON serializability if any
                 json.dump(resultados_finales, f, ensure_ascii=False, indent=2, default=str)
-                
+
             st.success("✅ Análisis completado y guardado.")
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error durante el análisis: {e}")
+        st.exception(e)

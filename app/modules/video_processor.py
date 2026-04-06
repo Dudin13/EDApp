@@ -30,8 +30,13 @@ from modules.detector import detect_frame
 from modules.tracker import SimpleTracker
 from modules.team_classifier import TeamClassifier, Team
 from modules.identity_reader import IdentityReader
-from modules.event_spotter_tdeed import EventSpotterTDEED
+from modules.event_spotter_tdeed import EventSpotterTDEED, AdvancedEventDetector
 from modules.calibration_pnl import PnLCalibrator
+try:
+    from modules.calibration_auto import AutoCalibrator
+    _HAS_AUTO_CAL = True
+except ImportError:
+    _HAS_AUTO_CAL = False
 from modules.camera_motion import CameraMotionEstimator
 
 
@@ -86,12 +91,21 @@ class VideoProcessor:
             self.tracker.initialize_with_seeds(self.manual_seeds)
 
         # ── Modulos SOTA ───────────────────────────────────────────────────
-        self.id_reader       = IdentityReader()
-        self.calibrator      = PnLCalibrator(
+        self.id_reader = IdentityReader()
+
+        # Calibrador automatico (usa YOLO keypoints del campo)
+        # Si no esta disponible, usa el calibrador manual PnLCalibrator
+        if _HAS_AUTO_CAL:
+            self.auto_calibrator = AutoCalibrator()
+        else:
+            self.auto_calibrator = None
+
+        self.calibrator = PnLCalibrator(
             pitch_width=self.config.get("pitch_width", 105),
             pitch_height=self.config.get("pitch_height", 68)
         )
         self.event_spotter   = EventSpotterTDEED()
+        self.advanced_detector = AdvancedEventDetector()
         self.camera_estimator = CameraMotionEstimator()
 
         # Estado cinematico del balon
@@ -158,6 +172,18 @@ class VideoProcessor:
         else:
             summary = self.team_classifier.get_summary()
             yield 8, f"Usando colores pre-configurados: {summary.get('name_a')} vs {summary.get('name_b')}", {}
+
+        # ── Calibracion automatica del campo ──────────────────────────────
+        if self.auto_calibrator is not None and not self.auto_calibrator.is_calibrated:
+            if calibration_frames:
+                yield 9, "Calibrando campo automaticamente...", {}
+                for cf in calibration_frames:
+                    if self.auto_calibrator.calibrate(cf):
+                        summary = self.auto_calibrator.get_summary()
+                        yield 9, f"Campo calibrado automaticamente ({summary['keypoints_detected']} keypoints)", {}
+                        break
+                if not self.auto_calibrator.is_calibrated:
+                    yield 9, "Calibracion automatica fallida — usando homografia manual", {}
 
         yield 10, "Calibracion completada. Iniciando analisis...", {}
 
@@ -356,6 +382,27 @@ class VideoProcessor:
                         "is_interpolated": False,
                     })
 
+                # DETECCIÓN AVANZADA DE EVENTOS
+                advanced_events = self.advanced_detector.detect_advanced_events(
+                    ball_pos=ball_pos_px,
+                    pitch_pos=(bx_p, by_p),
+                    tracks=tracks,
+                    frame_second=video_second
+                )
+                for ev in advanced_events:
+                    ball_events.append({
+                        "track_id":     ev.track_id,
+                        "video_second": ev.timestamp,
+                        "minute":       ev.minute,
+                        "equipo":       ev.team,
+                        "ball_pos":     ev.ball_pos,
+                        "pitch_pos":    ev.pitch_pos,
+                        "action":       ev.action,
+                        "conf":         ev.confidence,
+                        "is_interpolated": False,
+                        "advanced_detection": True,  # Marcar como detección avanzada
+                    })
+
                 # Guardar detecciones del minuto
                 minuto_key = int(minute)
                 detecciones_por_minuto[minuto_key].extend([
@@ -535,7 +582,10 @@ class VideoProcessor:
     # ── Utilidades ─────────────────────────────────────────────────────────
 
     def _pixel_to_pitch(self, x, y):
-        if self.H is not None:
+        # Prioridad: auto_calibrator > homografia manual > fallback naive
+        if self.auto_calibrator is not None and self.auto_calibrator.is_calibrated:
+            return self.auto_calibrator.pixel_to_pitch(x, y)
+        elif self.H is not None:
             pt          = np.array([[[float(x), float(y)]]], dtype=np.float32)
             transformed = cv2.perspectiveTransform(pt, self.H)
             px, py      = transformed[0][0]

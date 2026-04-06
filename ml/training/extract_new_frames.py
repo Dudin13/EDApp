@@ -136,7 +136,7 @@ if __name__ == "__main__":
     BASE = Path(os.environ.get("APPED_ROOT", "C:/apped"))
 
     # ── CONFIGURA AQUI ─────────────────────────────────────────────────────
-    SOURCE_VIDEOS = r"C:\Users\Usuario\Desktop\VideosDePrueba"
+    VIDEO_PATH    = r"C:\Users\Usuario\Desktop\VideosDePrueba\J10_DH_2526_CadeteA_SevillaFC.mp4"
     OUTPUT_IMAGES = str(BASE / "data" / "datasets" / "veo_frames_raw")
 
     # interval_seconds=8  → ~150 frames por partido de 90 min (recomendado)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     # ───────────────────────────────────────────────────────────────────────
 
     extract_frames(
-        video_dir=SOURCE_VIDEOS,
+        video_dir=Path(VIDEO_PATH).parent,
         output_dir=OUTPUT_IMAGES,
         interval_seconds=8,
         auto_label=True,

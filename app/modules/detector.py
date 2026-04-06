@@ -37,15 +37,35 @@ logger = logging.getLogger(__name__)
 _calibrator = PnLCalibrator()
 _id_reader  = IdentityReader()
 
-# Rutas de modelos
-_BASE      = Path(os.getenv("APPED_ROOT", "c:/apped"))
-_MODELS    = _BASE / "ml" / "models"
+# ── Fix 5: Rutas de modelos — portables, sin hardcodear c:/apped ───────────
+# Calculamos rutas relativas al propio archivo (detector.py está en app/modules/).
+# Buscamos en varios candidatos por orden de prioridad.
+_THIS_DIR  = Path(__file__).resolve().parent          # app/modules/
+_APP_ROOT  = _THIS_DIR.parent                         # app/
+_REPO_ROOT = _APP_ROOT.parent                         # raíz del repo
 
-PLAYER_MODEL_PATH = _MODELS / "detect_players.pt"
-BALL_MODEL_PATH   = _MODELS / "detect_ball.pt"
-PITCH_MODEL_PATH  = _MODELS / "pose_field.pt"
-YOLO_LEGACY_PATH  = _MODELS / "best_football_seg.pt"
-YOLO_COCO_MODEL   = str(_MODELS / "yolov8n.pt")
+_MODEL_SEARCH_PATHS = [
+    _THIS_DIR,                                        # junto al detector.py (legacy)
+    _REPO_ROOT / "ml" / "models",                    # estructura ml/models/
+    _REPO_ROOT / "assets" / "weights",               # estructura assets/weights/
+    _REPO_ROOT,                                       # raíz del repo (fallback)
+]
+
+def _find_model(filename: str) -> Path:
+    """Busca un archivo de modelo en los candidatos predefinidos. Retorna el
+    primer Path que exista, o el primer candidato + filename si ninguno existe
+    (permite mensajes de error con la ruta esperada)."""
+    for base in _MODEL_SEARCH_PATHS:
+        candidate = base / filename
+        if candidate.exists():
+            return candidate
+    return _MODEL_SEARCH_PATHS[1] / filename  # ruta esperada aunque no exista
+
+PLAYER_MODEL_PATH = _find_model("detect_players.pt")
+BALL_MODEL_PATH   = _find_model("detect_ball.pt")
+PITCH_MODEL_PATH  = _find_model("pose_field.pt")
+YOLO_LEGACY_PATH  = _find_model("best_football_seg.pt")
+YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
 
 BALL_ID=0; GOALKEEPER_ID=1; PLAYER_ID=2; REFEREE_ID=3
 VALID_CLASSES = {"player","goalkeeper","referee","ball"}

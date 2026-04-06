@@ -42,7 +42,100 @@ class BallEvent:
     is_validated: bool = True  # paso la validacion geometrica
 
 
-class EventSpotterTDEED:
+class AdvancedEventDetector(EventSpotterTDEED):
+    """Detector avanzado con reglas geométricas para eventos específicos."""
+
+    def __init__(self):
+        super().__init__()
+        # Zonas del campo (coordenadas normalizadas 0-1)
+        self.goal_zones = {
+            'team_a_goal': (0.45, 0.55, 0.0, 0.05),   # x_min, x_max, y_min, y_max
+            'team_b_goal': (0.45, 0.55, 0.95, 1.0)
+        }
+        self.corner_zones = [
+            (0.0, 0.05, 0.0, 0.05),    # Corner inferior izquierdo
+            (0.95, 1.0, 0.0, 0.05),    # Corner inferior derecho
+            (0.0, 0.05, 0.95, 1.0),    # Corner superior izquierdo
+            (0.95, 1.0, 0.95, 1.0)     # Corner superior derecho
+        ]
+
+    def detect_advanced_events(self, ball_pos, pitch_pos, tracks, frame_second):
+        """Detecta eventos específicos usando geometría."""
+        events = []
+
+        # 1. DETECCIÓN DE GOLES
+        if self._is_goal(ball_pos, pitch_pos):
+            events.append(BallEvent(
+                timestamp=frame_second,
+                minute=frame_second/60,
+                action="Gol",
+                track_id=self._current_possessor,
+                team=self._get_team_from_track(tracks, self._current_possessor),
+                ball_pos=ball_pos,
+                pitch_pos=pitch_pos,
+                confidence=0.95
+            ))
+
+        # 2. DETECCIÓN DE CORNERS
+        if self._is_corner(pitch_pos):
+            events.append(BallEvent(
+                timestamp=frame_second,
+                minute=frame_second/60,
+                action="Corner",
+                track_id=self._current_possessor,
+                team=self._get_team_from_track(tracks, self._current_possessor),
+                ball_pos=ball_pos,
+                pitch_pos=pitch_pos,
+                confidence=0.85
+            ))
+
+        # 3. DETECCIÓN DE TIROS A PUERTA
+        if self._is_shot_on_goal(pitch_pos, ball_pos):
+            events.append(BallEvent(
+                timestamp=frame_second,
+                minute=frame_second/60,
+                action="Tiro a puerta",
+                track_id=self._current_possessor,
+                team=self._get_team_from_track(tracks, self._current_possessor),
+                ball_pos=ball_pos,
+                pitch_pos=pitch_pos,
+                confidence=0.80
+            ))
+
+        return events
+
+    def _is_goal(self, ball_pos, pitch_pos):
+        """Detecta si el balón entró en la portería."""
+        px, py = pitch_pos
+        # Verificar si está en zona de gol y velocidad indica entrada
+        for goal_name, (x_min, x_max, y_min, y_max) in self.goal_zones.items():
+            if x_min <= px <= x_max and y_min <= py <= y_max:
+                return True
+        return False
+
+    def _is_corner(self, pitch_pos):
+        """Detecta si el balón salió por línea de fondo (corner)."""
+        px, py = pitch_pos
+        for x_min, x_max, y_min, y_max in self.corner_zones:
+            if x_min <= px <= x_max and y_min <= py <= y_max:
+                return True
+        return False
+
+    def _is_shot_on_goal(self, pitch_pos, ball_pos):
+        """Detecta tiros a puerta basados en trayectoria."""
+        px, py = pitch_pos
+        # Área de penalty (aproximada)
+        penalty_area = (0.35, 0.65, 0.0, 0.17)  # Equipo A
+        if (penalty_area[0] <= px <= penalty_area[1] and
+            penalty_area[2] <= py <= penalty_area[3]):
+            return True
+        return False
+
+    def _get_team_from_track(self, tracks, track_id):
+        """Obtiene el equipo de un track."""
+        if track_id in tracks:
+            return tracks[track_id].equipo
+        return -1
     """
     Detector de eventos de futbol basado en posesion del balon.
 
