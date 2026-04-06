@@ -135,43 +135,68 @@ class VideoProcessor:
         yield 2, f"Video: {duration_s/60:.1f} min | ~{frames_to_analyze} frames a analizar", {}
 
         # ── Fase 1: Calibrar TeamClassifier si no viene pre-entrenado ──────
+        # Candidatos de calibración: minuto 1, 2, 3, 5 y 8.
+        # Para cada uno detectamos cuántos jugadores hay y elegimos el mejor
+        # (más jugadores detectados = frame más representativo del partido).
+        calibration_frames = []  # lista de (frame, player_bboxes)
         if not self._clf_fitted:
-            yield 5, "Calibrando colores de equipos (KMeans automatico)...", {}
-            calibration_frames = []
-            # Usar frames del minuto 1 al 2 (evitar los primeros segundos con logo etc.)
-            for i in range(min(5, frames_to_analyze)):
-                frame_pos = int(60 * fps) + i * frame_interval
-                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
-                ret, frame = cap.read()
-                if ret:
-                    calibration_frames.append(frame)
-
-            if calibration_frames:
+            yield 5, "Seleccionando frame optimo para calibracion de colores...", {}
+            _cal_minute_offsets = [60, 90, 120, 180, 300, 480]  # segundos
+            _candidates = []
+            for t_sec in _cal_minute_offsets:
+                fpos = int(t_sec * fps)
+                if fpos >= total_frames:
+                    continue
+                cap.set(cv2.CAP_PROP_POS_FRAMES, fpos)
+                ret, cframe = cap.read()
+                if not ret:
+                    continue
                 try:
-                    # Detectar jugadores en el primer frame de calibracion
-                    dets = detect_frame(
-                        calibration_frames[0],
-                        mode=self.detection_mode,
-                        confidence=self.confidence
-                    )
-                    player_bboxes = [
+                    dets = detect_frame(cframe, mode=self.detection_mode, confidence=self.confidence)
+                    bboxes = [
                         (d["x"] - d["w"]/2, d["y"] - d["h"]/2,
                          d["x"] + d["w"]/2, d["y"] + d["h"]/2)
-                        for d in dets if d.get("clase", "") == "player"
+                        for d in dets
+                        if d.get("clase") == "player" and d.get("h", 0) >= 20
                     ]
+                    _candidates.append((len(bboxes), cframe, bboxes))
+                    calibration_frames.append(cframe)  # guardar todos para AutoCalibrator
+                except Exception:
+                    pass
+
+            if _candidates:
+                _candidates.sort(key=lambda x: -x[0])
+                best_count, best_frame, best_bboxes = _candidates[0]
+                try:
                     fitted = self.team_classifier.fit(
-                        calibration_frames[0], player_bboxes,
+                        best_frame, best_bboxes,
                         name_a=self.config.get("team",  "Equipo Local"),
                         name_b=self.config.get("rival", "Equipo Visitante")
                     )
                     self._clf_fitted = fitted
                     summary = self.team_classifier.get_summary()
-                    yield 8, f"Colores detectados: {summary.get('name_a')} ({summary.get('color_a')}) vs {summary.get('name_b')} ({summary.get('color_b')})", {}
+                    yield 8, (
+                        f"Colores calibrados con {best_count} jugadores: "
+                        f"{summary.get('name_a')} ({summary.get('color_a')}) "
+                        f"vs {summary.get('name_b')} ({summary.get('color_b')})"
+                    ), {}
                 except Exception as e:
-                    yield 8, f"Calibracion de colores fallida, continuando sin clasificacion de equipos: {e}", {}
+                    yield 8, f"Calibracion de colores fallida, continuando sin clasificacion: {e}", {}
+            else:
+                yield 8, "No se encontraron jugadores en frames de calibracion", {}
         else:
             summary = self.team_classifier.get_summary()
             yield 8, f"Usando colores pre-configurados: {summary.get('name_a')} vs {summary.get('name_b')}", {}
+            # Cargar frames igualmente para AutoCalibrator
+            if not calibration_frames:
+                for t_sec in [60, 120, 300]:
+                    fpos = int(t_sec * fps)
+                    if fpos >= total_frames:
+                        continue
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, fpos)
+                    ret, cframe = cap.read()
+                    if ret:
+                        calibration_frames.append(cframe)
 
         # ── Calibracion automatica del campo ──────────────────────────────
         if self.auto_calibrator is not None and not self.auto_calibrator.is_calibrated:
@@ -197,6 +222,8 @@ class VideoProcessor:
 
         frame_count = 0
         frame_pos   = 0
+        _last_recalib_minute = 0.0   # control de re-calibración periódica
+        _RECALIB_INTERVAL    = 5.0   # re-calibrar cada 5 minutos de partido
 
         while frame_pos < total_frames:
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
@@ -249,6 +276,28 @@ class VideoProcessor:
                     minute=minute,
                     camera_offset=(dx, dy)
                 )
+
+                # ── Re-calibración periódica del TeamClassifier ───────────
+                # Cada 5 minutos de partido, ajustamos los centroides de color
+                # con los tracks activos para adaptarnos a cambios de iluminación.
+                if (self._clf_fitted
+                        and minute - _last_recalib_minute >= _RECALIB_INTERVAL
+                        and len(tracks) >= 6):
+                    adapt_dets = [
+                        {
+                            "bbox": (
+                                t.last_box[0] - t.last_box[2]/2,
+                                t.last_box[1] - t.last_box[3]/2,
+                                t.last_box[0] + t.last_box[2]/2,
+                                t.last_box[1] + t.last_box[3]/2,
+                            ),
+                            "equipo": t.equipo,
+                        }
+                        for t in tracks.values()
+                        if t.frames_lost == 0 and t.clase != "referee"
+                    ]
+                    if self.team_classifier.adapt(frame, adapt_dets):
+                        _last_recalib_minute = minute
 
                 # Guardar estadisticas por track — propagar clase correcta
                 for tid, track in tracks.items():

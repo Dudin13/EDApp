@@ -163,6 +163,7 @@ with st.sidebar:
 
     st.markdown('<div class="nav-header">Herramientas IA</div>', unsafe_allow_html=True)
     nav_btn("Corrección de Imágenes", "image_correction", "🔍")
+    nav_btn("Auditoría de Dataset", "dataset_audit", "🔬")
     nav_btn("Calibración Campo", "calibration", "📐")
     nav_btn("Ajustes", "settings", "⚙️")
 
@@ -195,6 +196,9 @@ try:
     elif st.session_state.page == "image_correction":
         from pages import image_correction
         image_correction.main()
+    elif st.session_state.page == "dataset_audit":
+        from pages import dataset_audit
+        dataset_audit.main()
     elif st.session_state.page == "calibration":
         from pages import calibration
         calibration.render()

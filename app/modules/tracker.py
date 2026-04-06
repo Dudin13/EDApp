@@ -15,17 +15,20 @@ FIXES APLICADOS:
             detecciones sintéticas en el primer update para pre-sembrar IDs.
 """
 
+import logging
 import numpy as np
 import supervision as sv
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Track:
     track_id: int
     clase: str
-    equipo: int          # 0=local, 1=visitante, 2=árbitro
+    equipo: int          # 0=local, 1=visitante, 2=árbitro (calculado por votación)
     last_box: tuple      # (cx, cy, w, h) último frame visto
     frames_seen: int = 1
     frames_lost: int = 0
@@ -33,6 +36,24 @@ class Track:
     history_y: list = field(default_factory=list)
     history_minute: list = field(default_factory=list)
     appearance_color: Optional[tuple] = None  # (r, g, b) medio del torso
+    # Votación de equipo: buffer de las últimas N predicciones para evitar
+    # que un frame malo fije el equipo incorrecto para toda la secuencia.
+    _equipo_votes: list = field(default_factory=list)
+    _VOTE_WINDOW: int = field(default=8, init=False, repr=False)
+
+    def vote_equipo(self, equipo_pred: int) -> None:
+        """Registra una nueva predicción de equipo y actualiza self.equipo por mayoría."""
+        # Árbitros (equipo=2) son definitivos, no necesitan votación
+        if self.clase == "referee":
+            self.equipo = 2
+            return
+        self._equipo_votes.append(equipo_pred)
+        if len(self._equipo_votes) > self._VOTE_WINDOW:
+            self._equipo_votes.pop(0)
+        # Mayoría simple sobre el buffer (ignora equipo=2 en jugadores de campo)
+        votes = [v for v in self._equipo_votes if v != 2]
+        if votes:
+            self.equipo = max(set(votes), key=votes.count)
 
 
 class ProfessionalTracker:
@@ -154,17 +175,19 @@ class ProfessionalTracker:
             cy = y1 + h / 2
 
             if tid not in self._history:
-                # Track nuevo: buscar equipo en detecciones originales por proximidad
-                equipo = self._match_equipo(cx, cy, detecciones, equipo_map)
-                self._history[tid] = Track(
+                # Track nuevo: buscar equipo y clase en detecciones originales por proximidad
+                equipo, clase = self._match_equipo_clase(cx, cy, detecciones, equipo_map)
+                new_track = Track(
                     track_id=tid,
-                    clase="player",
+                    clase=clase,
                     equipo=equipo,
                     last_box=(cx, cy, w, h),
                     history_x=[cx],
                     history_y=[cy],
                     history_minute=[minute],
                 )
+                new_track.vote_equipo(equipo)  # primer voto
+                self._history[tid] = new_track
             else:
                 track = self._history[tid]
                 track.last_box = (cx, cy, w, h)
@@ -172,27 +195,33 @@ class ProfessionalTracker:
                 track.history_y.append(cy)
                 track.history_minute.append(minute)
                 track.frames_seen += 1
+                # Actualizar equipo con la predicción del frame actual
+                new_equipo, _ = self._match_equipo_clase(cx, cy, detecciones, equipo_map)
+                track.vote_equipo(new_equipo)
 
             current_active[tid] = self._history[tid]
 
         self._tracks = current_active
         return self._tracks
 
-    def _match_equipo(self, cx: float, cy: float,
-                      detecciones: list, equipo_map: list) -> int:
+    def _match_equipo_clase(self, cx: float, cy: float,
+                            detecciones: list, equipo_map: list) -> tuple[int, str]:
         """
-        Encuentra el equipo de la detección original más cercana al track.
+        Encuentra el equipo y la clase de la detección original más cercana al track.
+        Returns: (equipo: int, clase: str)
         """
         if not detecciones or not equipo_map:
-            return 0
+            return 0, "player"
         dist_min = float("inf")
         equipo = 0
+        clase = "player"
         for d_idx, d in enumerate(detecciones):
             dist = np.hypot(cx - d["x"], cy - d["y"])
             if dist < dist_min:
                 dist_min = dist
                 equipo = equipo_map[d_idx] if d_idx < len(equipo_map) else 0
-        return equipo
+                clase = d.get("clase", "player")
+        return equipo, clase
 
     def get_all_tracks(self) -> List[Track]:
         """Retorna todos los tracks registrados en la sesión completa."""

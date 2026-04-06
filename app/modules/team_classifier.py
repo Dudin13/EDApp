@@ -247,6 +247,52 @@ class TeamClassifier:
             result.append({**det, "team": team.value})
         return result
 
+    def adapt(self, frame: np.ndarray, detections_with_team: list[dict]) -> bool:
+        """
+        Re-calibración incremental: actualiza los centroides de color con los
+        tracks estables del frame actual. Útil para adaptarse a cambios de
+        iluminación durante el partido.
+
+        Args:
+            frame: Frame BGR actual
+            detections_with_team: Lista de dicts con keys 'bbox' y 'equipo' (0 o 1)
+                                  Solo se usan detecciones con equipo conocido (0 o 1).
+
+        Returns:
+            True si se actualizaron los centroides, False si no había suficientes datos.
+        """
+        if not self.colors.fitted:
+            return False
+
+        colors_a, colors_b = [], []
+        for det in detections_with_team:
+            eq = det.get("equipo", -1)
+            if eq not in (0, 1):
+                continue
+            bbox = det.get("bbox")
+            if bbox is None:
+                x, y, w, h = det.get("x", 0), det.get("y", 0), det.get("w", 0), det.get("h", 0)
+                bbox = (x - w/2, y - h/2, x + w/2, y + h/2)
+            if bbox[3] - bbox[1] < 20:  # bbox demasiado pequeño
+                continue
+            crop = self._extract_torso_crop(frame, bbox)
+            if crop is None:
+                continue
+            color = self._dominant_color_hsv(crop)
+            (colors_a if eq == 0 else colors_b).append(color)
+
+        if len(colors_a) < 3 or len(colors_b) < 3:
+            return False
+
+        # Media ponderada: 70% centroide previo + 30% media del frame actual
+        # para que la adaptación sea gradual y no salte por un frame malo
+        alpha = 0.30
+        new_a = np.mean(colors_a, axis=0)
+        new_b = np.mean(colors_b, axis=0)
+        self.colors.team_a = (1 - alpha) * self.colors.team_a + alpha * new_a
+        self.colors.team_b = (1 - alpha) * self.colors.team_b + alpha * new_b
+        return True
+
     # ── Utilidades ─────────────────────────────────────────────────────────
 
     def get_team_color_bgr(self, team: Team) -> tuple:

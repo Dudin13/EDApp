@@ -56,8 +56,15 @@ data/datasets/**
 !data/datasets/**/
 !data/datasets/**/*.dvc
 data/samples/*.mp4
+data/samples/*.jpg
+data/samples/*.jpeg
+data/samples/*.png
 data/samples/videos
 # ml/models/     <-- Handled by *.pt
+
+# Datasets de entrenamiento (no subir imágenes al repo)
+football-field-detection-15/
+ml/training/runs/
 
 # YOLO Training
 combined_dataset/
