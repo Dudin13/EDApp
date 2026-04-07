@@ -16,18 +16,18 @@ DST_LABELS = DST_DIR / "labels"
 FLAG = "# revisado_manual"
 
 def main():
-    print("🧹 Preparando dataset final de entrenamiento (Solo revisado por humanos)...")
+    print("[INFO] Preparando dataset final de entrenamiento (Solo revisado por humanos)...")
     
     # Crear estructura básica
     DST_IMAGES.mkdir(parents=True, exist_ok=True)
     DST_LABELS.mkdir(parents=True, exist_ok=True)
     
     if not SRC_LABELS.exists():
-        print("❌ Error: No se encontró la carpeta de labels origen.")
+        print("[ERROR] Error: No se encontro la carpeta de labels origen.")
         return
 
     label_files = list(SRC_LABELS.glob("*.txt"))
-    print(f"📁 Escaneando {len(label_files)} archivos de etiquetas...")
+    print(f"[INFO] Escaneando {len(label_files)} archivos de etiquetas...")
     
     copied_count = 0
     
@@ -42,7 +42,7 @@ def main():
                     img_path = SRC_IMAGES / (lab_path.stem + ".png")
                 
                 if not img_path.exists():
-                    print(f"   ⚠️ Imagen no encontrada para {lab_path.name}, saltando.")
+                    print(f"   [WARN] Imagen no encontrada para {lab_path.name}, saltando.")
                     continue
                 
                 # 2. Limpiar etiqueta (quitar comentario)
@@ -55,20 +55,20 @@ def main():
                 
                 copied_count += 1
                 if copied_count % 50 == 0:
-                    print(f"   ✅ Copiados {copied_count} archivos...")
+                    print(f"   [OK] Copiados {copied_count} archivos...")
         except Exception as e:
-            print(f"   ❌ Error procesando {lab_path.name}: {e}")
+            print(f"   [ERROR] Error procesando {lab_path.name}: {e}")
 
     print("\n" + "="*40)
-    print("🚀 PROCESO COMPLETADO")
+    print("PROCESO COMPLETADO")
     print("="*40)
-    print(f"📂 Dataset destino: {DST_DIR}")
-    print(f"✨ Imágenes/Labels listos: {copied_count}")
+    print(f"[INFO] Dataset destino: {DST_DIR}")
+    print(f"[INFO] Imagenes/Labels listos: {copied_count}")
     print("="*40)
     if copied_count > 0:
-        print("💡 Tip: Ya puedes usar esta carpeta en tu data.yaml para entrenar.")
+        print("Tip: Ya puedes usar esta carpeta en tu data.yaml para entrenar.")
     else:
-        print("💡 Tip: Aún no has revisado ninguna imagen manualmente en el Labeller.")
+        print("Tip: Aun no has revisado ninguna imagen manualmente en el Labeller.")
 
 if __name__ == "__main__":
     main()
