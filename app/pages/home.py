@@ -31,7 +31,7 @@ def render():
     """, unsafe_allow_html=True)
 
     # ── Botones de Acción Rápidos ───────────────────────────────────────────
-    c1, c2, c3, c4, c5 = st.columns([1,2,2,2,1])
+    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 2, 2, 2, 2, 0.5])
 
     with c2:
         if st.button("🚀  NUEVO ANÁLISIS", use_container_width=True, type="primary"):
@@ -48,6 +48,11 @@ def render():
     with c4:
         if st.button("📐  CALIBRAR CÁMARA", use_container_width=True):
             st.session_state.page = "calibration"
+            st.rerun()
+
+    with c5:
+        if st.button("🔬  COMPROBAR DETECCIÓN", use_container_width=True):
+            st.session_state.page = "dataset_audit"
             st.rerun()
 
     st.markdown("<br><br>", unsafe_allow_html=True)

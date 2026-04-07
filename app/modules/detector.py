@@ -46,6 +46,7 @@ _REPO_ROOT = _APP_ROOT.parent                         # raíz del repo
 
 _MODEL_SEARCH_PATHS = [
     _THIS_DIR,                                        # junto al detector.py (legacy)
+    _REPO_ROOT / "models",                           # la nueva carpeta centralizada
     _REPO_ROOT / "ml" / "models",                    # estructura ml/models/
     _REPO_ROOT / "assets" / "weights",               # estructura assets/weights/
     _REPO_ROOT,                                       # raíz del repo (fallback)
@@ -61,9 +62,9 @@ def _find_model(filename: str) -> Path:
             return candidate
     return _MODEL_SEARCH_PATHS[1] / filename  # ruta esperada aunque no exista
 
-PLAYER_MODEL_PATH = _find_model("detect_players.pt")
-BALL_MODEL_PATH   = _find_model("detect_ball.pt")
-PITCH_MODEL_PATH  = _find_model("pose_field.pt")
+PLAYER_MODEL_PATH = _find_model("players.pt")
+BALL_MODEL_PATH   = _find_model("ball.pt")
+PITCH_MODEL_PATH  = _find_model("pitch.pt")
 YOLO_LEGACY_PATH  = _find_model("best_football_seg.pt")
 YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
 
@@ -90,7 +91,6 @@ def _load_player_model():
             path = PLAYER_MODEL_PATH if PLAYER_MODEL_PATH.exists() else YOLO_LEGACY_PATH
             if path.exists():
                 _player_model = YOLO(str(path))
-                logger.info(f"Modelo jugadores: {path.name}")
             else:
                 _player_model = _load_coco_model()
     return _player_model
@@ -167,7 +167,7 @@ def _build_detection_dict(frame, x_abs, y_abs, w, h, clase, confidence,
     }
 
 
-def detect_frame_kaggle(frame, confidence=0.3):
+def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
     """
     Deteccion con 3 modelos especializados del notebook Kaggle.
     PLAYER_MODEL: jugadores/porteros/arbitros a resolucion estandar.
@@ -182,7 +182,9 @@ def detect_frame_kaggle(frame, confidence=0.3):
     pm=_load_player_model()
     if pm is not None:
         try:
-            r=pm.predict(frame,conf=confidence,verbose=False)[0]
+            p_imgsz = imgsz if imgsz else 640
+            r=pm.predict(frame,conf=confidence,verbose=False,imgsz=p_imgsz)[0]
+            import supervision as sv
             d=sv.Detections.from_ultralytics(r).with_nms(threshold=0.5,class_agnostic=True)
             for i,xyxy in enumerate(d.xyxy):
                 x1,y1,x2,y2=map(int,xyxy)
@@ -191,7 +193,7 @@ def detect_frame_kaggle(frame, confidence=0.3):
                 conf_v=float(d.confidence[i]) if d.confidence is not None else confidence
                 clase=id_to_name.get(cls_id,"player")
                 if clase=="ball": continue
-                if cy<h_frame*0.15 or w*h<400: continue
+                if cy<h_frame*0.15 or w*h<100: continue
                 if h>0 and (h/max(w,1))>7.0: continue
                 detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v))
         except Exception as e:
@@ -296,7 +298,7 @@ def detect_frame_coco(frame, confidence=0.35):
     return dets
 
 
-def detect_frame(frame, mode="auto", confidence=40):
+def detect_frame(frame, mode="auto", confidence=40, imgsz=None):
     """
     Fachada principal. Orden de prioridad:
       kaggle/auto+modelos -> yolo -> roboflow -> coco
@@ -304,7 +306,7 @@ def detect_frame(frame, mode="auto", confidence=40):
     conf_float=confidence/100.0 if isinstance(confidence,int) and confidence>1 else float(confidence)
     conf_int=int(conf_float*100)
     if mode=="kaggle" or (mode=="auto" and kaggle_models_available()):
-        return detect_frame_kaggle(frame,confidence=conf_float)
+        return detect_frame_kaggle(frame,confidence=conf_float,imgsz=imgsz)
     if mode=="yolo" or (mode=="auto" and yolo_model_available()):
         return detect_frame_yolo(frame,confidence=conf_float)
     if mode in ("roboflow","auto"):

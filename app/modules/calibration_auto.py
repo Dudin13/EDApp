@@ -139,13 +139,10 @@ class AutoCalibrator:
         self.pitch_config = SoccerPitchConfiguration()
         self.transformer:  Optional[ViewTransformer] = None
         self.last_keypoints_px  = []   # keypoints detectados en pixeles
-        self.last_keypoints_idx = []   # indices de keypoints detectados
         self.model = None
         self._model_path = self._find_model(model_path)
 
-        if self._model_path:
-            self._load_model()
-        else:
+        if not self._model_path:
             print("[AutoCalibrator] Modelo de campo no encontrado — usando calibracion manual")
 
     def _find_model(self, model_path: Optional[str]) -> Optional[Path]:
@@ -173,7 +170,8 @@ class AutoCalibrator:
         try:
             from ultralytics import YOLO
             self.model = YOLO(str(self._model_path))
-            print(f"[AutoCalibrator] Modelo de campo cargado OK")
+            self.model.to('cpu')
+            print(f"[AutoCalibrator] Modelo de campo cargado OK — names: {self.model.names}")
         except Exception as e:
             print(f"[AutoCalibrator] Error cargando modelo: {e}")
             self.model = None
@@ -194,6 +192,12 @@ class AutoCalibrator:
         Returns:
             True si la calibracion fue exitosa
         """
+        if self.model is None:
+            if self._model_path:
+                self._load_model()
+            else:
+                return False
+        
         if self.model is None:
             return False
 

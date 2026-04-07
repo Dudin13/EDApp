@@ -21,9 +21,11 @@ from pathlib import Path
 # Alternativa limpia a largo plazo: convertir app/ en un paquete instalable
 # con pyproject.toml y eliminarlo. Por ahora es el enfoque más seguro para Streamlit.
 def _setup_sys_path() -> None:
-    root_path = str(Path(__file__).parent)
-    if root_path not in sys.path:
-        sys.path.insert(0, root_path)
+    app_path = str(Path(__file__).parent)          # c:\apped\app
+    project_root = str(Path(__file__).parent.parent)  # c:\apped
+    for p in (project_root, app_path):
+        if p not in sys.path:
+            sys.path.insert(0, p)
 
 _setup_sys_path()
 
@@ -154,18 +156,12 @@ with st.sidebar:
 
     st.markdown('<div class="nav-header">Principal</div>', unsafe_allow_html=True)
     nav_btn("Inicio", "home", "🏠")
-    nav_btn("Análisis de Vídeo", "upload", "🛰️")
-
-    st.markdown('<div class="nav-header">Dashboards</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="nav-header">Flujo de Trabajo</div>', unsafe_allow_html=True)
+    nav_btn("Nuevo Análisis", "upload", "🚀")
     nav_btn("Panel de Scout", "scout", "📋")
-    nav_btn("Dashboard Colectivo", "collective", "📊")
-    nav_btn("Clips de Acción", "clips", "🎬")
-
-    st.markdown('<div class="nav-header">Herramientas IA</div>', unsafe_allow_html=True)
-    nav_btn("Corrección de Imágenes", "image_correction", "🔍")
-    nav_btn("Auditoría de Dataset", "dataset_audit", "🔬")
-    nav_btn("Calibración Campo", "calibration", "📐")
-    nav_btn("Ajustes", "settings", "⚙️")
+    nav_btn("Calibrar Cámara", "calibration", "📐")
+    nav_btn("Comprobar Detección", "dataset_audit", "🔬")
 
     # Footer Sidebar
     st.markdown("""

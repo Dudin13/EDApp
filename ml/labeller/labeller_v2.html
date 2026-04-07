@@ -257,13 +257,10 @@
         <div class="form-group">
             <label>Conjunto de Datos</label>
             <select id="subsetSelect" onchange="loadImages()">
-                <option value="veo_frames_raw">VEO Frames Nuevos</option>
-                <option value="imagenes_entrenamiento">Todas las Imagenes</option>
-                <option value="combined">Todo el Dataset (Mix)</option>
-                <option value="nuevas_muestras_marzo">Nuevas Muestras (Marzo)</option>
-                <option value="super_focused_50">Super Focused (50)</option>
-                <option value="train">Entrenamiento</option>
-                <option value="val">Validación</option>
+                <option value="0_por_entrenar">0. POR ENTRENAR (Nuevas)</option>
+                <option value="1_entrenadas_ia">1. ENTRENADAS IA (Sugeridas)</option>
+                <option value="2_entrenadas_manual">2. ENTRENADAS MANUAL (Revisadas)</option>
+                <option value="3_final">3. FINAL (Para Entrenar)</option>
             </select>
         </div>
         <div class="form-group" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
@@ -325,7 +322,7 @@
 
 <script>
     const API_URL = window.location.origin;
-    let currentSubset = "combined";
+    let currentSubset = "0_por_entrenar";
     let currentFile = "";
     let images = [];
     let labelsAI = [];
@@ -406,31 +403,44 @@
         currentFile = filename;
         document.querySelectorAll('.img-item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
-        
+
+        document.getElementById('status').innerText = "⏳ Cargando imagen...";
+
         bgImg.onload = () => {
             resetCanvases();
             draw();
+            document.getElementById('status').innerText = `✅ ${filename} (${bgImg.naturalWidth}×${bgImg.naturalHeight})`;
+        };
+        bgImg.onerror = () => {
+            document.getElementById('status').innerText = `❌ Error cargando: ${filename}`;
+            document.getElementById('status').style.color = "#ff4444";
+            console.error(`[Labeller] No se pudo cargar la imagen: ${API_URL}/api/image/${currentSubset}/${filename}`);
         };
         bgImg.src = `${API_URL}/api/image/${currentSubset}/${filename}`;
-        
+
         labelsAI = [];
         labelsManual = [];
         selectedIdx = -1;
         document.getElementById('deleteBtn').style.display = "none";
-        document.getElementById('savePath').innerText = `Guardando en: ml/data/datasets/${currentSubset}/labels/`;
+        document.getElementById('savePath').innerText = `Guardando en: data/datasets/labeller_flow/${currentSubset}/labels/`;
     }
 
     function resetCanvases() {
-        const aspect = bgImg.height / bgImg.width;
-        const container = cAI.parentElement;
-        const w = container.clientWidth;
-        const h = w * aspect;
-        
-        [cAI, cManual].forEach(c => {
-            c.width = w;
-            c.height = h;
-        });
-        
+        if (!bgImg.naturalWidth || !bgImg.naturalHeight) return;
+
+        const imgW = bgImg.naturalWidth;
+        const imgH = bgImg.naturalHeight;
+        const aspect = imgH / imgW;
+
+        // Usar el contenedor de cada canvas por separado para respetar su ancho real
+        const wAI = cAI.parentElement.clientWidth || 800;
+        const wManual = cManual.parentElement.clientWidth || 800;
+
+        cAI.width = wAI;
+        cAI.height = Math.round(wAI * aspect);
+        cManual.width = wManual;
+        cManual.height = Math.round(wManual * aspect);
+
         scale = 1.0;
         offsetX = 0;
         offsetY = 0;
@@ -455,13 +465,16 @@
         draw();
     }
 
-    // Helper: get image coordinates from mouse event
+    // Helper: get image coordinates from mouse event (normalized 0-1)
     function getImgCoords(e, canvas) {
         const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        
-        // Transform mouse coords to image space
+        // Corregir por ratio CSS vs intrinsic del canvas (DPR o resize)
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+
+        // Transformación inversa: canvas space → image space (0-1)
         const x = (mouseX - offsetX) / (canvas.width * scale);
         const y = (mouseY - offsetY) / (canvas.height * scale);
         return { x, y };
@@ -484,7 +497,24 @@
         try {
             const resp = await fetch(`${API_URL}/api/predict_data/${currentSubset}/${currentFile}`);
             const detections = await resp.json();
-            
+
+            // DEBUG: Mostrar coordenadas brutas en consola
+            console.group(`[IA PREDICT] ${currentFile} — ${detections.length} detecciones`);
+            detections.forEach((d, i) => {
+                const xs = d.points.map(p => p[0]);
+                const ys = d.points.map(p => p[1]);
+                const x1 = Math.min(...xs), y1 = Math.min(...ys);
+                const x2 = Math.max(...xs), y2 = Math.max(...ys);
+                console.log(`  [${i}] cls=${d.cls} → x1=${x1.toFixed(3)} y1=${y1.toFixed(3)} x2=${x2.toFixed(3)} y2=${y2.toFixed(3)}`);
+            });
+            console.groupEnd();
+
+            if (detections.length === 0) {
+                document.getElementById('status').innerText = "⚠️ IA: 0 detecciones (modelo sin predicciones)";
+                draw();
+                return;
+            }
+
             // Populate AI Pane
             labelsAI = detections.map(d => ({
                 cls: d.cls,
@@ -493,7 +523,6 @@
 
             // Copy to Manual Pane for refinement
             labelsManual = detections.map(d => {
-                // Convert polygon (points) to bounding box for simpler manual editing
                 const points = d.points;
                 const xs = points.map(p => p[0]);
                 const ys = points.map(p => p[1]);
@@ -506,11 +535,11 @@
                 };
             });
 
-            document.getElementById('status').innerText = "✅ IA Lista";
+            document.getElementById('status').innerText = `✅ IA: ${detections.length} detecciones — abre DevTools (F12) para ver coords`;
             draw();
-        } catch (e) { 
-            console.error(e); 
-            document.getElementById('status').innerText = "❌ Error en IA";
+        } catch (e) {
+            console.error("[IA ERROR]", e);
+            document.getElementById('status').innerText = "❌ Error en IA — ver consola";
         }
     }
 
@@ -795,13 +824,22 @@
     }
 
     async function saveFromIA() {
-        // Just copy AI labels exactly if needed
         const yoloLabels = labelsAI.map(l => {
-            // Logic to convert polygon to YOLO format (assuming class x1 y1 x2 y2... for segment)
             const ptsStr = l.points.map(p => `${p[0].toFixed(6)} ${p[1].toFixed(6)}`).join(" ");
             return `${l.cls} ${ptsStr}`;
         });
-        saveGeneric(yoloLabels);
+        // Guardar IA → mueve a 1_entrenadas_ia
+        const resp = await fetch(`${API_URL}/api/save_ia`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ subset: currentSubset, filename: currentFile, labels: yoloLabels })
+        });
+        if (resp.ok) {
+            document.getElementById('status').innerText = "🤖 IA Guardada → carpeta 1";
+            document.getElementById('status').style.color = "var(--primary)";
+            // Recargar lista para reflejar el movimiento
+            setTimeout(loadImages, 800);
+        }
     }
 
     function nextImage() {

@@ -1,0 +1,13 @@
+@echo off
+title EDudin Labeller
+cd /d C:\apped
+echo [INFO] Activando venv_cuda...
+call venv_cuda\Scripts\activate
+echo [INFO] Arrancando servidor Flask en background...
+start "" /b python ml/labeller/labeller_app.py
+echo [WAIT] Esperando inicializacion (2s)...
+timeout /t 2 /nobreak >nul
+echo [URL] Abriendo interfaz en puerto 5000...
+start http://localhost:5000
+echo [READY] Servidor activo. No cierres esta ventana.
+pause

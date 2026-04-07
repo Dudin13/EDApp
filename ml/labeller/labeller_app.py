@@ -15,9 +15,12 @@ app = Flask(__name__)
 CORS(app, origins=["http://localhost:*", "http://127.0.0.1:*"])
 
 # ✅ Rutas actualizadas para la estructura de raíz
-BASE = Path(os.environ.get("APPED_ROOT", "C:/apped"))
+BASE = Path("C:/apped")
 DATASET_ROOT = (BASE / "data/datasets").absolute()
-MODEL_PATH = BASE / "assets" / "weights" / "detect_players.pt"
+MODEL_DIR = BASE / "models"
+MODEL_PLAYERS = MODEL_DIR / "players.pt"
+MODEL_BALL = MODEL_DIR / "ball.pt"
+MODEL_SAM = MODEL_DIR / "sam2_t.pt"
 
 # ✅ Subsets válidos
 VALID_SUBSETS = {"train", "val", "test", "super_focused_50", "nuevas_muestras_marzo", "dataset", "combined", "veo_frames_raw", "imagenes_entrenamiento"}
@@ -25,8 +28,16 @@ VALID_SUBSETS = {"train", "val", "test", "super_focused_50", "nuevas_muestras_ma
 # ✅ Clases de Fútbol
 CLASSES = ["player", "goalkeeper", "referee", "ball", "equipo_a", "equipo_b"]
 
-print(f"Dataset Root: {DATASET_ROOT}")
-model = YOLO(MODEL_PATH)
+# Modelos con carga lazy
+_models = {}
+
+def get_model(name="players"):
+    global _models
+    if name not in _models:
+        path = MODEL_PLAYERS if name == "players" else MODEL_BALL
+        print(f"🔄 Cargando modelo YOLO: {name} ( {path} )...")
+        _models[name] = YOLO(str(path))
+    return _models[name]
 
 # ✅ SAM con carga lazy
 _sam_model = None
@@ -216,6 +227,7 @@ def predict(subset, filename):
     if img_path is None or not img_path.exists():
         return "Image not found", 404
 
+    model = get_model()
     results = model.predict(img_path, conf=0.15, imgsz=1280, verbose=False)[0]
 
     pred_filename = f"pred_{uuid.uuid4().hex}.jpg"
@@ -260,6 +272,7 @@ def predict_data(subset, filename):
     if img_path is None or not img_path.exists():
         return jsonify({"error": "Image not found"}), 404
 
+    model = get_model()
     results = model.predict(img_path, conf=0.25, imgsz=1280, verbose=False)[0]
     detections = []
     

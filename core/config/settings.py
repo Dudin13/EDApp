@@ -12,26 +12,26 @@ class Settings(BaseSettings):
     # Directories
     DATA_DIR: Path = BASE_DIR / "data"
     ASSETS_DIR: Path = BASE_DIR / "assets"
-    WEIGHTS_DIR: Path = ASSETS_DIR / "weights"
+    MODELS_DIR: Path = BASE_DIR / "models"
     OUTPUT_DIR: Path = BASE_DIR / "app" / "output"
     
     # Model Filenames
-    PLAYER_MODEL_NAME: str = "detect_players.pt"
-    BALL_MODEL_NAME: str = "detect_ball.pt"
-    PITCH_MODEL_NAME: str = "pose_field.pt"
+    PLAYER_MODEL_NAME: str = "players.pt"
+    BALL_MODEL_NAME: str = "ball.pt"
+    PITCH_MODEL_NAME: str = "pitch.pt"
     
     # Computed Model Paths
     @property
     def PLAYER_MODEL_PATH(self) -> str:
-        return str(self.WEIGHTS_DIR / self.PLAYER_MODEL_NAME)
+        return str(self.MODELS_DIR / self.PLAYER_MODEL_NAME)
         
     @property
     def BALL_MODEL_PATH(self) -> str:
-        return str(self.WEIGHTS_DIR / self.BALL_MODEL_NAME)
+        return str(self.MODELS_DIR / self.BALL_MODEL_NAME)
         
     @property
     def PITCH_MODEL_PATH(self) -> str:
-        return str(self.WEIGHTS_DIR / self.PITCH_MODEL_NAME)
+        return str(self.MODELS_DIR / self.PITCH_MODEL_NAME)
 
     # ML Hyperparameters
     DETECTION_CONF: float = 0.35
@@ -56,5 +56,5 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Ensure directories exist
-for path in [settings.DATA_DIR, settings.ASSETS_DIR, settings.WEIGHTS_DIR, settings.OUTPUT_DIR]:
+for path in [settings.DATA_DIR, settings.ASSETS_DIR, settings.MODELS_DIR, settings.OUTPUT_DIR]:
     path.mkdir(parents=True, exist_ok=True)
