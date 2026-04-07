@@ -250,10 +250,19 @@
         <div style="flex-shrink: 0; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;">
             <button onclick="aiPredict()" class="primary" style="width: 100%; margin-bottom: 10px;">🤖 IA PREDICT (YOLO)</button>
             <button onclick="nextImage()" class="primary" style="width: 100%; margin-bottom: 10px; background: #6366f1;">⏭️ SIGUIENTE IMAGEN</button>
-            <div style="background: rgba(255, 200, 0, 0.1); padding: 10px; border-radius: 8px; border: 1px solid var(--secondary);">
-                <p style="font-size: 11px; margin: 0 0 8px 0; color: var(--secondary); font-weight: 700;">MODO CLICK AUTOMÁTICO (SAM)</p>
-                <p style="font-size: 10px; margin: 0; color: var(--text-dim);">Haz CLICK NORMAL en un jugador para que la IA cree la caja sola.</p>
+            <div style="background: rgba(255, 200, 0, 0.1); padding: 10px; border-radius: 8px; border: 1px solid var(--secondary); margin-bottom: 10px;">
+                <p style="font-size: 11px; margin: 0 0 6px 0; color: var(--secondary); font-weight: 700;">CONTROLES PANEL DERECHO</p>
+                <p style="font-size: 10px; margin: 0; color: var(--text-dim); line-height: 1.6;">
+                    🖱️ <b>Click izq</b> → crear caja / SAM<br>
+                    🖱️ <b>Click der</b> → borrar caja bajo cursor<br>
+                    ⌨️ <b>Delete/Supr</b> → borrar seleccionada<br>
+                    ✋ <b>Espacio+drag</b> → desplazar vista
+                </p>
             </div>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--text-dim); text-transform: none; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="sam2RefineCheck" style="width: 16px; height: 16px; accent-color: var(--primary);">
+                🎯 Refinar con SAM2
+            </label>
         </div>
 
         <div class="form-group">
@@ -516,9 +525,12 @@
     // AI Prediction
     async function aiPredict() {
         if (!currentFile) return;
-        document.getElementById('status').innerText = "🤖 IA Pensando...";
+        const sam2Refine = document.getElementById('sam2RefineCheck').checked;
+        const statusMsg = sam2Refine ? "🎯 IA + SAM2 procesando..." : "🤖 IA Pensando...";
+        document.getElementById('status').innerText = statusMsg;
         try {
-            const resp = await fetch(`${API_URL}/api/predict_data/${currentSubset}/${currentFile}`);
+            const url = `${API_URL}/api/predict_data/${currentSubset}/${currentFile}?sam2_refine=${sam2Refine}`;
+            const resp = await fetch(url);
             const detections = await resp.json();
 
             // DEBUG: Mostrar coordenadas brutas en consola
@@ -581,7 +593,8 @@
                 body: JSON.stringify({
                     subset: currentSubset,
                     filename: currentFile,
-                    point: { x: point.x, y: point.y }
+                    point: { x: point.x, y: point.y },
+                    is_ball: (currentClass === 3)
                 })
             });
             const data = await resp.json();
@@ -610,51 +623,99 @@
         }
     }
 
-    // Event Handling with Zoom/Pan Support
-    cManual.oncontextmenu = (e) => e.preventDefault(); // Disable for Right-Click Pan
+    // Helper: find label index under given canvas coords, preferring smallest bbox (ball)
+    function findLabelAt(coords) {
+        // Minimum hit area: 20px in canvas space (for small ball circles)
+        const minPadPx = 20;
+        let hit = -1;
+        let smallestArea = Infinity;
+        labelsManual.forEach((l, idx) => {
+            // Adaptive pad: at least minPadPx pixels, but also 2% of normalised space
+            const padW = Math.max(0.005, minPadPx / (cManual.width  * scale));
+            const padH = Math.max(0.005, minPadPx / (cManual.height * scale));
+            if (coords.x >= l.x1 - padW && coords.x <= l.x2 + padW &&
+                coords.y >= l.y1 - padH && coords.y <= l.y2 + padH) {
+                const area = (l.x2 - l.x1) * (l.y2 - l.y1);
+                if (area < smallestArea) { smallestArea = area; hit = idx; }
+            }
+        });
+        return hit;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // MOUSE EVENT STATE MACHINE
+    //
+    //  Left-click on bbox            → select
+    //  Left-click on empty + drag    → pan
+    //  Left-click on empty (no drag) → SAM / ball
+    //  Right-click on bbox (no drag) → delete
+    //  Right-click on empty + drag   → pan
+    //  Middle-click + drag           → pan
+    //  Scroll wheel                  → zoom (handled separately)
+    //  Delete/Supr key               → delete selected
+    //  Ctrl+0                        → reset zoom
+    // ────────────────────────────────────────────────────────────────────
+
+    let dragPixels = 0;
+    let mouseDownClientX = 0, mouseDownClientY = 0;
+    let activeButton = -1;   // which button started the current action
+    const PAN_THRESHOLD = 5; // px — below this = click, above = pan
+
+    // Suppress native context menu — we handle right-click ourselves
+    cManual.oncontextmenu = (e) => e.preventDefault();
 
     cManual.onmousedown = (e) => {
-        const coords = getImgCoords(e, cManual);
-        
-        // Pan with Right Click (button 2) OR Middle Click (button 1) OR Spacebar
-        if (e.button === 2 || e.button === 1 || isSpacePressed) { 
+        if (e.button === 0 || e.button === 1 || e.button === 2) {
+            mouseDownClientX = e.clientX;
+            mouseDownClientY = e.clientY;
+            dragPixels = 0;
+            activeButton = e.button;
+        }
+
+        // ── Middle-click → always start pan immediately ──
+        if (e.button === 1) {
+            e.preventDefault();
             isPanning = true;
             panStartX = e.clientX - offsetX;
             panStartY = e.clientY - offsetY;
             return;
         }
 
-        if (e.button !== 0) return; // Only Left Click for interaction
-
-        // Selection Check (More sensitive)
-        let hit = -1;
-        const pad = 0.02 / scale;
-        labelsManual.forEach((l, idx) => {
-            if (coords.x >= l.x1 - pad && coords.x <= l.x2 + pad && coords.y >= l.y1 - pad && coords.y <= l.y2 + pad) {
-                hit = idx;
+        // ── Left-click ──
+        if (e.button === 0) {
+            const coords = getImgCoords(e, cManual);
+            const hit = findLabelAt(coords);
+            if (hit !== -1) {
+                // On bbox → select, no pan/draw
+                selectedIdx = hit;
+                document.getElementById('deleteBtn').style.display = "block";
+                isPanning = false;
+                isDrawing = false;
+            } else {
+                // On empty → defer: may become pan or SAM on mouseup
+                selectedIdx = -1;
+                document.getElementById('deleteBtn').style.display = "none";
+                startX = coords.x;
+                startY = coords.y;
+                isPanning = false;
+                isDrawing = true;
             }
-        });
-        
-        if (hit !== -1) {
-            selectedIdx = hit;
-            document.getElementById('deleteBtn').style.display = "block";
-            isDrawing = false;
-        } else {
-            selectedIdx = -1;
-            document.getElementById('deleteBtn').style.display = "none";
-            
-            // Start tracking for potential drag (manual box) or click (SAM)
-            startX = coords.x;
-            startY = coords.y;
-            isDrawing = true;
+            draw();
         }
-        draw();
+
+        // ── Right-click → defer: may become pan (drag) or delete (no drag) ──
+        if (e.button === 2) {
+            isPanning = false;
+            isDrawing = false; // don't draw boxes with RMB
+        }
     };
 
     cManual.onmousemove = (e) => {
         const coords = getImgCoords(e, cManual);
-        document.getElementById('coords').innerText = `X: ${Math.round(coords.x * 100)}%, Y: ${Math.round(coords.y * 100)}% | Zoom: ${Math.round(scale*100)}%`;
+        document.getElementById('coords').innerText =
+            `X: ${Math.round(coords.x * 100)}%, Y: ${Math.round(coords.y * 100)}% | Zoom: ${Math.round(scale*100)}%`;
 
+        // ── If already panning, keep panning ──
         if (isPanning) {
             offsetX = e.clientX - panStartX;
             offsetY = e.clientY - panStartY;
@@ -663,52 +724,113 @@
             return;
         }
 
-        // Update cursor visual
-        if (isSpacePressed) {
-            cManual.style.cursor = "grab";
-        } else {
-            // Check if hovering over a box
-            let hit = false;
-            const pad = 0.02 / scale;
-            labelsManual.forEach(l => {
-                if (coords.x >= l.x1 - pad && coords.x <= l.x2 + pad && coords.y >= l.y1 - pad && coords.y <= l.y2 + pad) hit = true;
-            });
-            cManual.style.cursor = hit ? "pointer" : "crosshair";
+        // ── Compute drag distance from mousedown ──
+        if (activeButton !== -1) {
+            dragPixels = Math.sqrt(
+                Math.pow(e.clientX - mouseDownClientX, 2) +
+                Math.pow(e.clientY - mouseDownClientY, 2)
+            );
         }
 
-        if (isDrawing) draw();
+        // ── Left-drag on empty OR Right-drag anywhere → promote to pan ──
+        const promoteToPan =
+            (activeButton === 0 && isDrawing  && dragPixels > PAN_THRESHOLD) ||
+            (activeButton === 2              && dragPixels > PAN_THRESHOLD);
+
+        if (promoteToPan) {
+            isPanning = true;
+            isDrawing = false;
+            panStartX = mouseDownClientX - offsetX;
+            panStartY = mouseDownClientY - offsetY;
+            offsetX = e.clientX - panStartX;
+            offsetY = e.clientY - panStartY;
+            cManual.style.cursor = "move";
+            draw();
+            return;
+        }
+
+        if (isDrawing) {
+            draw(); // live rubber-band preview
+            return;
+        }
+
+        // ── Idle hover cursor ──
+        const hovered = findLabelAt(coords);
+        cManual.style.cursor = hovered !== -1 ? "pointer" : "crosshair";
     };
 
     cManual.onmouseup = (e) => {
-        if (isPanning) { 
-            isPanning = false; 
-            return; 
+        const wasPanning  = isPanning;
+        const wasDrawing  = isDrawing;
+        const btn         = activeButton;
+        activeButton      = -1;
+
+        if (wasPanning) {
+            isPanning = false;
+            cManual.style.cursor = "crosshair";
+            return;
         }
-        if (!isDrawing) return;
+
+        // ── Right-click with no drag → delete ──
+        if (btn === 2 && dragPixels <= PAN_THRESHOLD) {
+            const coords = getImgCoords(e, cManual);
+            const hit = findLabelAt(coords);
+            if (hit !== -1) {
+                labelsManual.splice(hit, 1);
+                if (selectedIdx === hit) {
+                    selectedIdx = -1;
+                    document.getElementById('deleteBtn').style.display = "none";
+                } else if (selectedIdx > hit) {
+                    selectedIdx--;
+                }
+                document.getElementById('status').innerText = "🗑️ Anotación borrada";
+                draw();
+            }
+            return;
+        }
+
+        // ── Left-click resolution ──
+        if (!wasDrawing) return;
         isDrawing = false;
-        
+
         const coords = getImgCoords(e, cManual);
-        const endX = coords.x;
-        const endY = coords.y;
-        
+        const endX = coords.x, endY = coords.y;
         const dist = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-        
-        // If it was a CLICK -> Trigger SAM (Threshold increased to 0.01 for better usability)
-        if (dist < 0.01) {
-             samPredict({x: startX, y: startY});
-        } 
-        // If it was a drag -> Normal Box
-        else if (Math.abs(endX - startX) > 0.005 && Math.abs(endY - startY) > 0.005) {
+
+        if (dist < 0.008) {
+            // Point click → SAM or fixed ball box
+            if (currentClass === 3) {
+                const sizeW = 20 / bgImg.naturalWidth;
+                const sizeH = 20 / bgImg.naturalHeight;
+                labelsManual.push({
+                    cls: 3,
+                    x1: startX - sizeW/2, y1: startY - sizeH/2,
+                    x2: startX + sizeW/2, y2: startY + sizeH/2
+                });
+            } else {
+                samPredict({x: startX, y: startY});
+            }
+        } else if (Math.abs(endX - startX) > 0.005 && Math.abs(endY - startY) > 0.005) {
+            // Drag → draw rectangle
             labelsManual.push({
                 cls: currentClass,
-                x1: Math.min(startX, endX),
-                y1: Math.min(startY, endY),
-                x2: Math.max(startX, endX),
-                y2: Math.max(startY, endY)
+                x1: Math.min(startX, endX), y1: Math.min(startY, endY),
+                x2: Math.max(startX, endX), y2: Math.max(startY, endY)
             });
         }
         draw();
     };
+
+    // Safety: release state if mouse leaves window
+    window.addEventListener('mouseup', (e) => {
+        if (activeButton !== -1 && (e.button === activeButton)) {
+            if (isPanning) { isPanning = false; cManual.style.cursor = "crosshair"; }
+            if (isDrawing) { isDrawing = false; }
+            activeButton = -1;
+        }
+    });
+
+
 
     // Keyboard Events
     window.addEventListener('keydown', (e) => {
@@ -744,29 +866,30 @@
         draw();
     }
 
-    // Zoom with scrollwheel (Zoom to cursor) - ON BOTH CANVASES
-    [cAI, cManual].forEach(canvas => {
-        canvas.onwheel = (e) => {
-            e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
-            
-            applyZoom(e.deltaY < 0 ? 1 : -1, mouseX, mouseY);
-        };
-    });
+    // ── Zoom with scrollwheel (Zoom to cursor) ─────────────────────────
+    // Using addEventListener + passive:false so e.preventDefault() works
+    // and no later code can silently override the handler via .onwheel = ...
+    function wheelHandler(e) {
+        e.preventDefault();
+        const canvas = e.currentTarget;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left) * (canvas.width  / rect.width);
+        const mouseY = (e.clientY - rect.top)  * (canvas.height / rect.height);
+        applyZoom(e.deltaY < 0 ? 1 : -1, mouseX, mouseY);
+    }
+    cAI.addEventListener('wheel',     wheelHandler, { passive: false });
+    cManual.addEventListener('wheel', wheelHandler, { passive: false });
 
-    // Keyboard Shortcuts (Ctrl+0 to Reset)
+    // ── Ctrl+0 → reset zoom ────────────────────────────────────────────
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === '0') {
             e.preventDefault();
-            scale = 1.0;
-            offsetX = 0;
-            offsetY = 0;
+            scale = 1.0; offsetX = 0; offsetY = 0;
             document.getElementById('zoomRange').value = 100;
             draw();
         }
     });
+
 
     function updateZoomForce(newScaleValue) {
         const oldScale = scale;
@@ -827,11 +950,21 @@
             const y = l.y1 * cManual.height;
             const w = (l.x2 - l.x1) * cManual.width;
             const h = (l.y2 - l.y1) * cManual.height;
-            ctxManual.strokeRect(x, y, w, h);
             
-            ctxManual.fillStyle = classColors[l.cls] || "#fff";
-            ctxManual.globalAlpha = isSelected ? 0.4 : 0.2;
-            ctxManual.fillRect(x, y, w, h);
+            if (l.cls === 3) { // BALL: Draw circle + small square
+                ctxManual.beginPath();
+                ctxManual.arc(x + w/2, y + h/2, Math.abs(w/2), 0, Math.PI * 2);
+                ctxManual.stroke();
+                
+                ctxManual.fillStyle = classColors[l.cls] || "#fff";
+                ctxManual.globalAlpha = isSelected ? 0.6 : 0.4;
+                ctxManual.fill();
+            } else {
+                ctxManual.strokeRect(x, y, w, h);
+                ctxManual.fillStyle = classColors[l.cls] || "#fff";
+                ctxManual.globalAlpha = isSelected ? 0.4 : 0.2;
+                ctxManual.fillRect(x, y, w, h);
+            }
             ctxManual.globalAlpha = 1.0;
         });
 

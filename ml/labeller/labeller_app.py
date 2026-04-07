@@ -88,8 +88,25 @@ def segment_image():
         h, w = img.shape[:2]
         input_point = [[point['x'] * w, point['y'] * h]]
 
+        is_ball = data.get('is_ball', False)
+
         sam = get_sam_model()
-        results = sam.predict(img, points=input_point, labels=[1], verbose=False)
+        
+        # Si es balón, limitamos el área de búsqueda de SAM con un cuadro pequeño (60x60 px)
+        # para evitar que 'salte' a jugadores cercanos
+        predict_kwargs = {
+            "points": input_point,
+            "labels": [1],
+            "verbose": False
+        }
+        
+        if is_ball:
+            margin = 30 # px
+            px, py = input_point[0]
+            predict_kwargs["bboxes"] = [[max(0, px-margin), max(0, py-margin), min(w, px+margin), min(h, py+margin)]]
+            print(f"⚽ Ball SAM mode: box constraint applied at {predict_kwargs['bboxes']}")
+
+        results = sam.predict(img, **predict_kwargs)
 
         if not results or results[0].masks is None:
             return jsonify({"error": "No mask found"}), 400
@@ -167,16 +184,14 @@ def predict_data(subset, filename):
     if img_path is None or not img_path.exists():
         return jsonify({"error": "Image not found"}), 404
 
+    # ── Step 1: YOLO detection ──────────────────────────────────────────
     model = get_model()
     results = model.predict(img_path, conf=0.25, imgsz=1280, verbose=False)[0]
     detections = []
-    
+
     if results.masks is not None:
         for mask, cls in zip(results.masks.xyn, results.boxes.cls):
-            detections.append({
-                "cls": int(cls),
-                "points": mask.tolist()
-            })
+            detections.append({"cls": int(cls), "points": mask.tolist()})
     else:
         for box, cls in zip(results.boxes.xyxyn, results.boxes.cls):
             x1, y1, x2, y2 = box.tolist()
@@ -184,6 +199,45 @@ def predict_data(subset, filename):
                 "cls": int(cls),
                 "points": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
             })
+
+    # ── Step 2: Optional SAM2 refinement ───────────────────────────────
+    sam2_refine = request.args.get("sam2_refine", "false").lower() == "true"
+
+    if sam2_refine and len(detections) > 0:
+        try:
+            img_cv = cv2.imread(str(img_path))
+            h, w = img_cv.shape[:2]
+
+            # Build pixel bboxes for SAM2 from YOLO normalised coords
+            sam_bboxes = []
+            for d in detections:
+                xs = [p[0] for p in d["points"]]
+                ys = [p[1] for p in d["points"]]
+                sam_bboxes.append([
+                    min(xs) * w, min(ys) * h,
+                    max(xs) * w, max(ys) * h
+                ])
+
+            print(f"⚽ SAM2 refining {len(sam_bboxes)} bboxes...")
+            sam = get_sam_model()
+            sam_results = sam.predict(img_cv, bboxes=sam_bboxes, verbose=False)
+
+            refined = []
+            for i, (res, orig_d) in enumerate(zip(sam_results, detections)):
+                if res.masks is not None and len(res.masks.xyn) > 0:
+                    poly = res.masks.xyn[0].tolist()
+                    refined.append({"cls": orig_d["cls"], "points": poly})
+                else:
+                    # SAM didn't find a mask → keep YOLO bbox
+                    refined.append(orig_d)
+
+            detections = refined
+            print(f"✅ SAM2 done: {len(detections)} refined detections")
+
+        except Exception as e:
+            print(f"⚠️ SAM2 refine failed, falling back to YOLO: {e}")
+            import traceback; traceback.print_exc()
+            # detections already has YOLO results, just proceed
 
     return jsonify(detections)
 
