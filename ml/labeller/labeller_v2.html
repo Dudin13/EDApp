@@ -69,6 +69,8 @@
             display: flex;
             flex-direction: column;
             padding: 20px;
+            padding-bottom: 80px; /* Incrementado para asegurar visibilidad total */
+            overflow-y: auto;    /* Seguridad en pantallas pequeñas */
         }
 
         .form-group { margin-bottom: 20px; }
@@ -244,7 +246,7 @@
 </header>
 
 <main>
-    <aside style="display: flex; flex-direction: column; height: 100%;">
+    <aside>
         <div style="flex-shrink: 0; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;">
             <button onclick="aiPredict()" class="primary" style="width: 100%; margin-bottom: 10px;">🤖 IA PREDICT (YOLO)</button>
             <button onclick="nextImage()" class="primary" style="width: 100%; margin-bottom: 10px; background: #6366f1;">⏭️ SIGUIENTE IMAGEN</button>
@@ -257,13 +259,16 @@
         <div class="form-group">
             <label>Conjunto de Datos</label>
             <select id="subsetSelect" onchange="loadImages()">
-                <option value="0_por_entrenar">0. POR ENTRENAR (Nuevas)</option>
-                <option value="1_entrenadas_ia">1. ENTRENADAS IA (Sugeridas)</option>
-                <option value="2_entrenadas_manual">2. ENTRENADAS MANUAL (Revisadas)</option>
-                <option value="3_final">3. FINAL (Para Entrenar)</option>
+                <option value="veo_frames_raw">VEO Frames (1202 imágenes)</option>
             </select>
         </div>
         <div class="form-group" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <div id="statsPanel" style="background: rgba(0, 212, 170, 0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(0, 212, 170, 0.2);">
+                <label style="margin-bottom: 4px;">Progreso Manual</label>
+                <div id="manualStat" style="font-size: 14px; font-weight: 800; color: var(--text-dim);">
+                    Revisadas: <span id="manualCount">0</span> / <span id="totalCount">0</span>
+                </div>
+            </div>
             <label>Imágenes (<span id="imgCount">0</span>)</label>
             <div id="imageList" class="img-list"></div>
         </div>
@@ -322,7 +327,7 @@
 
 <script>
     const API_URL = window.location.origin;
-    let currentSubset = "0_por_entrenar";
+    let currentSubset = "veo_frames_raw";
     let currentFile = "";
     let images = [];
     let labelsAI = [];
@@ -370,26 +375,44 @@
         const resp = await fetch(`${API_URL}/api/images/${currentSubset}`);
         const data = await resp.json();
 
-        // Soporte para formato nuevo {name, corregida} y formato antiguo string
+        // Soporte para formato nuevo {name, corregida, revisado_manual}
         images = data.map(item => typeof item === "string" ? item : item.name);
-        const corregidas = new Set(
-            data.filter(item => typeof item === "object" && item.corregida)
-                .map(item => item.name)
-        );
-
+        
         const total = images.length;
-        const nCorregidas = corregidas.size;
-        document.getElementById('imgCount').innerText = `${total} (${nCorregidas} ✅)`;
+        const manualReviewed = data.filter(item => typeof item === "object" && item.revisado_manual).length;
+        
+        document.getElementById('imgCount').innerText = total;
+        document.getElementById('totalCount').innerText = total;
+        document.getElementById('manualCount').innerText = manualReviewed;
+        
+        // Colorear si hay progreso
+        const manualLabel = document.getElementById('manualStat');
+        if (manualReviewed > 0) {
+            manualLabel.style.color = "var(--primary)";
+        } else {
+            manualLabel.style.color = "var(--text-dim)";
+        }
 
         const list = document.getElementById('imageList');
         list.innerHTML = "";
         data.forEach(item => {
             const name = typeof item === "string" ? item : item.name;
             const corregida = typeof item === "object" && item.corregida;
+            const revisado_manual = typeof item === "object" && item.revisado_manual;
+            
             const div = document.createElement('div');
             div.className = "img-item";
-            div.style.color = corregida ? "#00d4aa" : "";
-            div.innerText = (corregida ? "✅ " : "") + name;
+            
+            let prefix = "";
+            if (revisado_manual) {
+                prefix = "👤 ✅ "; // Human check
+                div.style.color = "var(--primary)";
+            } else if (corregida) {
+                prefix = "🤖 ✅ "; // AI check
+                div.style.color = "var(--secondary)";
+            }
+            
+            div.innerText = prefix + name;
             div.onclick = () => selectImage(name, div);
             list.appendChild(div);
         });
@@ -688,7 +711,7 @@
     };
 
     // Keyboard Events
-    window.onkeydown = (e) => {
+    window.addEventListener('keydown', (e) => {
         if (e.code === "Space") {
             isSpacePressed = true;
         }
@@ -697,7 +720,7 @@
                 deleteSelected();
             }
         }
-    };
+    });
 
     window.onkeyup = (e) => {
         if (e.code === "Space") {
@@ -705,40 +728,54 @@
         }
     };
 
-    // Zoom with scrollwheel (Zoom to cursor) - ONLY WITH CTRL
-    cManual.onwheel = (e) => {
-        if (!e.ctrlKey) return; // REQUIRED: Hold CTRL to zoom
-        
-        e.preventDefault();
-        const rect = cManual.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
+    // Generic Zoom function
+    function applyZoom(delta, mouseX, mouseY) {
         const zoomIntensity = 0.1;
-        const delta = e.deltaY > 0 ? -zoomIntensity : zoomIntensity;
-        const newScale = Math.min(Math.max(0.1, scale * (1 + delta)), 25);
+        const factor = delta > 0 ? (1 + zoomIntensity) : (1 - zoomIntensity);
         
-        const factor = newScale / scale;
-        offsetX = mouseX - (mouseX - offsetX) * factor;
-        offsetY = mouseY - (mouseY - offsetY) * factor;
+        const newScale = Math.min(Math.max(0.5, scale * factor), 4.0);
+        const actualFactor = newScale / scale;
+
+        offsetX = mouseX - (mouseX - offsetX) * actualFactor;
+        offsetY = mouseY - (mouseY - offsetY) * actualFactor;
         
         scale = newScale;
         document.getElementById('zoomRange').value = Math.round(scale * 100);
         draw();
-    };
+    }
+
+    // Zoom with scrollwheel (Zoom to cursor) - ON BOTH CANVASES
+    [cAI, cManual].forEach(canvas => {
+        canvas.onwheel = (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            applyZoom(e.deltaY < 0 ? 1 : -1, mouseX, mouseY);
+        };
+    });
+
+    // Keyboard Shortcuts (Ctrl+0 to Reset)
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === '0') {
+            e.preventDefault();
+            scale = 1.0;
+            offsetX = 0;
+            offsetY = 0;
+            document.getElementById('zoomRange').value = 100;
+            draw();
+        }
+    });
 
     function updateZoomForce(newScaleValue) {
         const oldScale = scale;
-        scale = Math.min(Math.max(0.1, newScaleValue / 100), 25); // Convert percentage to scale
-        
+        scale = Math.min(Math.max(0.5, newScaleValue / 100), 4.0);
         const factor = scale / oldScale;
 
-        // Center of the canvas for slider zoom
         const centerX = cManual.width / 2;
         const centerY = cManual.height / 2;
 
-        // The point under the cursor should remain at the same position relative to the cursor
-        // (mouseX - offsetX_new) = (mouseX - offsetX_old) * factor
         offsetX = centerX - (centerX - offsetX) * factor;
         offsetY = centerY - (centerY - offsetY) * factor;
         
@@ -878,6 +915,10 @@
         if (resp.ok) {
             document.getElementById('status').innerText = "💾 Guardadas: " + currentFile;
             document.getElementById('status').style.color = "var(--primary)";
+            // Recargar lista lateral para mostrar el check ✅
+            const currentScroll = document.getElementById('imageList').scrollTop;
+            await loadImages();
+            document.getElementById('imageList').scrollTop = currentScroll;
         }
     }
 
