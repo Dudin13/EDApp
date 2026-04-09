@@ -21,7 +21,7 @@ ROOT       = Path("C:/apped")
 VIDEO_PATH = ROOT / "data/samples/test_5min.mp4" # Cambiado de test_clip_2m30s.mp4 por el usuario
 OUTPUT_DIR = ROOT / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
-OUTPUT_PATH = OUTPUT_DIR / "demo_result.mp4"
+OUTPUT_PATH = OUTPUT_DIR / "demo_result_v3.mp4"
 
 sys.path.insert(0, str(ROOT / "app"))
 
@@ -96,6 +96,12 @@ calib_done       = False
 frame_idx        = 0
 processed        = 0
 total_events     = 0
+total_detections = 0
+total_active_tracks = 0
+team_fit_frame   = -1
+minimap_points   = 0
+captures_at      = [60, 150, 240] # segundos
+captures_made    = 0
 
 colors = {
     Team.A.value:       (255, 100,  50),
@@ -107,8 +113,9 @@ colors = {
 print("\n[PROCESANDO]\n")
 
 # ── Loop principal ─────────────────────────────────────────────────────────
-MAX_FRAMES_LIMIT = 1000
-while frame_idx < MAX_FRAMES_LIMIT:
+target_frame_indices = [int(s * fps) for s in captures_at]
+
+while True:
     ret, frame = cap.read()
     if not ret:
         break
@@ -129,11 +136,15 @@ while frame_idx < MAX_FRAMES_LIMIT:
 
     # ── 2. Detección YOLO ─────────────────────────────────────────────────
     detections = detect_frame(frame, confidence=CONF, imgsz=IMGSZ)
+    total_detections += len([d for d in detections if d.get("clase") in ("player", "goalkeeper")])
     print(f"  [DEBUG] YOLO raw: {len(detections)} detecciones · imgsz={IMGSZ}", flush=True)
 
-    players  = [d for d in detections if d.get("clase") in ("player", "goalkeeper")]
-    referees = [d for d in detections if d.get("clase") == "referee"]
-    balls    = [d for d in detections if d.get("clase") == "ball"]
+    players, referees, balls = [], [], []
+    for d in detections:
+        c = d.get("clase")
+        if c in ("player", "goalkeeper"): players.append(d)
+        elif c == "referee": referees.append(d)
+        elif c == "ball": balls.append(d)
 
     # ── 3. Calibración automática (una sola vez) ───────────────────────────
     if not calib_done and len(players) >= 3:
@@ -147,6 +158,7 @@ while frame_idx < MAX_FRAMES_LIMIT:
         bboxes = [d["bbox"] for d in players]
         team_clf_fitted = team_clf.fit(frame, bboxes)
         if team_clf_fitted:
+            team_fit_frame = frame_idx
             print(f"  [TEAM] Equipos aprendidos en frame {frame_idx}: "
                   f"{team_clf.get_summary()}")
 
@@ -162,12 +174,16 @@ while frame_idx < MAX_FRAMES_LIMIT:
         equipo_map.append(2)
 
     # ── 6. Tracking ───────────────────────────────────────────────────────
+    if processed % 20 == 0:
+        print(f"  [DEBUG] Tracker input: {len(all_dets)} detections (P:{len(players)} R:{len(referees)})")
+        
     tracks = tracker.update(
         detecciones   = all_dets,
         equipo_map    = equipo_map,
         minute        = minute,
         camera_offset = (dx, dy)
     )
+    total_active_tracks += len(tracks)
 
     # ── 7. Balón ──────────────────────────────────────────────────────────
     ball_pos   = None
@@ -223,6 +239,9 @@ while frame_idx < MAX_FRAMES_LIMIT:
         for tid, track in tracks.items():
             px, py = calibrator.pixel_to_pitch(track.last_box[0], track.last_box[1])
             det_list.append({"pitch_pos": (px, py), "team": track.equipo})
+        
+        if det_list:
+            minimap_points += len(det_list)
 
         minimap = calibrator.draw_pitch_minimap(det_list, MINIMAP_W, MINIMAP_H)
         vis[MINIMAP_Y:MINIMAP_Y+MINIMAP_H, MINIMAP_X:MINIMAP_X+MINIMAP_W] = minimap
@@ -239,6 +258,17 @@ while frame_idx < MAX_FRAMES_LIMIT:
                      f"{minute:.1f}'",
                 (10, h - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
                 (255, 255, 255), 1, cv2.LINE_AA)
+
+    # ── 10. Capturas representativas ───────────────────────────────────────
+    if captures_made < len(captures_at):
+        # Capturar en el frame más cercano al segundo deseado (dentro del intervalo del loop)
+        current_target = target_frame_indices[captures_made]
+        if frame_idx >= current_target:
+            sec = captures_at[captures_made]
+            cap_path = OUTPUT_DIR / f"v3_frame_{sec}.jpg"
+            cv2.imwrite(str(cap_path), vis)
+            print(f"  [SAVE] Captura T={sec}s guardada en {cap_path}")
+            captures_made += 1
 
     out.write(vis)
 
@@ -259,6 +289,10 @@ print(f"Frames procesados: {processed}")
 print(f"Tracks totales:    {len(tracker.get_all_tracks())}")
 print(f"Eventos:           {total_events}")
 print(f"Calibración:       {'OK' if calib_done else 'FALLIDA'}")
-print(f"TeamClassifier:    {'OK' if team_clf_fitted else 'FALLIDO'}")
+print(f"TeamClassifier:    {'OK' if team_clf_fitted else 'FALLIDO'} @ Frame {team_fit_frame}")
+print(f"Media Jugadores/F: {total_detections / processed if processed > 0 else 0:.2f}")
+print(f"Media Tracks/F:    {total_active_tracks / processed if processed > 0 else 0:.2f}")
+print(f"Minimap Status:    {'POBLADO' if minimap_points > 0 else 'VACIO'}")
 print(f"Output:            {OUTPUT_PATH}")
-print("\nAbre output/demo_result.mp4 para ver el resultado visual.")
+print(f"\nCapturas guardadas en {OUTPUT_DIR}/v3_frame_60/150/240.jpg")
+print(f"\nAbre {OUTPUT_PATH} para ver el resultado visual.")

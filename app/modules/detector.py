@@ -149,21 +149,14 @@ def yolo_model_available():
 
 
 def _build_detection_dict(frame, x_abs, y_abs, w, h, clase, confidence,
-                           extract_dorsal=True):
-    dorsal_num = None
-    if extract_dorsal and clase in ("player","goalkeeper"):
-        cx,cy=x_abs,y_abs
-        x1c=max(0,cx-w//4); y1c=max(0,cy-h//3)
-        x2c=min(frame.shape[1],cx+w//4); y2c=min(frame.shape[0],cy+h//6)
-        roi=frame[y1c:y2c,x1c:x2c]
-        if roi.size>0:
-            dorsal_num,_=_id_reader.extract_dorsal(roi)
+                           extract_dorsal=False):
     return {
         "x":int(x_abs),"y":int(y_abs),"w":int(w),"h":int(h),
+        "bbox": (int(x_abs - w/2), int(y_abs - h/2), int(x_abs + w/2), int(y_abs + h/2)),
         "clase":clase,"confianza":round(confidence,3),"conf":round(confidence,3),
-        "torso_color":_extract_torso_rgb(frame,int(x_abs),int(y_abs),int(w),int(h)),
+        "torso_color":None,  # Eval. Lazy: Solo calcula KMeans si un clasificador lo pide explicitamente
         "pitch_coords":_calibrator.transform_point(int(x_abs),int(y_abs)),
-        "dorsal":dorsal_num,"mask":None,
+        "dorsal":None,"mask":None,
     }
 
 
@@ -182,8 +175,10 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
     pm=_load_player_model()
     if pm is not None:
         try:
+            import torch
+            use_half = torch.cuda.is_available()
             p_imgsz = imgsz if imgsz else 640
-            r=pm.predict(frame,conf=confidence,verbose=False,imgsz=p_imgsz)[0]
+            r=pm.predict(frame,conf=confidence,verbose=False,imgsz=p_imgsz, half=use_half)[0]
             import supervision as sv
             d=sv.Detections.from_ultralytics(r).with_nms(threshold=0.5,class_agnostic=True)
             for i,xyxy in enumerate(d.xyxy):
@@ -193,8 +188,8 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
                 conf_v=float(d.confidence[i]) if d.confidence is not None else confidence
                 clase=id_to_name.get(cls_id,"player")
                 if clase=="ball": continue
-                if cy<h_frame*0.15 or w*h<100: continue
-                if h>0 and (h/max(w,1))>7.0: continue
+                if cy<h_frame*0.10 or w*h<40: continue
+                if h>0 and (h/max(w,1))>7.5: continue
                 detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v))
         except Exception as e:
             logger.error(f"Error modelo jugadores: {e}")
@@ -203,9 +198,11 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
     bm=_load_ball_model()
     if bm is not None:
         try:
+            import torch
+            use_half = torch.cuda.is_available()
             scale=1280/w_frame
             fhd=cv2.resize(frame,(1280,int(h_frame*scale)))
-            rb=bm.predict(fhd,conf=0.1,verbose=False,imgsz=1280)[0]
+            rb=bm.predict(fhd,conf=0.1,verbose=False,imgsz=1280, half=use_half)[0]
             db=sv.Detections.from_ultralytics(rb).with_nms(threshold=0.3,class_agnostic=True)
             for i,xyxy in enumerate(db.xyxy):
                 x1,y1,x2,y2=map(int,xyxy)

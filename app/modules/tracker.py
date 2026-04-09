@@ -63,7 +63,7 @@ class ProfessionalTracker:
     """
 
     # Parámetros por defecto
-    _DEFAULT_TRACK_ACTIVATION = 0.25
+    _DEFAULT_TRACK_ACTIVATION = 0.20
     _DEFAULT_LOST_BUFFER      = 30
     _DEFAULT_MATCH_THRESHOLD  = 0.8
 
@@ -144,15 +144,23 @@ class ProfessionalTracker:
         xyxy = []
         confidence = []
         class_id = []
+        
+        # Mapeo de nombres de clase a IDs para que ByteTrack no mezcle tipos
+        # 0: player, 1: goalkeeper, 2: ball, 3: referee
+        class_name_to_id = {"goalkeeper": 1, "player": 0, "referee": 3, "ball": 2}
 
         for d in detecciones:
-            x1 = d["x"] - d["w"] / 2
-            y1 = d["y"] - d["h"] / 2
-            x2 = d["x"] + d["w"] / 2
-            y2 = d["y"] + d["h"] / 2
-            xyxy.append([x1, y1, x2, y2])
+            if "bbox" in d:
+                xyxy.append(list(d["bbox"]))
+            else:
+                x1 = d["x"] - d["w"] / 2
+                y1 = d["y"] - d["h"] / 2
+                x2 = d["x"] + d["w"] / 2
+                y2 = d["y"] + d["h"] / 2
+                xyxy.append([x1, y1, x2, y2])
+            
             confidence.append(d.get("conf", d.get("confianza", 0.5)))
-            class_id.append(0)
+            class_id.append(class_name_to_id.get(d.get("clase"), 0))
 
         sv_detections = sv.Detections(
             xyxy=np.array(xyxy, dtype=np.float32),

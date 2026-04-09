@@ -38,6 +38,7 @@ DATASET_DIR = BASE / "data" / "datasets" / "hybrid_dataset"
 VEO_DIR     = BASE / "data" / "datasets" / "veo_frames_raw"
 VEO_LABELS  = BASE / "data" / "datasets" / "labels_autolabel"
 LOCAL_DIR   = BASE / "data" / "datasets" / "local_dataset"
+VEO_FINAL_DIR = BASE / "data" / "datasets" / "veo_frames_raw_final"
 
 # Clases TARGET — igual que data.yaml
 TARGET_CLASSES = {0: "player", 1: "goalkeeper", 2: "referee", 3: "ball"}
@@ -309,12 +310,31 @@ def main():
     print(f"  Anadidos: {veo_train} train + {veo_val} valid = {veo_train + veo_val} total")
 
     # ── Anadir dataset local (si existe) ───────────────────────────────────
-    print(f"\n[2/2] Buscando dataset local adicional...")
+    print(f"\n[2/3] Buscando dataset local adicional...")
     if LOCAL_DIR.exists():
         loc_train, loc_val = add_local_frames(dry_run=args.dry_run)
         print(f"  Anadidos: {loc_train} train + {loc_val} valid")
     else:
         print(f"  No encontrado ({LOCAL_DIR}) — OK, saltando")
+
+    # ── Anadir frames manuales finales (VEO_FINAL_DIR) ───────────────────
+    print(f"\n[3/3] Anadiendo frames corregidos manualmente (veo_frames_raw_final)...")
+    if VEO_FINAL_DIR.exists():
+        # Reutilizamos la lógica de local pero adaptada a la estructura de veo_frames_raw_final
+        # En veo_frames_raw_final están en /images y /labels directamente
+        added_f = 0
+        src_imgs = VEO_FINAL_DIR / "images"
+        src_labs = VEO_FINAL_DIR / "labels"
+        dst_imgs = DATASET_DIR / "train" / "images"
+        dst_labs = DATASET_DIR / "train" / "labels"
+
+        for img in src_imgs.glob("*.jpg"):
+            label = src_labs / (img.stem + ".txt")
+            if copy_with_label(img, label, dst_imgs, dst_labs, prefix="final", dry_run=args.dry_run):
+                added_f += 1
+        print(f"  Anadidos: {added_f} frames revisados.")
+    else:
+        print(f"  No encontrado ({VEO_FINAL_DIR}) — saltando")
 
     # Actualizar data.yaml
     if not args.dry_run:

@@ -61,6 +61,8 @@ def train():
         data=str(DATA_YAML),
         epochs=20,
         imgsz=1280,
+        batch=4,      # Reducido para evitar error de memoria virtual
+        workers=4,    # Optimizado para el sistema actual (32GB RAM)
         device="cuda",
         name="incremental_train_run",
         exist_ok=True
