@@ -237,6 +237,10 @@ while True:
             px, py = calibrator.pixel_to_pitch(track.last_box[0], track.last_box[1])
             det_list.append({"pitch_pos": (px, py), "team": track.equipo})
         
+        # Inyectar balon al minimap
+        if ball_pos and calib_done:
+            det_list.append({"pitch_pos": pitch_pos, "team": 3})
+        
         if det_list:
             minimap_points += len(det_list)
 

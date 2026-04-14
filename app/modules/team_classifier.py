@@ -22,6 +22,20 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Intentar importar settings de forma robusta
+try:
+    from core.config.settings import settings
+except ImportError:
+    import sys
+    _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+    if str(_REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(_REPO_ROOT))
+    from core.config.settings import settings
 
 
 class Team(str, Enum):
@@ -100,11 +114,16 @@ class TeamClassifier:
         hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
         pixels = hsv.reshape(-1, 3).astype(np.float32)
 
-        # Filtrar sombras (V < 40) y sobreexposicion (V > 230 y S < 30)
-        mask = (pixels[:, 2] > 40) & ~((pixels[:, 2] > 230) & (pixels[:, 1] < 30))
+        # ── Filtrado robusto para extraer el color de la camiseta ──
+        # 1. Filtro de Valor (Sombras/V < 40)
+        # 2. Filtro de Saturación (Grisáceos/Blancos/S < 50)
+        # Nota: Ya no filtramos el Hue del césped aquí, dejamos que el KMeans
+        # con K=3 lo atrape de forma natural para descartarlo después.
+        mask = (pixels[:, 2] > 40) & (pixels[:, 1] > 50)
         pixels = pixels[mask]
 
         if len(pixels) < 10:
+            # Fallback a la media si nos quedamos sin píxeles tras el filtrado
             return hsv.reshape(-1, 3).mean(axis=0)
 
         # KMeans para encontrar color dominante
@@ -146,18 +165,42 @@ class TeamClassifier:
             color = self._dominant_color_hsv(crop)
             colors_hsv.append(color)
 
-        if len(colors_hsv) < 4:
+        if len(colors_hsv) < 6:
             return False
 
-        # KMeans con k=2 para separar los dos equipos
+        # KMeans con k=3 para separar: [Local, Visitante, Césped]
         data     = np.array(colors_hsv, dtype=np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 1.0)
         _, labels, centers = cv2.kmeans(
-            data, 2, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS
+            data, 3, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS
         )
 
-        self.colors.team_a = centers[0]
-        self.colors.team_b = centers[1]
+        centers = centers.astype(np.float32)
+
+        # 1. Identificar cuál de los 3 es el "más verde" (Césped) -> H cercano a 60
+        # En HSV (OpenCV), H=60 es Verde Puro.
+        distances_to_grass = [abs(float(c[0]) - 60) for c in centers]
+        grass_idx = np.argmin(distances_to_grass)
+        
+        # 2. Quedarnos con los otros 2 (Teams)
+        team_candidates = [c for i, c in enumerate(centers) if i != grass_idx]
+
+        # 3. Ordenar los dos equipos por cercanía al ancla del Equipo A (Amarillo por defecto)
+        def hsv_dist(c1, c2):
+            dh = min(abs(float(c1[0]) - float(c2[0])), 180 - abs(float(c1[0]) - float(c2[0])))
+            ds = float(c1[1]) - float(c2[1])
+            dv = float(c1[2]) - float(c2[2])
+            return np.sqrt((dh * 2) ** 2 + ds ** 2 + (dv * 0.5) ** 2)
+
+        anchor_a = np.array(settings.TEAM_A_COLOR_HSV)
+        dist_candidate_0 = hsv_dist(team_candidates[0], anchor_a)
+        dist_candidate_1 = hsv_dist(team_candidates[1], anchor_a)
+
+        if dist_candidate_1 < dist_candidate_0:
+            team_candidates = team_candidates[::-1]
+
+        self.colors.team_a = team_candidates[0]
+        self.colors.team_b = team_candidates[1]
         self.colors.fitted = True
         self.colors.name_a = name_a
         self.colors.name_b = name_b
@@ -337,9 +380,16 @@ class TeamClassifier:
         }
         for det in detections:
             x1, y1, x2, y2 = [int(v) for v in det.get("bbox", (0,0,0,0))]
-            team  = det.get("team", Team.UNKNOWN.value)
-            label = det.get("label", team)
-            color = team_colors.get(team, (180, 180, 180))
+            team_str  = det.get("team", Team.UNKNOWN.value)
+            
+            # Intentar obtener el color real del equipo
+            if team_str in (Team.A.value, Team.B.value):
+                t_enum = Team.A if team_str == Team.A.value else Team.B
+                color = self.get_team_color_bgr(t_enum)
+            else:
+                color = team_colors.get(team_str, (180, 180, 180))
+            
+            label = det.get("label", team_str)
             cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
             cv2.putText(out, label, (x1, max(y1-6, 10)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)

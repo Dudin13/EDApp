@@ -339,9 +339,10 @@ class AutoCalibrator:
 
         # Dibujar jugadores
         team_colors = {
-            0: (255, 100, 50),   # equipo A — azul
-            1: (50, 100, 255),   # equipo B — rojo
-            2: (50, 255, 50),    # arbitro — verde
+            0: (0, 220, 255),    # equipo 0 (local) — amarillo (BGR: 0, 220, 255)
+            1: (255, 100, 50),   # equipo 1 (visitante) — azul (BGR: 255, 100, 50)
+            2: (50, 50, 255),    # arbitro — rojo (BGR: 50, 50, 255)
+            3: (255, 255, 255),  # balon — blanco (BGR: 255, 255, 255)
         }
 
         for det in detections:
