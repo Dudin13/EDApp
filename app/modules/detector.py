@@ -68,7 +68,7 @@ PITCH_MODEL_PATH  = _find_model("pitch.pt")
 YOLO_LEGACY_PATH  = _find_model("best_football_seg.pt")
 YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
 
-BALL_ID=0; GOALKEEPER_ID=1; PLAYER_ID=2; REFEREE_ID=3
+PLAYER_ID=0; GOALKEEPER_ID=1; REFEREE_ID=2; BALL_ID=3
 VALID_CLASSES = {"player","goalkeeper","referee","ball"}
 
 ROBOFLOW_API_KEY   = os.getenv("ROBOFLOW_API_KEY","")
@@ -226,7 +226,7 @@ def detect_frame_yolo(frame, confidence=0.45):
     model=_load_player_model()
     h_frame,w_frame=frame.shape[:2]
     results=model(frame,conf=0.10,verbose=False)
-    class_names={0:"goalkeeper",1:"player",2:"ball",3:"referee"}
+    class_names={0: "player", 1: "goalkeeper", 2: "referee", 3: "ball"}
     detecciones=[]
     for r in results:
         boxes=r.boxes; masks=r.masks

@@ -137,7 +137,6 @@ while True:
     # ── 2. Detección YOLO ─────────────────────────────────────────────────
     detections = detect_frame(frame, confidence=CONF, imgsz=IMGSZ)
     total_detections += len([d for d in detections if d.get("clase") in ("player", "goalkeeper")])
-    print(f"  [DEBUG] YOLO raw: {len(detections)} detecciones · imgsz={IMGSZ}", flush=True)
 
     players, referees, balls = [], [], []
     for d in detections:
@@ -174,9 +173,7 @@ while True:
         equipo_map.append(2)
 
     # ── 6. Tracking ───────────────────────────────────────────────────────
-    if processed % 20 == 0:
-        print(f"  [DEBUG] Tracker input: {len(all_dets)} detections (P:{len(players)} R:{len(referees)})")
-        
+
     tracks = tracker.update(
         detecciones   = all_dets,
         equipo_map    = equipo_map,
@@ -264,10 +261,10 @@ while True:
         # Capturar en el frame más cercano al segundo deseado (dentro del intervalo del loop)
         current_target = target_frame_indices[captures_made]
         if frame_idx >= current_target:
-            sec = captures_at[captures_made]
-            cap_path = OUTPUT_DIR / f"v3_frame_{sec}.jpg"
+            cap_id = captures_made + 1
+            cap_path = OUTPUT_DIR / f"demo_v3_frame{cap_id}.jpg"
             cv2.imwrite(str(cap_path), vis)
-            print(f"  [SAVE] Captura T={sec}s guardada en {cap_path}")
+            print(f"  [SAVE] Captura {cap_id} guardada en {cap_path}")
             captures_made += 1
 
     out.write(vis)

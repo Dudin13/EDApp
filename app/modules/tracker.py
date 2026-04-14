@@ -146,8 +146,8 @@ class ProfessionalTracker:
         class_id = []
         
         # Mapeo de nombres de clase a IDs para que ByteTrack no mezcle tipos
-        # 0: player, 1: goalkeeper, 2: ball, 3: referee
-        class_name_to_id = {"goalkeeper": 1, "player": 0, "referee": 3, "ball": 2}
+        # 0: player, 1: goalkeeper, 2: referee, 3: ball
+        class_name_to_id = {"player": 0, "goalkeeper": 1, "referee": 2, "ball": 3}
 
         for d in detecciones:
             if "bbox" in d:
