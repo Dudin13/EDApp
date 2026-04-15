@@ -9,7 +9,7 @@ BASE_DIR = Path("C:/apped")
 SCRIPTS_DIR = BASE_DIR / "scripts"
 DATA_DIR = BASE_DIR / "data/datasets/veo_frames_raw_final"
 MODEL_PATH = BASE_DIR / "models/players.pt"
-BACKUP_PATH = BASE_DIR / "models/players_backup.pt"
+BACKUP_PATH = BASE_DIR / "models/players_backup_v3.pt"
 DATA_YAML = DATA_DIR / "data.yaml"
 
 def run_preparation():
@@ -59,7 +59,7 @@ def train():
     
     results = model.train(
         data=str(DATA_YAML),
-        epochs=20,
+        epochs=30,
         imgsz=1280,
         batch=4,      # Reducido para evitar error de memoria virtual
         workers=4,    # Optimizado para el sistema actual (32GB RAM)

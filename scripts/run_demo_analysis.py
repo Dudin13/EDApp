@@ -21,7 +21,7 @@ ROOT       = Path("C:/apped")
 VIDEO_PATH = ROOT / "data/samples/test_5min.mp4" # Cambiado de test_clip_2m30s.mp4 por el usuario
 OUTPUT_DIR = ROOT / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
-OUTPUT_PATH = OUTPUT_DIR / "demo_result_v3.mp4"
+OUTPUT_PATH = OUTPUT_DIR / "demo_result_v4.mp4"
 
 sys.path.insert(0, str(ROOT / "app"))
 
@@ -266,7 +266,7 @@ while True:
         current_target = target_frame_indices[captures_made]
         if frame_idx >= current_target:
             cap_id = captures_made + 1
-            cap_path = OUTPUT_DIR / f"demo_v3_frame{cap_id}.jpg"
+            cap_path = OUTPUT_DIR / f"demo_v4_frame{cap_id}.jpg"
             cv2.imwrite(str(cap_path), vis)
             print(f"  [SAVE] Captura {cap_id} guardada en {cap_path}")
             captures_made += 1
