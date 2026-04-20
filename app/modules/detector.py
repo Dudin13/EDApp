@@ -178,19 +178,20 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
             import torch
             use_half = torch.cuda.is_available()
             p_imgsz = imgsz if imgsz else 640
-            r=pm.predict(frame,conf=confidence,verbose=False,imgsz=p_imgsz, half=use_half)[0]
+            r=pm.predict(frame,conf=0.40,verbose=False,imgsz=p_imgsz, half=use_half)[0]
             import supervision as sv
             d=sv.Detections.from_ultralytics(r).with_nms(threshold=0.5,class_agnostic=True)
             for i,xyxy in enumerate(d.xyxy):
                 x1,y1,x2,y2=map(int,xyxy)
                 w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
                 cls_id=int(d.class_id[i]) if d.class_id is not None else PLAYER_ID
-                conf_v=float(d.confidence[i]) if d.confidence is not None else confidence
+                conf_v=float(d.confidence[i]) if d.confidence is not None else 0.40
                 clase=id_to_name.get(cls_id,"player")
                 if clase=="ball": continue
-                if cy<h_frame*0.10 or w*h<40: continue
+                if cy<h_frame*0.10 or w*h<40 or h<20: continue
                 if h>0 and (h/max(w,1))>7.5: continue
                 detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v))
+
         except Exception as e:
             logger.error(f"Error modelo jugadores: {e}")
 

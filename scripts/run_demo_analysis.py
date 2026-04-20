@@ -17,11 +17,15 @@ import numpy as np
 from pathlib import Path
 
 # ── Rutas del proyecto ─────────────────────────────────────────────────────
-ROOT       = Path("C:/apped")
-VIDEO_PATH = ROOT / "data/samples/test_5min.mp4" # Cambiado de test_clip_2m30s.mp4 por el usuario
+ROOT       = Path("c:/apped")
+VIDEO_PATH = ROOT / "data/samples/test_5min.mp4"
 OUTPUT_DIR = ROOT / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
-OUTPUT_PATH = OUTPUT_DIR / "demo_result_v4.mp4"
+OUTPUT_PATH = OUTPUT_DIR / "demo_final_filtered.mp4"
+
+
+
+
 
 sys.path.insert(0, str(ROOT / "app"))
 
@@ -35,10 +39,11 @@ MODEL_PLAYERS = str(ROOT / "models/players.pt")
 MODEL_PITCH   = str(ROOT / "models/pitch.pt")
 SAMPLE_RATE   = 0.5   # procesar 1 frame cada 0.5s
 IMGSZ         = 1280  # crítico para VEO panorámico
-CONF          = 0.20
+CONF          = 0.50
 
 MINIMAP_W, MINIMAP_H = 320, 213
 MINIMAP_X, MINIMAP_Y = 20, 20   # posición en el frame
+
 
 print("=" * 60)
 print("EDApp — Test End-to-End")
@@ -100,12 +105,12 @@ total_detections = 0
 total_active_tracks = 0
 team_fit_frame   = -1
 minimap_points   = 0
-captures_at      = [60, 150, 240] # segundos
+captures_at      = [30, 90, 150] # segundos
+
 captures_made    = 0
 
+# Colores base (se actualizarán dinámicamente para los equipos)
 colors = {
-    Team.A.value:       (255, 100,  50),
-    Team.B.value:       ( 50, 200, 255),
     Team.REFEREE.value: ( 50, 255,  50),
     Team.UNKNOWN.value: (180, 180, 180),
 }
@@ -160,6 +165,9 @@ while True:
             team_fit_frame = frame_idx
             print(f"  [TEAM] Equipos aprendidos en frame {frame_idx}: "
                   f"{team_clf.get_summary()}")
+            # Actualizar colores dinámicos
+            colors[Team.A.value] = team_clf.get_team_color_bgr(Team.A)
+            colors[Team.B.value] = team_clf.get_team_color_bgr(Team.B)
 
     # ── 5. Clasificar equipos ──────────────────────────────────────────────
     equipo_map = []
@@ -216,14 +224,22 @@ while True:
         x1 = int(cx - tw/2); y1 = int(cy - th/2)
         x2 = int(cx + tw/2); y2 = int(cy + th/2)
 
+
         team_val = Team.A.value if track.equipo == 0 else \
                    Team.B.value if track.equipo == 1 else Team.REFEREE.value
-        color = colors.get(team_val, (180, 180, 180))
+        
+        # Usar color real si el equipo está fiteado
+        if team_clf_fitted and track.equipo in (0, 1):
+            t_enum = Team.A if track.equipo == 0 else Team.B
+            color = team_clf.get_team_color_bgr(t_enum)
+        else:
+            color = colors.get(team_val, (180, 180, 180))
 
         cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
         label = f"#{tid} {track.clase[:3].upper()}"
         cv2.putText(vis, label, (x1, max(y1-6, 10)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
+
 
     # Balón
     if ball_pos:
@@ -234,17 +250,29 @@ while True:
     if calib_done:
         det_list = []
         for tid, track in tracks.items():
+            if track.frames_lost > 0: continue
             px, py = calibrator.pixel_to_pitch(track.last_box[0], track.last_box[1])
-            det_list.append({"pitch_pos": (px, py), "team": track.equipo})
+            # Solo pintar si está dentro de los límites
+            if 0 < px < 105 and 0 < py < 68:
+                det_list.append({"pitch_pos": (px, py), "team": track.equipo})
+
+        
+        # Preparar colores dinámicos para el minimap
+        m_colors = {}
+        if team_clf_fitted:
+            m_colors[0] = team_clf.get_team_color_bgr(Team.A)
+            m_colors[1] = team_clf.get_team_color_bgr(Team.B)
         
         # Inyectar balon al minimap
         if ball_pos and calib_done:
-            det_list.append({"pitch_pos": pitch_pos, "team": 3})
+            if 0 < pitch_pos[0] < 105 and 0 < pitch_pos[1] < 68:
+                det_list.append({"pitch_pos": pitch_pos, "team": 3})
+
         
         if det_list:
             minimap_points += len(det_list)
 
-        minimap = calibrator.draw_pitch_minimap(det_list, MINIMAP_W, MINIMAP_H)
+        minimap = calibrator.draw_pitch_minimap(det_list, MINIMAP_W, MINIMAP_H, custom_colors=m_colors)
         vis[MINIMAP_Y:MINIMAP_Y+MINIMAP_H, MINIMAP_X:MINIMAP_X+MINIMAP_W] = minimap
 
     # Keypoints de calibración

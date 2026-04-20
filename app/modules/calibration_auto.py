@@ -280,12 +280,10 @@ class AutoCalibrator:
 
         try:
             px, py = self.transformer.transform_point(x, y)
-            # Clip a los limites del campo
-            px = float(np.clip(px, 0, self.PITCH_LENGTH_M))
-            py = float(np.clip(py, 0, self.PITCH_WIDTH_M))
-            return px, py
+            return float(px), float(py)
         except Exception:
             return self._naive_transform(x, y)
+
 
     def pixels_to_pitch_batch(self, points: list) -> list:
         """Convierte una lista de puntos (x, y) a coordenadas del campo."""
@@ -320,16 +318,15 @@ class AutoCalibrator:
         return out
 
     def draw_pitch_minimap(self, detections: list,
-                           width: int = 400, height: int = 267) -> np.ndarray:
+                           width: int = 400, height: int = 267,
+                           custom_colors: Optional[dict] = None) -> np.ndarray:
         """
         Genera un minimapa del campo con las posiciones de los jugadores.
 
         Args:
             detections: Lista de dicts con 'pitch_pos' (x, y) y 'team'
             width, height: Dimensiones del minimapa en pixeles
-
-        Returns:
-            Imagen BGR del minimapa
+            custom_colors: Diccionario opcional {team_id: (B, G, R)}
         """
         minimap = np.zeros((height, width, 3), dtype=np.uint8)
         minimap[:] = (34, 139, 34)  # verde campo
@@ -337,13 +334,15 @@ class AutoCalibrator:
         # Dibujar lineas del campo
         self._draw_field_lines(minimap, width, height)
 
-        # Dibujar jugadores
+        # Colores por defecto
         team_colors = {
-            0: (0, 220, 255),    # equipo 0 (local) — amarillo (BGR: 0, 220, 255)
-            1: (255, 100, 50),   # equipo 1 (visitante) — azul (BGR: 255, 100, 50)
-            2: (50, 50, 255),    # arbitro — rojo (BGR: 50, 50, 255)
-            3: (255, 255, 255),  # balon — blanco (BGR: 255, 255, 255)
+            0: (0, 220, 255),    # equipo 0 (local)
+            1: (255, 100, 50),   # equipo 1 (visitante)
+            2: (50, 255, 50),    # arbitro — verde (BGR: 50, 255, 50)
+            3: (255, 255, 255),  # balon — blanco
         }
+        if custom_colors:
+            team_colors.update(custom_colors)
 
         for det in detections:
             px, py = det.get("pitch_pos", (0, 0))
@@ -356,6 +355,8 @@ class AutoCalibrator:
             color = team_colors.get(team, (180, 180, 180))
             cv2.circle(minimap, (mx, my), 5, color, -1)
             cv2.circle(minimap, (mx, my), 5, (255, 255, 255), 1)
+
+        return minimap
 
         return minimap
 

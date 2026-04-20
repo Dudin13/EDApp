@@ -177,27 +177,27 @@ class TeamClassifier:
 
         centers = centers.astype(np.float32)
 
-        # 1. Identificar cuál de los 3 es el "más verde" (Césped) -> H cercano a 60
-        # En HSV (OpenCV), H=60 es Verde Puro.
-        distances_to_grass = [abs(float(c[0]) - 60) for c in centers]
-        grass_idx = np.argmin(distances_to_grass)
-        
-        # 2. Quedarnos con los otros 2 (Teams)
-        team_candidates = [c for i, c in enumerate(centers) if i != grass_idx]
+        # 1. Identificar cuál de los 3 es el "más verde" (Césped)
+        # Descartar basado en rango Hue [38, 85] (Verde en OpenCV HSV)
+        centers_hsv = centers.astype(np.float32)
+        team_candidates = []
+        for c in centers_hsv:
+            h = c[0]
+            if not (38 <= h <= 85):
+                team_candidates.append(c)
 
-        # 3. Ordenar los dos equipos por cercanía al ancla del Equipo A (Amarillo por defecto)
-        def hsv_dist(c1, c2):
-            dh = min(abs(float(c1[0]) - float(c2[0])), 180 - abs(float(c1[0]) - float(c2[0])))
-            ds = float(c1[1]) - float(c2[1])
-            dv = float(c1[2]) - float(c2[2])
-            return np.sqrt((dh * 2) ** 2 + ds ** 2 + (dv * 0.5) ** 2)
+        # Fallback si el filtrado por Hue falla (ej: camisetas verdes)
+        if len(team_candidates) < 2:
+            logger.warning("[TeamClassifier] Hue filtering failed to find 2 teams. Using 2 most frequent non-grass clusters.")
+            # Fallback simple: quitar el que tenga H más cercano a 60
+            distances_to_pure_green = [abs(float(c[0]) - 60) for c in centers]
+            grass_idx = np.argmin(distances_to_pure_green)
+            team_candidates = [c for i, c in enumerate(centers) if i != grass_idx]
 
-        anchor_a = np.array(settings.TEAM_A_COLOR_HSV)
-        dist_candidate_0 = hsv_dist(team_candidates[0], anchor_a)
-        dist_candidate_1 = hsv_dist(team_candidates[1], anchor_a)
-
-        if dist_candidate_1 < dist_candidate_0:
-            team_candidates = team_candidates[::-1]
+        # 3. Ordenar los dos equipos por Hue ascendente
+        # Cluster con H más bajo -> Equipo A
+        # Cluster con H más alto -> Equipo B
+        team_candidates.sort(key=lambda x: x[0])
 
         self.colors.team_a = team_candidates[0]
         self.colors.team_b = team_candidates[1]
@@ -373,8 +373,6 @@ class TeamClassifier:
         """
         out = frame.copy()
         team_colors = {
-            Team.A.value:       (255, 100,  50),   # azul
-            Team.B.value:       ( 50, 200, 255),   # naranja
             Team.REFEREE.value: ( 50, 255,  50),   # verde
             Team.UNKNOWN.value: (180, 180, 180),   # gris
         }
