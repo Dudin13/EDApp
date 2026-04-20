@@ -64,9 +64,10 @@ class EventSpotterTDEED:
     """
 
     # Radio de contacto balon-jugador en pixeles (camara VEO panoramica)
-    CONTACT_RADIUS_PX   = 120
+    CONTACT_RADIUS_PX   = 200
     # Minimo de frames seguidos para confirmar posesion
-    MIN_POSSESSION_FRAMES = 2
+    MIN_POSSESSION_FRAMES = 1
+
     # Ventana de suavizado de posesion (frames)
     SMOOTHING_WINDOW    = 5
     # Minimo tiempo entre eventos del mismo jugador (segundos)
@@ -92,6 +93,10 @@ class EventSpotterTDEED:
         self._last_ball_second: float          = -1.0
         self._frame_count: int                 = 0
 
+        # Estadisticas acumuladas
+        self._team_possession_counts = {0: 0, 1: 0}
+        self._event_positions = []  # Lista de (x, y) de cada evento para zonas de presion
+
         # Para detectar cambios de posesion
         self._current_possessor:  Optional[int] = None
         self._possessor_frames:   int           = 0
@@ -100,11 +105,14 @@ class EventSpotterTDEED:
         print(f"EventSpotter: Inicializado en {self.device} | "
               f"Modo: posesion de balon (Peral et al. 2025)")
 
+
     # ── API principal ──────────────────────────────────────────────────────
 
     def update(self, frame_second: float, minute: float,
                tracks: dict, ball_pos: Optional[tuple],
-               pitch_pos: tuple = (0, 0), ball_conf: float = 0.0) -> list[BallEvent]:
+               pitch_pos: tuple = (0, 0), ball_conf: float = 0.0,
+               calibrator = None) -> list[BallEvent]:
+
         """
         Procesa un frame y detecta eventos.
 
@@ -158,13 +166,25 @@ class EventSpotterTDEED:
                 possessor_team = track.equipo
 
         # Solo confirmar posesion si el jugador esta suficientemente cerca
-        if possessor_dist > self.CONTACT_RADIUS_PX:
-            possessor_id = None
+        if possessor_id is not None:
+            if possessor_dist > self.CONTACT_RADIUS_PX:
+                # print(f"  [DEBUG] Balon cerca de #{possessor_id} pero dist={possessor_dist:.1f} > {self.CONTACT_RADIUS_PX}")
+                possessor_id = None
+            else:
+                pass
+                # print(f"  [DEBUG] Posesion detectada: #{possessor_id} (dist={possessor_dist:.1f})")
 
         self._possession_history.append(possessor_id)
 
+
         # ── Suavizar posesion con ventana temporal ─────────────────────────
         smoothed_possessor = self._smooth_possessor()
+
+        # ── Contabilizar posesion por equipo ───────────────────────────────
+        if smoothed_possessor is not None and smoothed_possessor in tracks:
+            t = tracks[smoothed_possessor].equipo
+            if t in self._team_possession_counts:
+                self._team_possession_counts[t] += 1
 
         # ── Detectar cambio de poseedor ────────────────────────────────────
         if smoothed_possessor != self._current_possessor:
@@ -174,12 +194,12 @@ class EventSpotterTDEED:
             self._previous_possessor = prev
             self._current_possessor  = smoothed_possessor
 
-            # Cambio real de posesion -> clasificar evento
-            if prev is not None and smoothed_possessor is not None:
-                # Obtener equipo del poseedor actual
+            # Clasificar evento (incluso si se pierde la posesion a None)
+            if prev is not None:
+                # Obtener equipo del poseedor previo (quien realiza la accion)
                 team = -1
-                if smoothed_possessor in tracks:
-                    team = tracks[smoothed_possessor].equipo
+                if prev in tracks:
+                    team = tracks[prev].equipo
 
                 action = self._classify_action(
                     prev_possessor=prev,
@@ -187,8 +207,10 @@ class EventSpotterTDEED:
                     tracks=tracks,
                     ball_pos=ball_pos,
                     pitch_pos=pitch_pos,
-                    frame_second=frame_second
+                    frame_second=frame_second,
+                    calibrator=calibrator
                 )
+
 
                 # Verificar gap minimo entre eventos del mismo jugador
                 last_ev = self._last_event_by_track.get(prev, -999)
@@ -197,7 +219,7 @@ class EventSpotterTDEED:
                         timestamp   = frame_second,
                         minute      = minute,
                         action      = action,
-                        track_id    = prev,  # quien ENVIA
+                        track_id    = prev,  # quien ENVIA/TIRA
                         team        = team,
                         ball_pos    = ball_pos,
                         pitch_pos   = pitch_pos,
@@ -206,8 +228,10 @@ class EventSpotterTDEED:
                     )
                     if self.validate_geometrical({"action": action}, pitch_pos):
                         self._events.append(event)
+                        self._event_positions.append(pitch_pos)
                         self._last_event_by_track[prev] = frame_second
                         new_events.append(event)
+
         else:
             if smoothed_possessor is not None:
                 self._possessor_frames += 1
@@ -233,7 +257,9 @@ class EventSpotterTDEED:
 
     def _classify_action(self, prev_possessor: int, new_possessor: int,
                          tracks: dict, ball_pos: tuple,
-                         pitch_pos: tuple, frame_second: float) -> str:
+                         pitch_pos: tuple, frame_second: float,
+                         calibrator = None) -> str:
+
         """
         Clasifica la accion basandose en el cambio de posesion y contexto geometrico.
         """
@@ -244,19 +270,34 @@ class EventSpotterTDEED:
         new_team  = tracks[new_possessor].equipo  if new_possessor in tracks else -1
         prev_cls  = tracks[prev_possessor].clase  if prev_possessor in tracks else "player"
 
-        # Portero -> Despeje
+        # 1. Portero -> Despeje
         if prev_cls == "goalkeeper":
             return "Despeje"
 
-        # Cambio de equipo -> Recuperacion (el nuevo equipo recupera)
+        # 2. Tiro (en zona de ataque y sin receptor inmediato)
+        if new_possessor is None or new_team != prev_team:
+            if x > 88 or x < 17:  # zona de finalizacion
+                if 20 < y < 48:   # frente a porteria
+                    return "Tiro"
+
+        # 3. Centro (desde bandas al area)
+        if prev_team == new_team and new_team >= 0 and calibrator is not None:
+            nx, ny = 0, 0
+            if new_possessor in tracks:
+                pt = calibrator.pixel_to_pitch(tracks[new_possessor].last_box[0], tracks[new_possessor].last_box[1])
+                nx, ny = pt
+
+            # Viene de banda y va al centro
+            if (y < 12 or y > 56) and (20 < ny < 48):
+                if (x > 70 or x < 35):
+                    return "Centro"
+
+        # 4. Cambio de equipo -> Recuperacion
         if prev_team != new_team and prev_team >= 0 and new_team >= 0:
             return "Recuperacion"
 
-        # Mismo equipo -> Pase
+        # 5. Mismo equipo -> Pase
         if prev_team == new_team:
-            # Velocidad del balon para distinguir pase largo de corto
-            # (se calcula en video_processor con ball_history)
-            # Aqui usamos posicion para estimar
             if x < 10 or x > 95:
                 return "Saque de puerta"
             if y < 5 or y > 63:
@@ -264,6 +305,7 @@ class EventSpotterTDEED:
             return "Pase"
 
         return "Pase"
+
 
     # ── Validacion geometrica (compatibilidad con video_processor) ─────────
 
@@ -313,32 +355,40 @@ class EventSpotterTDEED:
             for e in self._events
         ]
 
-    def get_possession_stats(self, track_stats: dict) -> dict:
+    def get_possession_stats(self, track_stats: dict = None) -> dict:
         """
-        Calcula estadisticas de posesion por equipo.
+        Calcula estadisticas de posesion acumulada por equipo.
 
         Returns:
             {"team_0": 45.2, "team_1": 54.8}  <- porcentaje de posesion
         """
-        history = list(self._possession_history)
-        team_frames = {0: 0, 1: 0}
-
-        for tid in history:
-            if tid is None:
-                continue
-            if tid in track_stats:
-                team = track_stats[tid].get("equipo", -1)
-                if team in team_frames:
-                    team_frames[team] += 1
-
-        total = sum(team_frames.values())
+        total = sum(self._team_possession_counts.values())
         if total == 0:
+            # Intentar fallback con historial de smoothed_possessor (compatibilidad)
             return {"team_0": 50.0, "team_1": 50.0}
 
         return {
-            "team_0": round(team_frames[0] / total * 100, 1),
-            "team_1": round(team_frames[1] / total * 100, 1),
+            "team_0": round(self._team_possession_counts[0] / total * 100, 1),
+            "team_1": round(self._team_possession_counts[1] / total * 100, 1),
         }
+
+    def get_pressure_report(self) -> dict:
+        """Genera un reporte de zonas de presion (eventos por zona)."""
+        zones = {"Defensa A": 0, "Medio A": 0, "Ataque A": 0,
+                 "Defensa B": 0, "Medio B": 0, "Ataque B": 0}
+        
+        for x, y in self._event_positions:
+            if x < 35:
+                zones["Defensa A"] += 1
+                zones["Ataque B"] += 1
+            elif x < 70:
+                zones["Medio A"] += 1
+                zones["Medio B"] += 1
+            else:
+                zones["Ataque A"] += 1
+                zones["Defensa B"] += 1
+        return zones
+
 
     def reset(self):
         """Reinicia el estado para un nuevo video."""

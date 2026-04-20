@@ -38,9 +38,6 @@ class Settings(BaseSettings):
     TRACKING_BUFFER: int = 30
     BATCH_SIZE: int = 1
     
-    # Team Identification Anchors (HSV)
-    TEAM_A_COLOR_HSV: tuple = (30, 150, 150)  # Amarillo (Local)
-    TEAM_B_COLOR_HSV: tuple = (110, 150, 150) # Azul (Visitante)
 
     # Hardware
     DEVICE: str = "cuda" # 'cpu', 'cuda', 'mps'

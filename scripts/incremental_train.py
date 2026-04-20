@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+import torch
 from pathlib import Path
 
 # Configuración de Rutas
@@ -55,6 +56,11 @@ def train():
         return None
 
     print("\n[3/4] Paso 3: Iniciando entrenamiento YOLO (Fine-tuning)...")
+    
+    if torch.cuda.is_available():
+        torch.cuda.set_per_process_memory_fraction(0.70)
+        print(f"[INFO] Memoria GPU limitada al 70%.")
+        
     model = YOLO(str(MODEL_PATH))
     
     results = model.train(

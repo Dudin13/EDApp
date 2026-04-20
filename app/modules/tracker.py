@@ -64,7 +64,7 @@ class ProfessionalTracker:
 
     # Parámetros por defecto
     _DEFAULT_TRACK_ACTIVATION = 0.20
-    _DEFAULT_LOST_BUFFER      = 30
+    _DEFAULT_LOST_BUFFER      = 10
     _DEFAULT_MATCH_THRESHOLD  = 0.8
 
     def __init__(self, sample_rate: float = 0.5):

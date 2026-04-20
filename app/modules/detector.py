@@ -212,7 +212,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
                 w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
                 cls_id=int(db.class_id[i]) if db.class_id is not None else BALL_ID
                 conf_v=float(db.confidence[i]) if db.confidence is not None else 0.1
-                if id_to_name.get(cls_id,"ball")!="ball": continue
+                # Specialized ball model ALWAYS detects balls, even if class_id is 0
                 if h>0 and (h/max(w,1))>3.0: continue
                 if w>int(w_frame*0.07) or cy<h_frame*0.15: continue
                 det=_build_detection_dict(frame,cx,cy,max(w,20),max(h,20),"ball",conf_v,extract_dorsal=False)

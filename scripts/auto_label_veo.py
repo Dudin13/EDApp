@@ -22,7 +22,7 @@ def main():
     LABEL_DIR.mkdir(parents=True, exist_ok=True)
     
     # 2. Listar imágenes
-    images = sorted(list(IMAGE_DIR.glob("*.jpg")) + list(IMAGE_DIR.glob("*.png")))
+    images = sorted(list(IMAGE_DIR.glob("mediacoach_j35_*.jpg")) + list(IMAGE_DIR.glob("mediacoach_j35_*.png")))
     total_images = len(images)
     print(f"Images found: {total_images}")
     

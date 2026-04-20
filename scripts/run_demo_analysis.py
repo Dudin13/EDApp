@@ -37,9 +37,10 @@ from modules.calibration_auto import AutoCalibrator
 # ── Configuración ──────────────────────────────────────────────────────────
 MODEL_PLAYERS = str(ROOT / "models/players.pt")
 MODEL_PITCH   = str(ROOT / "models/pitch.pt")
-SAMPLE_RATE   = 0.5   # procesar 1 frame cada 0.5s
+SAMPLE_RATE   = 0.2   # procesar 5 frames por segundo (evita perder contactos rápidos)
 IMGSZ         = 1280  # crítico para VEO panorámico
 CONF          = 0.50
+
 
 MINIMAP_W, MINIMAP_H = 320, 213
 MINIMAP_X, MINIMAP_Y = 20, 20   # posición en el frame
@@ -103,7 +104,9 @@ processed        = 0
 total_events     = 0
 total_detections = 0
 total_active_tracks = 0
+total_ball_frames   = 0
 team_fit_frame   = -1
+
 minimap_points   = 0
 captures_at      = [30, 90, 150] # segundos
 
@@ -199,8 +202,10 @@ while True:
         b         = balls[0]
         ball_pos  = (int(b["x"]), int(b["y"]))
         ball_conf = b.get("conf", 0.0)
+        total_ball_frames += 1
         if calib_done:
             pitch_pos = calibrator.pixel_to_pitch(b["x"], b["y"])
+
 
     # ── 8. Eventos ────────────────────────────────────────────────────────
     events = spotter.update(
@@ -209,8 +214,10 @@ while True:
         tracks       = tracks,
         ball_pos     = ball_pos,
         pitch_pos    = pitch_pos,
-        ball_conf    = ball_conf
+        ball_conf    = ball_conf,
+        calibrator   = calibrator
     )
+
     total_events += len(events)
     for ev in events:
         print(f"  [EVENT] {ev.minute:.1f}' {ev.action} (track #{ev.track_id})")
@@ -311,17 +318,60 @@ while True:
 cap.release()
 out.release()
 
+# ── Generar Informe Táctico ────────────────────────────────────────────────
+events = spotter.get_events()
+possession = spotter.get_possession_stats()
+pressure = spotter.get_pressure_report()
+
 print("\n" + "=" * 60)
-print("RESULTADO FINAL")
+print("INFORME TÁCTICO - EDApp")
 print("=" * 60)
+print(f"Video:             {VIDEO_PATH.name}")
+print(f"Duración:          {duration:.1f}s")
 print(f"Frames procesados: {processed}")
-print(f"Tracks totales:    {len(tracker.get_all_tracks())}")
-print(f"Eventos:           {total_events}")
-print(f"Calibración:       {'OK' if calib_done else 'FALLIDA'}")
-print(f"TeamClassifier:    {'OK' if team_clf_fitted else 'FALLIDO'} @ Frame {team_fit_frame}")
-print(f"Media Jugadores/F: {total_detections / processed if processed > 0 else 0:.2f}")
-print(f"Media Tracks/F:    {total_active_tracks / processed if processed > 0 else 0:.2f}")
-print(f"Minimap Status:    {'POBLADO' if minimap_points > 0 else 'VACIO'}")
-print(f"Output:            {OUTPUT_PATH}")
-print(f"\nCapturas guardadas en {OUTPUT_DIR}/v3_frame_60/150/240.jpg")
-print(f"\nAbre {OUTPUT_PATH} para ver el resultado visual.")
+print("-" * 60)
+print(f"POSESIÓN:  Equipo A: {possession['team_0']}% | Equipo B: {possession['team_1']}%")
+print("-" * 60)
+print("EVENTOS DETECTADOS:")
+counts = {}
+for e in events:
+    counts[e.action] = counts.get(e.action, 0) + 1
+    # Imprimir solo los más importantes para no saturar la consola
+    if e.action in ["Tiro", "Centro", "Gol", "Recuperacion"]:
+        print(f"  [{e.minute:.1f}'] {e.action} (Equipo {'A' if e.team==0 else 'B'})")
+
+print("\nRESUMEN DE ACCIONES:")
+for action, count in counts.items():
+    print(f"  - {action}: {count}")
+
+print("-" * 60)
+print("ZONAS DE PRESIÓN (Eventos por zona):")
+print(f"  Equipo A: Defensa: {pressure['Defensa A']} | Medio: {pressure['Medio A']} | Ataque: {pressure['Ataque A']}")
+print(f"  Equipo B: Defensa: {pressure['Defensa B']} | Medio: {pressure['Medio B']} | Ataque: {pressure['Ataque B']}")
+
+print("-" * 60)
+print("MÉTRICAS DE CALIDAD:")
+print(f"  Media Jugadores/F: {total_detections / processed if processed > 0 else 0:.2f}")
+print(f"  Media Tracks/F:    {total_active_tracks / processed if processed > 0 else 0:.2f}")
+print(f"  Calibración:       {'OK' if calib_done else 'FALLIDA'}")
+print(f"  TeamClassifier:    {'OK' if team_clf_fitted else 'FALLIDO'}")
+print(f"  Detecciones Balón: {total_ball_frames}")
+
+# ── Guardar Eventos para ClipMaker ─────────────────────────────────────────
+import json
+EVENTS_JSON_PATH = OUTPUT_DIR / "events.json"
+events_data = {
+    "source_video": str(VIDEO_PATH),
+    "events": spotter.get_events_dict()
+}
+with open(EVENTS_JSON_PATH, "w") as f:
+    json.dump(events_data, f, indent=4)
+print(f"\nEventos guardados en: {EVENTS_JSON_PATH}")
+
+
+
+print("\n" + "=" * 60)
+print(f"Output guardado en: {OUTPUT_PATH}")
+print(f"Abre el video para ver la visualización de los eventos.")
+print("=" * 60)
+
