@@ -63,7 +63,7 @@ def _find_model(filename: str) -> Path:
     return _MODEL_SEARCH_PATHS[1] / filename  # ruta esperada aunque no exista
 
 PLAYER_MODEL_PATH = _find_model("players.pt")
-BALL_MODEL_PATH   = _find_model("ball.pt")
+BALL_MODEL_PATH   = _find_model("ball_specialist.pt")
 PITCH_MODEL_PATH  = _find_model("pitch.pt")
 YOLO_LEGACY_PATH  = _find_model("best_football_seg.pt")
 YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
