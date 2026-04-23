@@ -17,7 +17,7 @@ El sistema funciona en capas independientes:
 
 | Capa | Módulo | Tecnología | Estado |
 |------|--------|------------|--------|
-| Detección | `app/modules/detector.py` | YOLO11m-seg | ✅ Listo (v3) |
+| Detección | `app/modules/detector.py` | YOLOv8 (v6) | ✅ Listo (v6) |
 | Clasificación de equipos | `app/modules/team_classifier.py` | KMeans + HSV | ✅ Listo |
 | Tracking | `app/modules/tracker.py` | ByteTrack | ✅ Funcional |
 | Calibración de campo | `app/modules/calibration_pnl.py` | PnLCalib + Homografía | ⚠️ Manual |
@@ -361,3 +361,10 @@ APPED_ROOT=C:/apped
 - **Rendimiento**: mAP50 Box: 0.818 / mAP50-95: 0.647 (mejoras significativas en jugadores 0.93 y árbitros 0.94).
 - **Despliegue**: Modelo automáticamente integrado en `assets/weights/detect_players.pt`.
 - **Validación**: Test de predicción visual completado con éxito sobre 20 frames de validación.
+
+### 2026-04-23
+- **Modelo**: Entrenamiento `players_v6` completado con éxito.
+- **Rendimiento**: mAP50 Box: 0.76 (Jugadores: 0.954, Árbitros: 0.867, Porteros: 0.707).
+- **Dataset**: Dataset manual ampliado a 1.593 imágenes de alta calidad.
+- **Documentación**: Generación de dumps consolidados para análisis en NotebookLM.
+- **Planes**: Iniciado el diseño de la herramienta de calibración de equipos por camiseta.

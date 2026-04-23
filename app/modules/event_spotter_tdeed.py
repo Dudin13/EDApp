@@ -74,6 +74,11 @@ class EventSpotterTDEED:
     MIN_EVENT_GAP_S     = 0.8
     # Velocidad maxima del balon en px/s (para filtrar detecciones falsas)
     MAX_BALL_SPEED_PX_S = 900
+    # Minima velocidad del balon en m/s (para ignorar balon parado/balones lentos)
+    MIN_BALL_SPEED_MS   = 2.0
+    # Separacion minima global entre eventos (segundos)
+    GLOBAL_EVENT_GAP_S  = 3.0
+
 
     def __init__(self, weights_path: str = None):
         self.weights = weights_path
@@ -90,8 +95,11 @@ class EventSpotterTDEED:
         self._events: list[BallEvent]   = []
         self._last_event_by_track: dict = {}   # track_id -> ultimo timestamp
         self._last_ball_pos: Optional[tuple]   = None
+        self._last_ball_pitch_pos: Optional[tuple] = None
         self._last_ball_second: float          = -1.0
+        self._last_global_event_ts: float      = -999.0
         self._frame_count: int                 = 0
+
 
         # Estadisticas acumuladas
         self._team_possession_counts = {0: 0, 1: 0}
@@ -147,6 +155,17 @@ class EventSpotterTDEED:
 
         self._last_ball_pos    = ball_pos
         self._last_ball_second = frame_second
+
+        # Calcular velocidad en m/s usando coordenadas de campo
+        ball_speed_ms = 0.0
+        if self._last_ball_pitch_pos and pitch_pos:
+            dt = max(frame_second - self._last_ball_second, 0.001)
+            dist_m = np.hypot(pitch_pos[0] - self._last_ball_pitch_pos[0],
+                              pitch_pos[1] - self._last_ball_pitch_pos[1])
+            ball_speed_ms = dist_m / dt
+        
+        self._last_ball_pitch_pos = pitch_pos
+
 
         # ── Encontrar poseedor: jugador mas cercano al balon ───────────────
         possessor_id   = None
@@ -212,9 +231,18 @@ class EventSpotterTDEED:
                 )
 
 
-                # Verificar gap minimo entre eventos del mismo jugador
+                # Verificar gap minimo entre eventos del mismo jugador y cooldown global
                 last_ev = self._last_event_by_track.get(prev, -999)
-                if frame_second - last_ev >= self.MIN_EVENT_GAP_S:
+                time_since_last_global = frame_second - self._last_global_event_ts
+                
+                can_generate = (
+                    (frame_second - last_ev >= self.MIN_EVENT_GAP_S) and
+                    (time_since_last_global >= self.GLOBAL_EVENT_GAP_S) and
+                    (ball_speed_ms >= self.MIN_BALL_SPEED_MS)
+                )
+
+                if can_generate:
+
                     event = BallEvent(
                         timestamp   = frame_second,
                         minute      = minute,
@@ -230,7 +258,9 @@ class EventSpotterTDEED:
                         self._events.append(event)
                         self._event_positions.append(pitch_pos)
                         self._last_event_by_track[prev] = frame_second
+                        self._last_global_event_ts = frame_second
                         new_events.append(event)
+
 
         else:
             if smoothed_possessor is not None:

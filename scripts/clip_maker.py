@@ -37,9 +37,10 @@ def make_clips():
         team_id = ev["team"]
         team_str = "equipoA" if team_id == 0 else "equipoB" if team_id == 1 else "otro"
         
-        # 10 segundos total (±5s del evento)
-        start = max(0, ts - 5)
-        duration = 10
+        # 6 segundos total (±3s del evento)
+        start = max(0, ts - 3)
+        duration = 6
+
         
         output_name = f"clip_{minute:04.1f}_{action}_{team_str}.mp4"
         output_path = OUTPUT_DIR / output_name

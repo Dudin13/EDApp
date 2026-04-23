@@ -1,1 +1,2 @@
 [2026-04-21 21:56:23] Modelo: test_verify | mAP50: 0.6874
+[2026-04-23 11:46:48] Modelo: v6_general | mAP50: 0.75963
