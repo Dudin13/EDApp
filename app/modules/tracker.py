@@ -34,6 +34,8 @@ class Track:
     frames_lost: int = 0
     history_x: list = field(default_factory=list)
     history_y: list = field(default_factory=list)
+    history_pitch_x: list = field(default_factory=list)
+    history_pitch_y: list = field(default_factory=list)
     history_minute: list = field(default_factory=list)
     appearance_color: Optional[tuple] = None  # (r, g, b) medio del torso
     # Votación de equipo: buffer de las últimas N predicciones para evitar
@@ -109,6 +111,7 @@ class ProfessionalTracker:
                            (calculado externamente con optical flow).
         """
         if not detecciones:
+            self._tracks = {}
             return self._tracks
 
         # ── Fix 6: Compensación de movimiento de cámara ───────────────────

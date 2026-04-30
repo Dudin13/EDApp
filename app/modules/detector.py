@@ -46,29 +46,27 @@ _REPO_ROOT = _APP_ROOT.parent                         # raíz del repo
 
 _MODEL_SEARCH_PATHS = [
     _THIS_DIR,                                        # junto al detector.py (legacy)
+    Path("C:/D/New folder"),                         # Ruta de modelos descargados
+    Path("C:/D/New folder/models"),                  # Subcarpeta de modelos
     _REPO_ROOT / "models",                           # la nueva carpeta centralizada
-    _REPO_ROOT / "ml" / "models",                    # estructura ml/models/
     _REPO_ROOT / "assets" / "weights",               # estructura assets/weights/
-    _REPO_ROOT,                                       # raíz del repo (fallback)
 ]
 
 def _find_model(filename: str) -> Path:
-    """Busca un archivo de modelo en los candidatos predefinidos. Retorna el
-    primer Path que exista, o el primer candidato + filename si ninguno existe
-    (permite mensajes de error con la ruta esperada)."""
+    """Busca un archivo de modelo en los candidatos predefinidos."""
     for base in _MODEL_SEARCH_PATHS:
         candidate = base / filename
         if candidate.exists():
             return candidate
-    return _MODEL_SEARCH_PATHS[1] / filename  # ruta esperada aunque no exista
+    return _MODEL_SEARCH_PATHS[1] / filename
 
-PLAYER_MODEL_PATH = _find_model("players.pt")
-BALL_MODEL_PATH   = _find_model("ball_specialist.pt")
-PITCH_MODEL_PATH  = _find_model("pitch.pt")
+PLAYER_MODEL_PATH = _find_model("detect_players.pt")
+BALL_MODEL_PATH   = _find_model("detect_ball.pt")
+PITCH_MODEL_PATH  = _find_model("pose_field.pt")
 YOLO_LEGACY_PATH  = _find_model("best_football_seg.pt")
 YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
 
-PLAYER_ID=0; GOALKEEPER_ID=1; REFEREE_ID=2; BALL_ID=3
+PLAYER_ID=2; GOALKEEPER_ID=1; REFEREE_ID=3; BALL_ID=0
 VALID_CLASSES = {"player","goalkeeper","referee","ball"}
 
 ROBOFLOW_API_KEY   = os.getenv("ROBOFLOW_API_KEY","")
@@ -316,22 +314,32 @@ def detect_frame(frame, mode="auto", confidence=40, imgsz=None):
 
 def detect_pitch_homography(frame):
     """Homografia automatica con pose_field.pt. Retorna H (3x3) o None."""
-    pm=_load_pitch_model()
+    pm = _load_pitch_model()
     if pm is None: return None
     try:
         import supervision as sv
-        from sports.configs.soccer import SoccerPitchConfiguration
-        CONFIG=SoccerPitchConfiguration()
-        result=pm.predict(frame,conf=0.3,verbose=False)[0]
-        kp=sv.KeyPoints.from_ultralytics(result)
-        mask=kp.confidence[0]>0.5
-        frame_pts=kp.xy[0][mask]
-        pitch_pts=np.array(CONFIG.vertices)[mask]
-        if len(frame_pts)<4: return None
-        H,_=cv2.findHomography(pitch_pts.astype(np.float32),frame_pts.astype(np.float32),cv2.RANSAC,5.0)
+        from modules.pitch_config import SoccerPitchConfiguration
+        
+        CONFIG = SoccerPitchConfiguration()
+        result = pm.predict(frame, conf=0.3, verbose=False)[0]
+        kp = sv.KeyPoints.from_ultralytics(result)
+        
+        if not kp or len(kp.xy) == 0:
+            return None
+            
+        mask = kp.confidence[0] > 0.5
+        frame_pts = kp.xy[0][mask]
+        pitch_pts = np.array(CONFIG.vertices)[mask]
+        
+        if len(frame_pts) < 4:
+            return None
+            
+        # Homografía: mapea puntos de la imagen (frame_pts) a puntos del campo (pitch_pts)
+        H, _ = cv2.findHomography(frame_pts.astype(np.float32), pitch_pts.astype(np.float32), cv2.RANSAC, 5.0)
         return H
     except Exception as e:
-        logger.error(f"Homografia automatica error: {e}"); return None
+        logger.error(f"Homografia automatica error: {e}")
+        return None
 
 
 # Clasificacion de equipos
