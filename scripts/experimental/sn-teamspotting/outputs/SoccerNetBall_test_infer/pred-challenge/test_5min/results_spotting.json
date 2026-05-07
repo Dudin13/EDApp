@@ -1,0 +1,5021 @@
+{
+    "UrlLocal": "test_5min",
+    "predictions": [
+        {
+            "gameTime": "1 - 0:29",
+            "label": "THROW IN",
+            "position": 29360,
+            "confidence": 0.030617713928222656,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 0:29",
+            "label": "HIGH PASS",
+            "position": 29520,
+            "confidence": 0.011816650629043579,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 0:35",
+            "label": "THROW IN",
+            "position": 35440,
+            "confidence": 0.010959222912788391,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 0:39",
+            "label": "THROW IN",
+            "position": 39280,
+            "confidence": 0.01715528964996338,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 0:43",
+            "label": "THROW IN",
+            "position": 43440,
+            "confidence": 0.01106080412864685,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:0",
+            "label": "DRIVE",
+            "position": 60800,
+            "confidence": 0.09924697875976562,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:1",
+            "label": "PASS",
+            "position": 61360,
+            "confidence": 0.022571563720703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:1",
+            "label": "DRIVE",
+            "position": 61680,
+            "confidence": 0.013316856490241157,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:3",
+            "label": "PASS",
+            "position": 63520,
+            "confidence": 0.018304824829101562,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:4",
+            "label": "PASS",
+            "position": 64480,
+            "confidence": 0.011363983154296875,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:5",
+            "label": "DRIVE",
+            "position": 65440,
+            "confidence": 0.02102375030517578,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:5",
+            "label": "PASS",
+            "position": 65440,
+            "confidence": 0.02633953094482422,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:7",
+            "label": "DRIVE",
+            "position": 67280,
+            "confidence": 0.015301704406738281,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:7",
+            "label": "PASS",
+            "position": 67440,
+            "confidence": 0.017721176147460938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:9",
+            "label": "PASS",
+            "position": 69440,
+            "confidence": 0.02949237823486328,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:11",
+            "label": "PASS",
+            "position": 71360,
+            "confidence": 0.020235061645507812,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:13",
+            "label": "DRIVE",
+            "position": 73520,
+            "confidence": 0.010958671569824219,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:13",
+            "label": "PASS",
+            "position": 73520,
+            "confidence": 0.033715248107910156,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:15",
+            "label": "PASS",
+            "position": 75440,
+            "confidence": 0.02978515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:17",
+            "label": "THROW IN",
+            "position": 77520,
+            "confidence": 0.011437058448791504,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:17",
+            "label": "PASS",
+            "position": 77520,
+            "confidence": 0.015902996063232422,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:18",
+            "label": "THROW IN",
+            "position": 78880,
+            "confidence": 0.04625353217124939,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:18",
+            "label": "PASS",
+            "position": 78960,
+            "confidence": 0.01777935028076172,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:19",
+            "label": "DRIVE",
+            "position": 79520,
+            "confidence": 0.014625072479248047,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:41",
+            "label": "HIGH PASS",
+            "position": 101360,
+            "confidence": 0.1097976565361023,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:41",
+            "label": "DRIVE",
+            "position": 101520,
+            "confidence": 0.010164499282836914,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:41",
+            "label": "PASS",
+            "position": 101520,
+            "confidence": 0.012273073196411133,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:43",
+            "label": "DRIVE",
+            "position": 103760,
+            "confidence": 0.012848377227783203,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:45",
+            "label": "PASS",
+            "position": 105280,
+            "confidence": 0.052205801010131836,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:45",
+            "label": "HIGH PASS",
+            "position": 105440,
+            "confidence": 0.030973613262176514,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:45",
+            "label": "DRIVE",
+            "position": 105520,
+            "confidence": 0.013957500457763672,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:51",
+            "label": "THROW IN",
+            "position": 111040,
+            "confidence": 0.0605798065662384,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:51",
+            "label": "PASS",
+            "position": 111440,
+            "confidence": 0.018413066864013672,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:53",
+            "label": "PASS",
+            "position": 113520,
+            "confidence": 0.010663032531738281,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:53",
+            "label": "DRIVE",
+            "position": 113680,
+            "confidence": 0.010859966278076172,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:55",
+            "label": "PASS",
+            "position": 115200,
+            "confidence": 0.014009475708007812,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:55",
+            "label": "HIGH PASS",
+            "position": 115360,
+            "confidence": 0.013508796691894531,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:55",
+            "label": "DRIVE",
+            "position": 115680,
+            "confidence": 0.012079238891601562,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 1:56",
+            "label": "PASS",
+            "position": 116160,
+            "confidence": 0.015246391296386719,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:56",
+            "label": "THROW IN",
+            "position": 116880,
+            "confidence": 0.023894309997558594,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:57",
+            "label": "PASS",
+            "position": 117200,
+            "confidence": 0.07842636108398438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:57",
+            "label": "HIGH PASS",
+            "position": 117360,
+            "confidence": 0.013540029525756836,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:57",
+            "label": "DRIVE",
+            "position": 117520,
+            "confidence": 0.017640113830566406,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:58",
+            "label": "PASS",
+            "position": 118240,
+            "confidence": 0.020524978637695312,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:58",
+            "label": "DRIVE",
+            "position": 118480,
+            "confidence": 0.021436691284179688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:59",
+            "label": "DRIVE",
+            "position": 119440,
+            "confidence": 0.0539093017578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 1:59",
+            "label": "PASS",
+            "position": 119520,
+            "confidence": 0.0484619140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:0",
+            "label": "DRIVE",
+            "position": 120480,
+            "confidence": 0.017545700073242188,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:0",
+            "label": "PASS",
+            "position": 120560,
+            "confidence": 0.019643783569335938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:1",
+            "label": "HIGH PASS",
+            "position": 121200,
+            "confidence": 0.015532493591308594,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:1",
+            "label": "PASS",
+            "position": 121520,
+            "confidence": 0.211669921875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:1",
+            "label": "DRIVE",
+            "position": 121920,
+            "confidence": 0.0260772705078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:2",
+            "label": "PASS",
+            "position": 122000,
+            "confidence": 0.028939247131347656,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:2",
+            "label": "DRIVE",
+            "position": 122960,
+            "confidence": 0.060466766357421875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:3",
+            "label": "HIGH PASS",
+            "position": 123200,
+            "confidence": 0.012257575988769531,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:3",
+            "label": "PASS",
+            "position": 123360,
+            "confidence": 0.11447906494140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:3",
+            "label": "DRIVE",
+            "position": 123920,
+            "confidence": 0.019779205322265625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:4",
+            "label": "PASS",
+            "position": 124320,
+            "confidence": 0.021448771158854168,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:4",
+            "label": "PASS",
+            "position": 124960,
+            "confidence": 0.11548233032226562,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:5",
+            "label": "HIGH PASS",
+            "position": 125200,
+            "confidence": 0.01575946807861328,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:5",
+            "label": "DRIVE",
+            "position": 125440,
+            "confidence": 0.038036346435546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:5",
+            "label": "PASS",
+            "position": 125920,
+            "confidence": 0.0347747802734375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:6",
+            "label": "DRIVE",
+            "position": 126400,
+            "confidence": 0.022687911987304688,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:7",
+            "label": "PASS",
+            "position": 127040,
+            "confidence": 0.048404693603515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:7",
+            "label": "DRIVE",
+            "position": 127520,
+            "confidence": 0.04889678955078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:8",
+            "label": "PASS",
+            "position": 128080,
+            "confidence": 0.161956787109375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:8",
+            "label": "PASS",
+            "position": 128479,
+            "confidence": 0.016601328496579772,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:8",
+            "label": "DRIVE",
+            "position": 128639,
+            "confidence": 0.037506103515625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:9",
+            "label": "PASS",
+            "position": 129360,
+            "confidence": 0.03196398417154948,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:9",
+            "label": "DRIVE",
+            "position": 129680,
+            "confidence": 0.069366455078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:10",
+            "label": "PASS",
+            "position": 130160,
+            "confidence": 0.10595703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:10",
+            "label": "HIGH PASS",
+            "position": 130320,
+            "confidence": 0.011220932006835938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:10",
+            "label": "DRIVE",
+            "position": 130639,
+            "confidence": 0.214111328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:11",
+            "label": "PASS",
+            "position": 131120,
+            "confidence": 0.07823944091796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:11",
+            "label": "DRIVE",
+            "position": 131600,
+            "confidence": 0.028743743896484375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:12",
+            "label": "DRIVE",
+            "position": 132080,
+            "confidence": 0.2029876708984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:12",
+            "label": "PASS",
+            "position": 132160,
+            "confidence": 0.029257535934448242,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:12",
+            "label": "DRIVE",
+            "position": 132560,
+            "confidence": 0.028209686279296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:12",
+            "label": "PASS",
+            "position": 132880,
+            "confidence": 0.18145751953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:13",
+            "label": "HIGH PASS",
+            "position": 133200,
+            "confidence": 0.013414382934570312,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:13",
+            "label": "DRIVE",
+            "position": 133680,
+            "confidence": 0.0321502685546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:13",
+            "label": "PASS",
+            "position": 133840,
+            "confidence": 0.107025146484375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:14",
+            "label": "DRIVE",
+            "position": 134560,
+            "confidence": 0.01802292524371296,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:14",
+            "label": "DRIVE",
+            "position": 134800,
+            "confidence": 0.4481201171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:15",
+            "label": "PASS",
+            "position": 135120,
+            "confidence": 0.017971462673611112,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:15",
+            "label": "HIGH PASS",
+            "position": 135520,
+            "confidence": 0.013563156127929688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:15",
+            "label": "PASS",
+            "position": 135520,
+            "confidence": 0.199310302734375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:15",
+            "label": "DRIVE",
+            "position": 135840,
+            "confidence": 0.0835418701171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:16",
+            "label": "PASS",
+            "position": 136400,
+            "confidence": 0.017266227507296904,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:16",
+            "label": "DRIVE",
+            "position": 136640,
+            "confidence": 0.01972516377766927,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:16",
+            "label": "PASS",
+            "position": 136960,
+            "confidence": 0.10605621337890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:17",
+            "label": "DRIVE",
+            "position": 137600,
+            "confidence": 0.04961326387193468,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:17",
+            "label": "OUT",
+            "position": 137600,
+            "confidence": 0.016271114349365234,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:17",
+            "label": "PASS",
+            "position": 137920,
+            "confidence": 0.03600311279296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:18",
+            "label": "DRIVE",
+            "position": 138480,
+            "confidence": 0.258209228515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:18",
+            "label": "PASS",
+            "position": 138880,
+            "confidence": 0.010244581434461806,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:19",
+            "label": "PASS",
+            "position": 139200,
+            "confidence": 0.1347808837890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:19",
+            "label": "DRIVE",
+            "position": 139520,
+            "confidence": 0.040584564208984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:20",
+            "label": "PASS",
+            "position": 140240,
+            "confidence": 0.021375656127929688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:20",
+            "label": "DRIVE",
+            "position": 140720,
+            "confidence": 0.05987548828125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:20",
+            "label": "OUT",
+            "position": 140800,
+            "confidence": 0.021215438842773438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:21",
+            "label": "PASS",
+            "position": 141440,
+            "confidence": 0.059139251708984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:21",
+            "label": "DRIVE",
+            "position": 141520,
+            "confidence": 0.01566012700398763,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:22",
+            "label": "DRIVE",
+            "position": 142480,
+            "confidence": 0.030141830444335938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:22",
+            "label": "PASS",
+            "position": 142560,
+            "confidence": 0.016448974609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:23",
+            "label": "DRIVE",
+            "position": 143520,
+            "confidence": 0.018802642822265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:23",
+            "label": "PASS",
+            "position": 143520,
+            "confidence": 0.03969001770019531,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:24",
+            "label": "PASS",
+            "position": 144560,
+            "confidence": 0.014112472534179688,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:24",
+            "label": "DRIVE",
+            "position": 144640,
+            "confidence": 0.020679473876953125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:25",
+            "label": "DRIVE",
+            "position": 145520,
+            "confidence": 0.015451656447516548,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:25",
+            "label": "PASS",
+            "position": 145520,
+            "confidence": 0.039417266845703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:26",
+            "label": "DRIVE",
+            "position": 146480,
+            "confidence": 0.011196136474609375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:26",
+            "label": "PASS",
+            "position": 146560,
+            "confidence": 0.013650894165039062,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:27",
+            "label": "DRIVE",
+            "position": 147440,
+            "confidence": 0.02320384979248047,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:27",
+            "label": "HIGH PASS",
+            "position": 147520,
+            "confidence": 0.0247800350189209,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:27",
+            "label": "PASS",
+            "position": 147520,
+            "confidence": 0.07438278198242188,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:28",
+            "label": "DRIVE",
+            "position": 148480,
+            "confidence": 0.010228157043457031,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:28",
+            "label": "PASS",
+            "position": 148560,
+            "confidence": 0.010457038879394531,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:29",
+            "label": "PASS",
+            "position": 149520,
+            "confidence": 0.020023345947265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:30",
+            "label": "HIGH PASS",
+            "position": 150400,
+            "confidence": 0.011399030685424805,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:30",
+            "label": "DRIVE",
+            "position": 150560,
+            "confidence": 0.014162063598632812,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:30",
+            "label": "PASS",
+            "position": 150560,
+            "confidence": 0.020856857299804688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:31",
+            "label": "DRIVE",
+            "position": 151520,
+            "confidence": 0.016608238220214844,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:31",
+            "label": "PASS",
+            "position": 151520,
+            "confidence": 0.02933502197265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:32",
+            "label": "PASS",
+            "position": 152560,
+            "confidence": 0.01045989990234375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:33",
+            "label": "DRIVE",
+            "position": 153440,
+            "confidence": 0.011166572570800781,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:33",
+            "label": "PASS",
+            "position": 153520,
+            "confidence": 0.02287006378173828,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:34",
+            "label": "PASS",
+            "position": 154720,
+            "confidence": 0.019596099853515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:36",
+            "label": "PASS",
+            "position": 156400,
+            "confidence": 0.013174057006835938,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:37",
+            "label": "DRIVE",
+            "position": 157520,
+            "confidence": 0.019987106323242188,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:37",
+            "label": "PASS",
+            "position": 157520,
+            "confidence": 0.021360397338867188,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:38",
+            "label": "HIGH PASS",
+            "position": 158400,
+            "confidence": 0.013195991516113281,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:38",
+            "label": "DRIVE",
+            "position": 158480,
+            "confidence": 0.013927459716796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:38",
+            "label": "PASS",
+            "position": 158480,
+            "confidence": 0.014720916748046875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:39",
+            "label": "DRIVE",
+            "position": 159520,
+            "confidence": 0.015567779541015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:39",
+            "label": "PASS",
+            "position": 159520,
+            "confidence": 0.026933670043945312,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:40",
+            "label": "HIGH PASS",
+            "position": 160640,
+            "confidence": 0.05094146728515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:40",
+            "label": "PASS",
+            "position": 160960,
+            "confidence": 0.05437469482421875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:41",
+            "label": "DRIVE",
+            "position": 161040,
+            "confidence": 0.0224761962890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:42",
+            "label": "HIGH PASS",
+            "position": 162080,
+            "confidence": 0.017286300659179688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:42",
+            "label": "PASS",
+            "position": 162080,
+            "confidence": 0.048492431640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:42",
+            "label": "DRIVE",
+            "position": 162160,
+            "confidence": 0.029178619384765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:43",
+            "label": "PASS",
+            "position": 163040,
+            "confidence": 0.026406182183159724,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:43",
+            "label": "DRIVE",
+            "position": 163280,
+            "confidence": 0.04830169677734375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:43",
+            "label": "THROW IN",
+            "position": 163360,
+            "confidence": 0.014072418212890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:43",
+            "label": "HIGH PASS",
+            "position": 163360,
+            "confidence": 0.014534950256347656,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:43",
+            "label": "PASS",
+            "position": 163840,
+            "confidence": 0.0703887939453125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:44",
+            "label": "DRIVE",
+            "position": 164240,
+            "confidence": 0.033504486083984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:44",
+            "label": "HEADER",
+            "position": 164480,
+            "confidence": 0.02384185791015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:44",
+            "label": "PASS",
+            "position": 164560,
+            "confidence": 0.021016240119934082,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:45",
+            "label": "PASS",
+            "position": 165440,
+            "confidence": 0.06629180908203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:45",
+            "label": "HIGH PASS",
+            "position": 165520,
+            "confidence": 0.013185977935791016,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:45",
+            "label": "DRIVE",
+            "position": 165520,
+            "confidence": 0.1073760986328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:46",
+            "label": "PASS",
+            "position": 166560,
+            "confidence": 0.0209808349609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:46",
+            "label": "DRIVE",
+            "position": 166720,
+            "confidence": 0.036407470703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:47",
+            "label": "HIGH PASS",
+            "position": 167520,
+            "confidence": 0.010685920715332031,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:47",
+            "label": "PASS",
+            "position": 167520,
+            "confidence": 0.06987762451171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:47",
+            "label": "DRIVE",
+            "position": 167680,
+            "confidence": 0.021240234375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:48",
+            "label": "PASS",
+            "position": 168560,
+            "confidence": 0.018190383911132812,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:48",
+            "label": "DRIVE",
+            "position": 168800,
+            "confidence": 0.01739501953125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:49",
+            "label": "PASS",
+            "position": 169520,
+            "confidence": 0.016679763793945312,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:49",
+            "label": "DRIVE",
+            "position": 169760,
+            "confidence": 0.012760162353515625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:50",
+            "label": "PASS",
+            "position": 170480,
+            "confidence": 0.013872146606445312,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 2:51",
+            "label": "PASS",
+            "position": 171440,
+            "confidence": 0.017765045166015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:51",
+            "label": "DRIVE",
+            "position": 171520,
+            "confidence": 0.011801719665527344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:52",
+            "label": "PASS",
+            "position": 172400,
+            "confidence": 0.016379356384277344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:52",
+            "label": "DRIVE",
+            "position": 172480,
+            "confidence": 0.012652397155761719,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:53",
+            "label": "PASS",
+            "position": 173360,
+            "confidence": 0.03187084197998047,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:53",
+            "label": "HIGH PASS",
+            "position": 173520,
+            "confidence": 0.012529611587524414,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:53",
+            "label": "DRIVE",
+            "position": 173520,
+            "confidence": 0.013650894165039062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:54",
+            "label": "PASS",
+            "position": 174320,
+            "confidence": 0.010848522186279297,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:55",
+            "label": "PASS",
+            "position": 175360,
+            "confidence": 0.03769397735595703,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:55",
+            "label": "DRIVE",
+            "position": 175440,
+            "confidence": 0.014643192291259766,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:55",
+            "label": "HIGH PASS",
+            "position": 175520,
+            "confidence": 0.01720142364501953,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:57",
+            "label": "DRIVE",
+            "position": 177280,
+            "confidence": 0.010132312774658203,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:57",
+            "label": "HIGH PASS",
+            "position": 177440,
+            "confidence": 0.016103267669677734,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:57",
+            "label": "PASS",
+            "position": 177520,
+            "confidence": 0.02671527862548828,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:59",
+            "label": "THROW IN",
+            "position": 179360,
+            "confidence": 0.014006257057189941,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:59",
+            "label": "DRIVE",
+            "position": 179440,
+            "confidence": 0.01607513427734375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:59",
+            "label": "PASS",
+            "position": 179440,
+            "confidence": 0.016678333282470703,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 2:59",
+            "label": "HIGH PASS",
+            "position": 179520,
+            "confidence": 0.02169167995452881,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:0",
+            "label": "PASS",
+            "position": 180560,
+            "confidence": 0.013601303100585938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:0",
+            "label": "HIGH PASS",
+            "position": 180720,
+            "confidence": 0.010843154456880357,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:1",
+            "label": "HIGH PASS",
+            "position": 181280,
+            "confidence": 0.10419940948486328,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:1",
+            "label": "PASS",
+            "position": 181600,
+            "confidence": 0.016857147216796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:2",
+            "label": "DRIVE",
+            "position": 182000,
+            "confidence": 0.011631011962890625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:2",
+            "label": "PASS",
+            "position": 182880,
+            "confidence": 0.010162353515625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:3",
+            "label": "DRIVE",
+            "position": 183600,
+            "confidence": 0.013906094763014052,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:3",
+            "label": "PASS",
+            "position": 183840,
+            "confidence": 0.03348350524902344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:4",
+            "label": "DRIVE",
+            "position": 184400,
+            "confidence": 0.02750873565673828,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:4",
+            "label": "PASS",
+            "position": 184800,
+            "confidence": 0.015740142928229436,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:5",
+            "label": "DRIVE",
+            "position": 185440,
+            "confidence": 0.021320343017578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:5",
+            "label": "PASS",
+            "position": 185680,
+            "confidence": 0.1440277099609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:6",
+            "label": "DRIVE",
+            "position": 186400,
+            "confidence": 0.012990501191880967,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:6",
+            "label": "PASS",
+            "position": 186640,
+            "confidence": 0.021009206771850586,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:6",
+            "label": "DRIVE",
+            "position": 186800,
+            "confidence": 0.1486358642578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:7",
+            "label": "HIGH PASS",
+            "position": 187280,
+            "confidence": 0.016371409098307293,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:7",
+            "label": "PASS",
+            "position": 187360,
+            "confidence": 0.0993804931640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:7",
+            "label": "DRIVE",
+            "position": 187760,
+            "confidence": 0.10272216796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:8",
+            "label": "HEADER",
+            "position": 188000,
+            "confidence": 0.0119476318359375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:8",
+            "label": "HIGH PASS",
+            "position": 188080,
+            "confidence": 0.05910491943359375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:8",
+            "label": "THROW IN",
+            "position": 188160,
+            "confidence": 0.015565872192382812,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:8",
+            "label": "PASS",
+            "position": 188320,
+            "confidence": 0.193450927734375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:8",
+            "label": "DRIVE",
+            "position": 188800,
+            "confidence": 0.06383514404296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:8",
+            "label": "OUT",
+            "position": 188800,
+            "confidence": 0.016620635986328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:9",
+            "label": "PASS",
+            "position": 189280,
+            "confidence": 0.203765869140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:9",
+            "label": "THROW IN",
+            "position": 189360,
+            "confidence": 0.013515949249267578,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:9",
+            "label": "HIGH PASS",
+            "position": 189440,
+            "confidence": 0.017974853515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:9",
+            "label": "PASS",
+            "position": 189600,
+            "confidence": 0.012724134657118056,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:10",
+            "label": "DRIVE",
+            "position": 190000,
+            "confidence": 0.06854258643256293,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:10",
+            "label": "DRIVE",
+            "position": 190560,
+            "confidence": 0.28424072265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:10",
+            "label": "PASS",
+            "position": 190560,
+            "confidence": 0.037078857421875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:11",
+            "label": "HIGH PASS",
+            "position": 191280,
+            "confidence": 0.02137899398803711,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:11",
+            "label": "HEADER",
+            "position": 191360,
+            "confidence": 0.011919975280761719,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:11",
+            "label": "DRIVE",
+            "position": 191520,
+            "confidence": 0.0538482666015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:11",
+            "label": "PASS",
+            "position": 191520,
+            "confidence": 0.091583251953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:11",
+            "label": "OUT",
+            "position": 191600,
+            "confidence": 0.018938064575195312,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:12",
+            "label": "DRIVE",
+            "position": 192400,
+            "confidence": 0.012170345327000558,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:12",
+            "label": "PASS",
+            "position": 192480,
+            "confidence": 0.0455322265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:12",
+            "label": "DRIVE",
+            "position": 192960,
+            "confidence": 0.0750885009765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:13",
+            "label": "HEADER",
+            "position": 193360,
+            "confidence": 0.012740135192871094,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:13",
+            "label": "PASS",
+            "position": 193440,
+            "confidence": 0.09256744384765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:13",
+            "label": "DRIVE",
+            "position": 193520,
+            "confidence": 0.011925968123070986,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:13",
+            "label": "OUT",
+            "position": 193520,
+            "confidence": 0.019977569580078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:14",
+            "label": "DRIVE",
+            "position": 194160,
+            "confidence": 0.14313507080078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:14",
+            "label": "PASS",
+            "position": 194240,
+            "confidence": 0.014148744536034855,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:14",
+            "label": "PASS",
+            "position": 194640,
+            "confidence": 0.22698974609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:14",
+            "label": "DRIVE",
+            "position": 194720,
+            "confidence": 0.01251362724068724,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:15",
+            "label": "PASS",
+            "position": 195360,
+            "confidence": 0.01163184642791748,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:15",
+            "label": "DRIVE",
+            "position": 195520,
+            "confidence": 0.1438446044921875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:15",
+            "label": "OUT",
+            "position": 195600,
+            "confidence": 0.02129077911376953,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:15",
+            "label": "THROW IN",
+            "position": 195680,
+            "confidence": 0.01929187774658203,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:15",
+            "label": "HEADER",
+            "position": 195680,
+            "confidence": 0.019733428955078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:15",
+            "label": "PASS",
+            "position": 195760,
+            "confidence": 0.3134765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:16",
+            "label": "PASS",
+            "position": 196320,
+            "confidence": 0.049705187479654946,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:16",
+            "label": "DRIVE",
+            "position": 196560,
+            "confidence": 0.027457237243652344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:17",
+            "label": "DRIVE",
+            "position": 197280,
+            "confidence": 0.10833740234375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:17",
+            "label": "PASS",
+            "position": 197440,
+            "confidence": 0.10593414306640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:17",
+            "label": "HIGH PASS",
+            "position": 197520,
+            "confidence": 0.024161338806152344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:17",
+            "label": "OUT",
+            "position": 197920,
+            "confidence": 0.02227163314819336,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:18",
+            "label": "DRIVE",
+            "position": 198080,
+            "confidence": 0.0522772471110026,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:18",
+            "label": "HIGH PASS",
+            "position": 198480,
+            "confidence": 0.017111778259277344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:18",
+            "label": "PASS",
+            "position": 198560,
+            "confidence": 0.14630889892578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:19",
+            "label": "DRIVE",
+            "position": 199440,
+            "confidence": 0.03882598876953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:19",
+            "label": "PASS",
+            "position": 199520,
+            "confidence": 0.03452301025390625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:20",
+            "label": "DRIVE",
+            "position": 200400,
+            "confidence": 0.01466312673356798,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:20",
+            "label": "PASS",
+            "position": 200480,
+            "confidence": 0.02422332763671875,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:21",
+            "label": "DRIVE",
+            "position": 201280,
+            "confidence": 0.030752182006835938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:21",
+            "label": "PASS",
+            "position": 201520,
+            "confidence": 0.02881622314453125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:22",
+            "label": "DRIVE",
+            "position": 202320,
+            "confidence": 0.014751434326171875,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:22",
+            "label": "PASS",
+            "position": 202480,
+            "confidence": 0.016803741455078125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:23",
+            "label": "DRIVE",
+            "position": 203440,
+            "confidence": 0.024145126342773438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:23",
+            "label": "PASS",
+            "position": 203440,
+            "confidence": 0.03462028503417969,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:23",
+            "label": "OUT",
+            "position": 203520,
+            "confidence": 0.01412057876586914,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:24",
+            "label": "DRIVE",
+            "position": 204400,
+            "confidence": 0.01728057861328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:24",
+            "label": "HIGH PASS",
+            "position": 204880,
+            "confidence": 0.0162506103515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:24",
+            "label": "PASS",
+            "position": 204880,
+            "confidence": 0.037128448486328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:25",
+            "label": "DRIVE",
+            "position": 205520,
+            "confidence": 0.01361083984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:25",
+            "label": "PASS",
+            "position": 205840,
+            "confidence": 0.025287628173828125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:26",
+            "label": "DRIVE",
+            "position": 206560,
+            "confidence": 0.06919097900390625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:26",
+            "label": "PASS",
+            "position": 206640,
+            "confidence": 0.013193359345565607,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:27",
+            "label": "PASS",
+            "position": 207520,
+            "confidence": 0.03670501708984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:27",
+            "label": "DRIVE",
+            "position": 207600,
+            "confidence": 0.0382080078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:28",
+            "label": "PASS",
+            "position": 208480,
+            "confidence": 0.010027170181274414,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:28",
+            "label": "DRIVE",
+            "position": 208560,
+            "confidence": 0.016458511352539062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:28",
+            "label": "HIGH PASS",
+            "position": 208960,
+            "confidence": 0.019522666931152344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:29",
+            "label": "PASS",
+            "position": 209200,
+            "confidence": 0.026538848876953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:29",
+            "label": "DRIVE",
+            "position": 209760,
+            "confidence": 0.023479461669921875,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:30",
+            "label": "PASS",
+            "position": 210160,
+            "confidence": 0.024433135986328125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "PASS",
+            "position": 211120,
+            "confidence": 0.04326629638671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "THROW IN",
+            "position": 211200,
+            "confidence": 0.018105825409293175,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "HIGH PASS",
+            "position": 211280,
+            "confidence": 0.03141283988952637,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "DRIVE",
+            "position": 211360,
+            "confidence": 0.452392578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "HEADER",
+            "position": 211360,
+            "confidence": 0.04861640930175781,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "OUT",
+            "position": 211440,
+            "confidence": 0.0204010009765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:31",
+            "label": "DRIVE",
+            "position": 211680,
+            "confidence": 0.039876302083333336,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:32",
+            "label": "PASS",
+            "position": 212080,
+            "confidence": 0.01503096686469184,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:32",
+            "label": "OUT",
+            "position": 212640,
+            "confidence": 0.015370368957519531,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:32",
+            "label": "DRIVE",
+            "position": 212800,
+            "confidence": 0.020381927490234375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:32",
+            "label": "HIGH PASS",
+            "position": 212880,
+            "confidence": 0.010781288146972656,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:32",
+            "label": "PASS",
+            "position": 212880,
+            "confidence": 0.049224853515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:33",
+            "label": "OUT",
+            "position": 213680,
+            "confidence": 0.014300823211669922,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:33",
+            "label": "DRIVE",
+            "position": 213840,
+            "confidence": 0.0426483154296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:34",
+            "label": "PASS",
+            "position": 214240,
+            "confidence": 0.03754425048828125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:34",
+            "label": "DRIVE",
+            "position": 214960,
+            "confidence": 0.022541046142578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:35",
+            "label": "PASS",
+            "position": 215120,
+            "confidence": 0.011663000892709802,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:35",
+            "label": "HEADER",
+            "position": 215360,
+            "confidence": 0.012537956237792969,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:35",
+            "label": "PASS",
+            "position": 215520,
+            "confidence": 0.149322509765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:35",
+            "label": "THROW IN",
+            "position": 215600,
+            "confidence": 0.028947830200195312,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:35",
+            "label": "OUT",
+            "position": 215600,
+            "confidence": 0.037654876708984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:35",
+            "label": "HIGH PASS",
+            "position": 215760,
+            "confidence": 0.01029205322265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:36",
+            "label": "DRIVE",
+            "position": 216320,
+            "confidence": 0.07305908203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:36",
+            "label": "PASS",
+            "position": 216400,
+            "confidence": 0.02389073187922254,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:36",
+            "label": "DRIVE",
+            "position": 216960,
+            "confidence": 0.010432050810597929,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "HIGH PASS",
+            "position": 217040,
+            "confidence": 0.06862449645996094,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "PASS",
+            "position": 217280,
+            "confidence": 0.1389007568359375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "CROSS",
+            "position": 217280,
+            "confidence": 0.03679180145263672,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "HIGH PASS",
+            "position": 217440,
+            "confidence": 0.010517405139075385,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "THROW IN",
+            "position": 217520,
+            "confidence": 0.044254302978515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "OUT",
+            "position": 217600,
+            "confidence": 0.034239768981933594,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:37",
+            "label": "DRIVE",
+            "position": 217840,
+            "confidence": 0.07163238525390625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:38",
+            "label": "PASS",
+            "position": 218240,
+            "confidence": 0.07089996337890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:38",
+            "label": "DRIVE",
+            "position": 218800,
+            "confidence": 0.05890655517578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:39",
+            "label": "OUT",
+            "position": 219200,
+            "confidence": 0.028583526611328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:39",
+            "label": "HIGH PASS",
+            "position": 219280,
+            "confidence": 0.01813507080078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:39",
+            "label": "PASS",
+            "position": 219360,
+            "confidence": 0.065460205078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:39",
+            "label": "DRIVE",
+            "position": 219840,
+            "confidence": 0.04035186767578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:40",
+            "label": "PASS",
+            "position": 220320,
+            "confidence": 0.030231475830078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:40",
+            "label": "OUT",
+            "position": 220480,
+            "confidence": 0.014013290405273438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:40",
+            "label": "DRIVE",
+            "position": 220560,
+            "confidence": 0.011973381042480469,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:41",
+            "label": "DRIVE",
+            "position": 221280,
+            "confidence": 0.07352447509765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:41",
+            "label": "HIGH PASS",
+            "position": 221360,
+            "confidence": 0.012166023254394531,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:41",
+            "label": "PASS",
+            "position": 221520,
+            "confidence": 0.036655426025390625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:41",
+            "label": "OUT",
+            "position": 221600,
+            "confidence": 0.017050743103027344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:42",
+            "label": "DRIVE",
+            "position": 222400,
+            "confidence": 0.0398712158203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:42",
+            "label": "PASS",
+            "position": 222720,
+            "confidence": 0.03594207763671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:42",
+            "label": "HIGH PASS",
+            "position": 222960,
+            "confidence": 0.012820243835449219,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:43",
+            "label": "THROW IN",
+            "position": 223600,
+            "confidence": 0.010007381439208984,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:43",
+            "label": "OUT",
+            "position": 223600,
+            "confidence": 0.012253761291503906,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:43",
+            "label": "DRIVE",
+            "position": 223680,
+            "confidence": 0.027963638305664062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:43",
+            "label": "PASS",
+            "position": 223840,
+            "confidence": 0.07154083251953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:43",
+            "label": "HIGH PASS",
+            "position": 223920,
+            "confidence": 0.03473663330078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:44",
+            "label": "DRIVE",
+            "position": 224640,
+            "confidence": 0.1119842529296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:44",
+            "label": "PASS",
+            "position": 224720,
+            "confidence": 0.014811643847712762,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:44",
+            "label": "OUT",
+            "position": 224800,
+            "confidence": 0.018856048583984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:45",
+            "label": "PASS",
+            "position": 225520,
+            "confidence": 0.0500946044921875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:45",
+            "label": "DRIVE",
+            "position": 225600,
+            "confidence": 0.014808230929904513,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:45",
+            "label": "OUT",
+            "position": 225840,
+            "confidence": 0.05197715759277344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:46",
+            "label": "DRIVE",
+            "position": 226160,
+            "confidence": 0.07015228271484375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:46",
+            "label": "DRIVE",
+            "position": 226720,
+            "confidence": 0.013302485148111979,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:46",
+            "label": "PASS",
+            "position": 226800,
+            "confidence": 0.054534912109375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:46",
+            "label": "THROW IN",
+            "position": 226880,
+            "confidence": 0.014752076731787788,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:46",
+            "label": "HIGH PASS",
+            "position": 226880,
+            "confidence": 0.01247683995299869,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:47",
+            "label": "HIGH PASS",
+            "position": 227440,
+            "confidence": 0.35175323486328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:47",
+            "label": "DRIVE",
+            "position": 227680,
+            "confidence": 0.028860092163085938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:47",
+            "label": "THROW IN",
+            "position": 227760,
+            "confidence": 0.06570053100585938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:47",
+            "label": "HIGH PASS",
+            "position": 227760,
+            "confidence": 0.017064412434895832,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:47",
+            "label": "PASS",
+            "position": 227760,
+            "confidence": 0.08881378173828125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:48",
+            "label": "DRIVE",
+            "position": 228640,
+            "confidence": 0.034427642822265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:49",
+            "label": "PASS",
+            "position": 229200,
+            "confidence": 0.04163360595703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:49",
+            "label": "DRIVE",
+            "position": 229600,
+            "confidence": 0.02553105354309082,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:49",
+            "label": "HEADER",
+            "position": 229760,
+            "confidence": 0.046810521019829646,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:49",
+            "label": "THROW IN",
+            "position": 229840,
+            "confidence": 0.055694580078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:50",
+            "label": "HEADER",
+            "position": 230320,
+            "confidence": 0.3302001953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:50",
+            "label": "PASS",
+            "position": 230400,
+            "confidence": 0.015465418497721354,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:50",
+            "label": "DRIVE",
+            "position": 230480,
+            "confidence": 0.03949737548828125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:50",
+            "label": "PASS",
+            "position": 230800,
+            "confidence": 0.1786346435546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:51",
+            "label": "THROW IN",
+            "position": 231040,
+            "confidence": 0.057750701904296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:51",
+            "label": "HIGH PASS",
+            "position": 231040,
+            "confidence": 0.017705917358398438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:51",
+            "label": "HEADER",
+            "position": 231280,
+            "confidence": 0.06067657470703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:51",
+            "label": "DRIVE",
+            "position": 231520,
+            "confidence": 0.0629119873046875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:51",
+            "label": "PASS",
+            "position": 231760,
+            "confidence": 0.227783203125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:52",
+            "label": "HEADER",
+            "position": 232240,
+            "confidence": 0.019863128662109375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:52",
+            "label": "DRIVE",
+            "position": 232560,
+            "confidence": 0.3809814453125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:52",
+            "label": "PASS",
+            "position": 232720,
+            "confidence": 0.033290863037109375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:52",
+            "label": "DRIVE",
+            "position": 232960,
+            "confidence": 0.016407797366012764,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:53",
+            "label": "DRIVE",
+            "position": 233520,
+            "confidence": 0.245361328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:53",
+            "label": "HIGH PASS",
+            "position": 233600,
+            "confidence": 0.02194722555577755,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:53",
+            "label": "CROSS",
+            "position": 233600,
+            "confidence": 0.0346730537712574,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:53",
+            "label": "PASS",
+            "position": 233760,
+            "confidence": 0.48858642578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "PASS",
+            "position": 234160,
+            "confidence": 0.03672921728273785,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "HEADER",
+            "position": 234160,
+            "confidence": 0.011441548354923725,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "DRIVE",
+            "position": 234400,
+            "confidence": 0.016974001387019218,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "CROSS",
+            "position": 234720,
+            "confidence": 0.056121826171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "HIGH PASS",
+            "position": 234880,
+            "confidence": 0.0797526016831398,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "PASS",
+            "position": 234960,
+            "confidence": 0.53131103515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:54",
+            "label": "SHOT",
+            "position": 234960,
+            "confidence": 0.04471588134765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:55",
+            "label": "THROW IN",
+            "position": 235280,
+            "confidence": 0.010579586029052734,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:55",
+            "label": "DRIVE",
+            "position": 235280,
+            "confidence": 0.10528564453125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:55",
+            "label": "PASS",
+            "position": 235280,
+            "confidence": 0.031205919053819444,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:55",
+            "label": "HEADER",
+            "position": 235280,
+            "confidence": 0.026660919189453125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:55",
+            "label": "BALL PLAYER BLOCK",
+            "position": 235280,
+            "confidence": 0.056751251220703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:56",
+            "label": "DRIVE",
+            "position": 236320,
+            "confidence": 0.06597137451171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:56",
+            "label": "PASS",
+            "position": 236320,
+            "confidence": 0.03214263916015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:56",
+            "label": "OUT",
+            "position": 236560,
+            "confidence": 0.026875813802083332,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:56",
+            "label": "HEADER",
+            "position": 236800,
+            "confidence": 0.02570597268640995,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:56",
+            "label": "BALL PLAYER BLOCK",
+            "position": 236880,
+            "confidence": 0.013896942138671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:57",
+            "label": "OUT",
+            "position": 237200,
+            "confidence": 0.41571044921875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:57",
+            "label": "HIGH PASS",
+            "position": 237360,
+            "confidence": 0.012608528137207031,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:57",
+            "label": "DRIVE",
+            "position": 237360,
+            "confidence": 0.1015167236328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:57",
+            "label": "PASS",
+            "position": 237360,
+            "confidence": 0.04772186279296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:58",
+            "label": "OUT",
+            "position": 238160,
+            "confidence": 0.0401763916015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:58",
+            "label": "DRIVE",
+            "position": 238320,
+            "confidence": 0.025005340576171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:58",
+            "label": "PASS",
+            "position": 238400,
+            "confidence": 0.028072357177734375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 3:58",
+            "label": "OUT",
+            "position": 238960,
+            "confidence": 0.01196566923165027,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:59",
+            "label": "PASS",
+            "position": 239360,
+            "confidence": 0.030254364013671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:59",
+            "label": "OUT",
+            "position": 239600,
+            "confidence": 0.04086494445800781,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 3:59",
+            "label": "DRIVE",
+            "position": 239680,
+            "confidence": 0.0491485595703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:0",
+            "label": "THROW IN",
+            "position": 240320,
+            "confidence": 0.010346412658691406,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:0",
+            "label": "PASS",
+            "position": 240320,
+            "confidence": 0.06443023681640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:0",
+            "label": "DRIVE",
+            "position": 240640,
+            "confidence": 0.025970458984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:1",
+            "label": "HIGH PASS",
+            "position": 241440,
+            "confidence": 0.019683837890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:1",
+            "label": "PASS",
+            "position": 241440,
+            "confidence": 0.07956695556640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:1",
+            "label": "THROW IN",
+            "position": 241520,
+            "confidence": 0.014689445495605469,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:1",
+            "label": "DRIVE",
+            "position": 241600,
+            "confidence": 0.024644851684570312,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:1",
+            "label": "OUT",
+            "position": 241680,
+            "confidence": 0.0242462158203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:2",
+            "label": "DRIVE",
+            "position": 242080,
+            "confidence": 0.10437774658203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:2",
+            "label": "PASS",
+            "position": 242400,
+            "confidence": 0.04546356201171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:2",
+            "label": "OUT",
+            "position": 242720,
+            "confidence": 0.015964508056640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "DRIVE",
+            "position": 243120,
+            "confidence": 0.0717315673828125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "HIGH PASS",
+            "position": 243280,
+            "confidence": 0.025808334350585938,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "CROSS",
+            "position": 243280,
+            "confidence": 0.011462688446044922,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "PASS",
+            "position": 243440,
+            "confidence": 0.36602783203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "THROW IN",
+            "position": 243520,
+            "confidence": 0.018957138061523438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "PASS",
+            "position": 243760,
+            "confidence": 0.012302116111472802,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:3",
+            "label": "OUT",
+            "position": 243840,
+            "confidence": 0.03558540344238281,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:4",
+            "label": "DRIVE",
+            "position": 244000,
+            "confidence": 0.027668880827632955,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:4",
+            "label": "PASS",
+            "position": 244320,
+            "confidence": 0.04776695039537218,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:4",
+            "label": "OUT",
+            "position": 244720,
+            "confidence": 0.019147488805982802,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:4",
+            "label": "DRIVE",
+            "position": 244800,
+            "confidence": 0.182952880859375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:4",
+            "label": "HEADER",
+            "position": 244960,
+            "confidence": 0.021205902099609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:5",
+            "label": "PASS",
+            "position": 245280,
+            "confidence": 0.0997772216796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:5",
+            "label": "HIGH PASS",
+            "position": 245440,
+            "confidence": 0.01712799072265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:5",
+            "label": "THROW IN",
+            "position": 245520,
+            "confidence": 0.011167526245117188,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:5",
+            "label": "OUT",
+            "position": 245680,
+            "confidence": 0.072021484375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:5",
+            "label": "DRIVE",
+            "position": 245760,
+            "confidence": 0.07449256049262153,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:6",
+            "label": "PASS",
+            "position": 246240,
+            "confidence": 0.04743194580078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:6",
+            "label": "DRIVE",
+            "position": 246560,
+            "confidence": 0.1528167724609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:6",
+            "label": "OUT",
+            "position": 246640,
+            "confidence": 0.011577606201171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:6",
+            "label": "DRIVE",
+            "position": 246960,
+            "confidence": 0.013950191162250658,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:7",
+            "label": "PASS",
+            "position": 247520,
+            "confidence": 0.05855560302734375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:7",
+            "label": "DRIVE",
+            "position": 247840,
+            "confidence": 0.098480224609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:8",
+            "label": "PASS",
+            "position": 248480,
+            "confidence": 0.015028900570339628,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:8",
+            "label": "HIGH PASS",
+            "position": 248720,
+            "confidence": 0.012436866760253906,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:8",
+            "label": "HEADER",
+            "position": 248720,
+            "confidence": 0.01010894775390625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:8",
+            "label": "DRIVE",
+            "position": 248800,
+            "confidence": 0.0619964599609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:8",
+            "label": "THROW IN",
+            "position": 248960,
+            "confidence": 0.01690673828125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:9",
+            "label": "PASS",
+            "position": 249040,
+            "confidence": 0.115875244140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:9",
+            "label": "OUT",
+            "position": 249680,
+            "confidence": 0.028547286987304688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:9",
+            "label": "DRIVE",
+            "position": 249840,
+            "confidence": 0.1603851318359375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:10",
+            "label": "PASS",
+            "position": 250080,
+            "confidence": 0.06699371337890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:10",
+            "label": "HIGH PASS",
+            "position": 250320,
+            "confidence": 0.019475936889648438,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:10",
+            "label": "DRIVE",
+            "position": 250320,
+            "confidence": 0.011086106300354004,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:10",
+            "label": "PASS",
+            "position": 250800,
+            "confidence": 0.012656539678573608,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:11",
+            "label": "DRIVE",
+            "position": 251040,
+            "confidence": 0.1151580810546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:11",
+            "label": "THROW IN",
+            "position": 251360,
+            "confidence": 0.011937141418457031,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:11",
+            "label": "HIGH PASS",
+            "position": 251520,
+            "confidence": 0.01563262939453125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:11",
+            "label": "PASS",
+            "position": 251520,
+            "confidence": 0.07999420166015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:11",
+            "label": "DRIVE",
+            "position": 251840,
+            "confidence": 0.023220056368980876,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:11",
+            "label": "OUT",
+            "position": 251840,
+            "confidence": 0.016574859619140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:12",
+            "label": "PASS",
+            "position": 252480,
+            "confidence": 0.1268463134765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:12",
+            "label": "DRIVE",
+            "position": 252640,
+            "confidence": 0.1315460205078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:13",
+            "label": "PASS",
+            "position": 253280,
+            "confidence": 0.03157883514592677,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:13",
+            "label": "HIGH PASS",
+            "position": 253520,
+            "confidence": 0.0222320556640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:13",
+            "label": "OUT",
+            "position": 253600,
+            "confidence": 0.04990196228027344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:13",
+            "label": "DRIVE",
+            "position": 253680,
+            "confidence": 0.080108642578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:13",
+            "label": "THROW IN",
+            "position": 253760,
+            "confidence": 0.013310445679558648,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:13",
+            "label": "PASS",
+            "position": 253840,
+            "confidence": 0.1422882080078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:14",
+            "label": "HEADER",
+            "position": 254080,
+            "confidence": 0.0297088623046875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:14",
+            "label": "OUT",
+            "position": 254560,
+            "confidence": 0.014163970947265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:14",
+            "label": "THROW IN",
+            "position": 254640,
+            "confidence": 0.035175323486328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:14",
+            "label": "HIGH PASS",
+            "position": 254640,
+            "confidence": 0.039340972900390625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:14",
+            "label": "DRIVE",
+            "position": 254720,
+            "confidence": 0.061126708984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:14",
+            "label": "PASS",
+            "position": 254880,
+            "confidence": 0.2952880859375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:15",
+            "label": "CROSS",
+            "position": 255120,
+            "confidence": 0.01298379898071289,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:15",
+            "label": "PASS",
+            "position": 255360,
+            "confidence": 0.0407867431640625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:15",
+            "label": "HIGH PASS",
+            "position": 255440,
+            "confidence": 0.011002355151706271,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:15",
+            "label": "DRIVE",
+            "position": 255600,
+            "confidence": 0.023341761695014104,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:15",
+            "label": "OUT",
+            "position": 255680,
+            "confidence": 0.0379486083984375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:16",
+            "label": "DRIVE",
+            "position": 256079,
+            "confidence": 0.1605377197265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:16",
+            "label": "HIGH PASS",
+            "position": 256399,
+            "confidence": 0.02685546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:16",
+            "label": "PASS",
+            "position": 256399,
+            "confidence": 0.025509304470486112,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:16",
+            "label": "OUT",
+            "position": 256640,
+            "confidence": 0.020120620727539062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:16",
+            "label": "DRIVE",
+            "position": 256880,
+            "confidence": 0.04695786370171441,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:17",
+            "label": "PASS",
+            "position": 257040,
+            "confidence": 0.086639404296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:17",
+            "label": "HIGH PASS",
+            "position": 257440,
+            "confidence": 0.013698577880859375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:17",
+            "label": "PASS",
+            "position": 257519,
+            "confidence": 0.011824236975775825,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:17",
+            "label": "OUT",
+            "position": 257680,
+            "confidence": 0.03129386901855469,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:17",
+            "label": "DRIVE",
+            "position": 257839,
+            "confidence": 0.059051513671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:18",
+            "label": "PASS",
+            "position": 258320,
+            "confidence": 0.08701324462890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:18",
+            "label": "OUT",
+            "position": 258720,
+            "confidence": 0.014363421334160699,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:18",
+            "label": "DRIVE",
+            "position": 258800,
+            "confidence": 0.012631733901798725,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:19",
+            "label": "DRIVE",
+            "position": 259040,
+            "confidence": 0.3572998046875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:19",
+            "label": "HEADER",
+            "position": 259040,
+            "confidence": 0.02057647705078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:19",
+            "label": "HIGH PASS",
+            "position": 259440,
+            "confidence": 0.027742385864257812,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:19",
+            "label": "PASS",
+            "position": 259440,
+            "confidence": 0.1281890869140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:19",
+            "label": "OUT",
+            "position": 259600,
+            "confidence": 0.04516029357910156,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:20",
+            "label": "DRIVE",
+            "position": 260000,
+            "confidence": 0.03960418701171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:20",
+            "label": "PASS",
+            "position": 260399,
+            "confidence": 0.0881500244140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:20",
+            "label": "HIGH PASS",
+            "position": 260480,
+            "confidence": 0.0128936767578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:21",
+            "label": "DRIVE",
+            "position": 261040,
+            "confidence": 0.038372039794921875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:21",
+            "label": "HIGH PASS",
+            "position": 261440,
+            "confidence": 0.022803783416748047,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:21",
+            "label": "THROW IN",
+            "position": 261519,
+            "confidence": 0.010765552520751953,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:21",
+            "label": "PASS",
+            "position": 261519,
+            "confidence": 0.05113983154296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:21",
+            "label": "OUT",
+            "position": 261920,
+            "confidence": 0.0186767578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:22",
+            "label": "DRIVE",
+            "position": 262000,
+            "confidence": 0.0531005859375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:22",
+            "label": "PASS",
+            "position": 262320,
+            "confidence": 0.022495712762997475,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:22",
+            "label": "DRIVE",
+            "position": 262960,
+            "confidence": 0.03946685791015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:23",
+            "label": "PASS",
+            "position": 263200,
+            "confidence": 0.0400238037109375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:23",
+            "label": "OUT",
+            "position": 263440,
+            "confidence": 0.01039886474609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:23",
+            "label": "DRIVE",
+            "position": 263760,
+            "confidence": 0.017945817959161454,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:24",
+            "label": "THROW IN",
+            "position": 264000,
+            "confidence": 0.013578414916992188,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:24",
+            "label": "PASS",
+            "position": 264160,
+            "confidence": 0.089569091796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:24",
+            "label": "DRIVE",
+            "position": 264640,
+            "confidence": 0.03926849365234375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:25",
+            "label": "PASS",
+            "position": 265120,
+            "confidence": 0.0418853759765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:25",
+            "label": "HIGH PASS",
+            "position": 265440,
+            "confidence": 0.0264434814453125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:25",
+            "label": "DRIVE",
+            "position": 265600,
+            "confidence": 0.11902618408203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:25",
+            "label": "OUT",
+            "position": 265680,
+            "confidence": 0.03153371810913086,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:26",
+            "label": "PASS",
+            "position": 266080,
+            "confidence": 0.0843963623046875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:26",
+            "label": "DRIVE",
+            "position": 266480,
+            "confidence": 0.022553231981065538,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:26",
+            "label": "PASS",
+            "position": 266640,
+            "confidence": 0.011509364033922739,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:27",
+            "label": "DRIVE",
+            "position": 267440,
+            "confidence": 0.05577850341796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:27",
+            "label": "HEADER",
+            "position": 267440,
+            "confidence": 0.010348320007324219,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:27",
+            "label": "PASS",
+            "position": 267520,
+            "confidence": 0.038272857666015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:28",
+            "label": "DRIVE",
+            "position": 268560,
+            "confidence": 0.020275115966796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:28",
+            "label": "PASS",
+            "position": 268560,
+            "confidence": 0.021221160888671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:29",
+            "label": "DRIVE",
+            "position": 269520,
+            "confidence": 0.013828277587890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:29",
+            "label": "PASS",
+            "position": 269520,
+            "confidence": 0.0247650146484375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:30",
+            "label": "DRIVE",
+            "position": 270320,
+            "confidence": 0.023511886596679688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:30",
+            "label": "PASS",
+            "position": 270480,
+            "confidence": 0.016139984130859375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:31",
+            "label": "PASS",
+            "position": 271440,
+            "confidence": 0.027740478515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:31",
+            "label": "DRIVE",
+            "position": 271600,
+            "confidence": 0.03383445739746094,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:31",
+            "label": "OUT",
+            "position": 271680,
+            "confidence": 0.015639305114746094,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:32",
+            "label": "DRIVE",
+            "position": 272560,
+            "confidence": 0.020399093627929688,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:32",
+            "label": "PASS",
+            "position": 272640,
+            "confidence": 0.024539947509765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:32",
+            "label": "OUT",
+            "position": 272640,
+            "confidence": 0.010067939758300781,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:33",
+            "label": "DRIVE",
+            "position": 273600,
+            "confidence": 0.023263931274414062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:33",
+            "label": "PASS",
+            "position": 273600,
+            "confidence": 0.042667388916015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:33",
+            "label": "OUT",
+            "position": 273600,
+            "confidence": 0.013857841491699219,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:34",
+            "label": "DRIVE",
+            "position": 274480,
+            "confidence": 0.012831593737190153,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:34",
+            "label": "OUT",
+            "position": 274640,
+            "confidence": 0.011218547821044922,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:34",
+            "label": "PASS",
+            "position": 274960,
+            "confidence": 0.029041290283203125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:35",
+            "label": "DRIVE",
+            "position": 275120,
+            "confidence": 0.047718048095703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:35",
+            "label": "OUT",
+            "position": 275600,
+            "confidence": 0.025894641876220703,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:35",
+            "label": "HIGH PASS",
+            "position": 275680,
+            "confidence": 0.015582084655761719,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:35",
+            "label": "DRIVE",
+            "position": 275840,
+            "confidence": 0.016469836235046387,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "PASS",
+            "position": 276000,
+            "confidence": 0.163970947265625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "THROW IN",
+            "position": 276160,
+            "confidence": 0.03285219934251574,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "HIGH PASS",
+            "position": 276160,
+            "confidence": 0.116729736328125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "HIGH PASS",
+            "position": 276800,
+            "confidence": 0.04040357801649305,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "DRIVE",
+            "position": 276800,
+            "confidence": 0.0412750244140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "PASS",
+            "position": 276880,
+            "confidence": 0.06312084197998047,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:36",
+            "label": "CROSS",
+            "position": 276880,
+            "confidence": 0.0109100341796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:37",
+            "label": "THROW IN",
+            "position": 277040,
+            "confidence": 0.05894639756944445,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:37",
+            "label": "THROW IN",
+            "position": 277360,
+            "confidence": 0.769287109375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:37",
+            "label": "PASS",
+            "position": 277600,
+            "confidence": 0.37359619140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:37",
+            "label": "HEADER",
+            "position": 277600,
+            "confidence": 0.010957717895507812,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:37",
+            "label": "THROW IN",
+            "position": 277760,
+            "confidence": 0.015135605644900352,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:38",
+            "label": "HIGH PASS",
+            "position": 278000,
+            "confidence": 0.012643814086914062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:38",
+            "label": "PASS",
+            "position": 278000,
+            "confidence": 0.02898905012342665,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:38",
+            "label": "OUT",
+            "position": 278240,
+            "confidence": 0.0142059326171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:38",
+            "label": "DRIVE",
+            "position": 278320,
+            "confidence": 0.06341326898998684,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:38",
+            "label": "DRIVE",
+            "position": 278640,
+            "confidence": 0.735107421875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:39",
+            "label": "PASS",
+            "position": 279440,
+            "confidence": 0.025776267051696777,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:39",
+            "label": "DRIVE",
+            "position": 279760,
+            "confidence": 0.0380706787109375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:39",
+            "label": "HEADER",
+            "position": 279920,
+            "confidence": 0.03324127197265625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:40",
+            "label": "PASS",
+            "position": 280320,
+            "confidence": 0.04621124267578125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:40",
+            "label": "DRIVE",
+            "position": 280480,
+            "confidence": 0.010801941156387329,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:41",
+            "label": "DRIVE",
+            "position": 281040,
+            "confidence": 0.1041412353515625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:41",
+            "label": "PASS",
+            "position": 281200,
+            "confidence": 0.026274707582261827,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:41",
+            "label": "DRIVE",
+            "position": 281920,
+            "confidence": 0.016573548316955566,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:42",
+            "label": "PASS",
+            "position": 282160,
+            "confidence": 0.1007537841796875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:42",
+            "label": "DRIVE",
+            "position": 282400,
+            "confidence": 0.210906982421875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:42",
+            "label": "HEADER",
+            "position": 282480,
+            "confidence": 0.014092445373535156,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:42",
+            "label": "PASS",
+            "position": 282560,
+            "confidence": 0.014351979817873166,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:43",
+            "label": "DRIVE",
+            "position": 283200,
+            "confidence": 0.030766593085394964,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:43",
+            "label": "HIGH PASS",
+            "position": 283440,
+            "confidence": 0.0782216414809227,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:43",
+            "label": "PASS",
+            "position": 283440,
+            "confidence": 0.1640116423368454,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:43",
+            "label": "THROW IN",
+            "position": 283600,
+            "confidence": 0.10650634765625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:43",
+            "label": "HEADER",
+            "position": 283920,
+            "confidence": 0.1386922150850296,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:44",
+            "label": "DRIVE",
+            "position": 284080,
+            "confidence": 0.014851711414478441,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:44",
+            "label": "PASS",
+            "position": 284080,
+            "confidence": 0.04827880859375,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:44",
+            "label": "OUT",
+            "position": 284160,
+            "confidence": 0.021413803100585938,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:44",
+            "label": "PASS",
+            "position": 284720,
+            "confidence": 0.013358222113715278,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:44",
+            "label": "DRIVE",
+            "position": 284880,
+            "confidence": 0.0406036376953125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:45",
+            "label": "OUT",
+            "position": 285520,
+            "confidence": 0.011957168579101562,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:45",
+            "label": "PASS",
+            "position": 285680,
+            "confidence": 0.059234619140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:45",
+            "label": "DRIVE",
+            "position": 285920,
+            "confidence": 0.04296112060546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:46",
+            "label": "HEADER",
+            "position": 286000,
+            "confidence": 0.01597118377685547,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:46",
+            "label": "PASS",
+            "position": 286960,
+            "confidence": 0.038532257080078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:47",
+            "label": "DRIVE",
+            "position": 287120,
+            "confidence": 0.1044158935546875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:47",
+            "label": "HEADER",
+            "position": 287360,
+            "confidence": 0.011191368103027344,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:47",
+            "label": "HIGH PASS",
+            "position": 287440,
+            "confidence": 0.014369010925292969,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:47",
+            "label": "OUT",
+            "position": 287600,
+            "confidence": 0.01395726203918457,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:48",
+            "label": "DRIVE",
+            "position": 288000,
+            "confidence": 0.029973745346069336,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:48",
+            "label": "PASS",
+            "position": 288080,
+            "confidence": 0.1040496826171875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:48",
+            "label": "THROW IN",
+            "position": 288400,
+            "confidence": 0.013416528701782227,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:48",
+            "label": "PASS",
+            "position": 288640,
+            "confidence": 0.01371590719546801,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:48",
+            "label": "DRIVE",
+            "position": 288800,
+            "confidence": 0.014337897300720215,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:49",
+            "label": "HIGH PASS",
+            "position": 289440,
+            "confidence": 0.01671123504638672,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:49",
+            "label": "DRIVE",
+            "position": 289520,
+            "confidence": 0.039516448974609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:49",
+            "label": "PASS",
+            "position": 289520,
+            "confidence": 0.06409454345703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:49",
+            "label": "OUT",
+            "position": 289600,
+            "confidence": 0.014810562133789062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:49",
+            "label": "THROW IN",
+            "position": 289680,
+            "confidence": 0.018233776092529297,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:49",
+            "label": "HEADER",
+            "position": 289840,
+            "confidence": 0.022777557373046875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:50",
+            "label": "DRIVE",
+            "position": 290560,
+            "confidence": 0.0815277099609375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:50",
+            "label": "OUT",
+            "position": 290640,
+            "confidence": 0.2154541015625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:50",
+            "label": "THROW IN",
+            "position": 290880,
+            "confidence": 0.028542518615722656,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:50",
+            "label": "HIGH PASS",
+            "position": 290880,
+            "confidence": 0.04348182678222656,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:50",
+            "label": "PASS",
+            "position": 290880,
+            "confidence": 0.0543975830078125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:51",
+            "label": "OUT",
+            "position": 291120,
+            "confidence": 0.0419921875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:51",
+            "label": "HEADER",
+            "position": 291280,
+            "confidence": 0.0256500244140625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:51",
+            "label": "DRIVE",
+            "position": 291760,
+            "confidence": 0.063201904296875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:52",
+            "label": "PASS",
+            "position": 292000,
+            "confidence": 0.08213043212890625,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:52",
+            "label": "HIGH PASS",
+            "position": 292320,
+            "confidence": 0.0360260009765625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:52",
+            "label": "THROW IN",
+            "position": 292400,
+            "confidence": 0.01136016845703125,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:52",
+            "label": "DRIVE",
+            "position": 292880,
+            "confidence": 0.0316314697265625,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:52",
+            "label": "PASS",
+            "position": 292960,
+            "confidence": 0.043426513671875,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:53",
+            "label": "HIGH PASS",
+            "position": 293280,
+            "confidence": 0.015936613082885742,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:53",
+            "label": "HEADER",
+            "position": 293280,
+            "confidence": 0.011321067810058594,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:53",
+            "label": "THROW IN",
+            "position": 293520,
+            "confidence": 0.022026538848876953,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:53",
+            "label": "DRIVE",
+            "position": 293840,
+            "confidence": 0.0348917655646801,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:53",
+            "label": "OUT",
+            "position": 293920,
+            "confidence": 0.022199630737304688,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:54",
+            "label": "HIGH PASS",
+            "position": 294000,
+            "confidence": 0.05978584289550781,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:54",
+            "label": "PASS",
+            "position": 294000,
+            "confidence": 0.1094512939453125,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:54",
+            "label": "DRIVE",
+            "position": 294640,
+            "confidence": 0.013674114957267856,
+            "half": 1,
+            "team": "left"
+        },
+        {
+            "gameTime": "1 - 4:55",
+            "label": "THROW IN",
+            "position": 295200,
+            "confidence": 0.01331418752670288,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:55",
+            "label": "PASS",
+            "position": 295280,
+            "confidence": 0.031045913696289062,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:55",
+            "label": "HEADER",
+            "position": 295360,
+            "confidence": 0.02208256721496582,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:55",
+            "label": "DRIVE",
+            "position": 295440,
+            "confidence": 0.03412914276123047,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:55",
+            "label": "OUT",
+            "position": 295520,
+            "confidence": 0.012404203414916992,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:56",
+            "label": "THROW IN",
+            "position": 296160,
+            "confidence": 0.03237668797373772,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:56",
+            "label": "PASS",
+            "position": 296240,
+            "confidence": 0.06004587933421135,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:56",
+            "label": "DRIVE",
+            "position": 296400,
+            "confidence": 0.017637887969613075,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:57",
+            "label": "PASS",
+            "position": 297120,
+            "confidence": 0.03660552211613883,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:57",
+            "label": "THROW IN",
+            "position": 297280,
+            "confidence": 0.013032038696110249,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:57",
+            "label": "HIGH PASS",
+            "position": 297280,
+            "confidence": 0.018877824768424034,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:57",
+            "label": "DRIVE",
+            "position": 297440,
+            "confidence": 0.055322010070085526,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:57",
+            "label": "OUT",
+            "position": 297520,
+            "confidence": 0.03416013717651367,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:57",
+            "label": "HEADER",
+            "position": 297600,
+            "confidence": 0.05944013595581055,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:58",
+            "label": "PASS",
+            "position": 298000,
+            "confidence": 0.09639739990234375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:58",
+            "label": "PASS",
+            "position": 298560,
+            "confidence": 0.013858053419325087,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:58",
+            "label": "DRIVE",
+            "position": 298640,
+            "confidence": 0.016743434800042048,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:58",
+            "label": "HEADER",
+            "position": 298880,
+            "confidence": 0.010601997375488281,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:59",
+            "label": "DRIVE",
+            "position": 299520,
+            "confidence": 0.05673408508300781,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:59",
+            "label": "PASS",
+            "position": 299520,
+            "confidence": 0.037960052490234375,
+            "half": 1,
+            "team": "right"
+        },
+        {
+            "gameTime": "1 - 4:59",
+            "label": "OUT",
+            "position": 299520,
+            "confidence": 0.01741313934326172,
+            "half": 1,
+            "team": "right"
+        }
+    ]
+}
