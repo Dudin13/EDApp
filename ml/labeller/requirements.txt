@@ -1,0 +1,9 @@
+# EDUDIN Pro Labeller - Portable Edition
+flask
+flask-cors
+ultralytics
+opencv-python
+torch
+torchvision
+numpy
+pathlib

@@ -14,8 +14,8 @@ app = Flask(__name__)
 # ✅ CORS habilitado
 CORS(app)
 
-# ✅ Rutas raíz
-BASE = Path("C:/apped")
+# ✅ Rutas raíz (RELATIVAS para versión portable)
+BASE = Path(__file__).parent.absolute()
 DATASET_ROOT = (BASE / "data/datasets").absolute()
 MODEL_DIR = BASE / "models"
 MODEL_PLAYERS = MODEL_DIR / "players.pt"

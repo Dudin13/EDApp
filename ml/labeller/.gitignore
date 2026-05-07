@@ -1,0 +1,24 @@
+# EDUDIN Pro Labeller - Portable
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (optional to ignore, but usually provided separately)
+# models/*.pt
+
+# Data
+data/datasets/**/images/*
+data/datasets/**/labels/*
+!data/datasets/**/images/
+!data/datasets/**/labels/

@@ -26,3 +26,18 @@ tmp/
 .vscode/
 .idea/
 .cursor/
+
+# Entornos virtuales
+venv_cuda/
+venv_training/
+.venv/
+
+# Heavy stuff
+runs/
+output/
+outputs/
+estructura_*.txt
+project_*_dump.txt
+images.cache
+*.pth
+*.pt
