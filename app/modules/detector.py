@@ -30,12 +30,10 @@ from collections import Counter
 from sklearn.cluster import KMeans
 
 from modules.calibration_pnl import PnLCalibrator
-from modules.identity_reader import IdentityReader
 
 logger = logging.getLogger(__name__)
 
 _calibrator = PnLCalibrator()
-_id_reader  = IdentityReader()
 
 # ── Fix 5: Rutas de modelos — portables, sin hardcodear c:/apped ───────────
 # Calculamos rutas relativas al propio archivo (detector.py está en app/modules/).
@@ -82,6 +80,7 @@ _roboflow_lock=threading.Lock()
 
 
 def _load_player_model():
+    """Thread-safe lazy loader for the player/goalkeeper/referee YOLO model."""
     global _player_model
     with _player_lock:
         if _player_model is None:
@@ -95,6 +94,7 @@ def _load_player_model():
 
 
 def _load_ball_model():
+    """Thread-safe lazy loader for the ball detector (runs inference at 1280 px)."""
     global _ball_model
     with _ball_lock:
         if _ball_model is None:
@@ -109,6 +109,7 @@ def _load_ball_model():
 
 
 def _load_pitch_model():
+    """Thread-safe lazy loader for the pitch keypoint pose model. Returns None if file not found."""
     global _pitch_model
     with _pitch_lock:
         if _pitch_model is None:
@@ -120,6 +121,7 @@ def _load_pitch_model():
 
 
 def _load_coco_model():
+    """Thread-safe lazy loader for the COCO YOLOv8n fallback (person class only)."""
     global _coco_model
     with _coco_lock:
         if _coco_model is None:
@@ -129,6 +131,7 @@ def _load_coco_model():
 
 
 def _load_roboflow():
+    """Lazy loader for the Roboflow API client. Requires ROBOFLOW_API_KEY env var."""
     global _roboflow_model
     with _roboflow_lock:
         if _roboflow_model is None:
@@ -140,14 +143,20 @@ def _load_roboflow():
 
 
 def kaggle_models_available():
+    """Returns True if both the player and ball specialized models exist on disk."""
     return PLAYER_MODEL_PATH.exists() and BALL_MODEL_PATH.exists()
 
 def yolo_model_available():
+    """Returns True if at least one YOLO model (primary or legacy) is available."""
     return PLAYER_MODEL_PATH.exists() or YOLO_LEGACY_PATH.exists()
 
 
 def _build_detection_dict(frame, x_abs, y_abs, w, h, clase, confidence,
                            extract_dorsal=False):
+    """
+    Builds the standard detection dict consumed by the rest of the pipeline.
+    torso_color is left None — computed lazily by the team classifier on demand.
+    """
     return {
         "x":int(x_abs),"y":int(y_abs),"w":int(w),"h":int(h),
         "bbox": (int(x_abs - w/2), int(y_abs - h/2), int(x_abs + w/2), int(y_abs + h/2)),
@@ -222,6 +231,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
 
 
 def detect_frame_yolo(frame, confidence=0.45):
+    """Single-model detection path using the player model for all classes including ball."""
     model=_load_player_model()
     h_frame,w_frame=frame.shape[:2]
     results=model(frame,conf=0.10,verbose=False)
@@ -253,6 +263,10 @@ def detect_frame_yolo(frame, confidence=0.45):
 
 
 def detect_frame_roboflow(frame, confidence=40, overlap=25):
+    """
+    Roboflow API detection. Crops field borders (top 20%, bottom 15%) and splits
+    the frame in two halves to stay within the API's image-size limits.
+    """
     import tempfile
     h_img,w_img=frame.shape[:2]
     y_min=int(h_img*0.20); y_max=int(h_img*0.85)
@@ -282,6 +296,7 @@ def detect_frame_roboflow(frame, confidence=40, overlap=25):
 
 
 def detect_frame_coco(frame, confidence=0.35):
+    """COCO YOLOv8n fallback: detects persons only (class 0), no ball or field classes."""
     model=_load_coco_model()
     results=model(frame,conf=confidence,classes=[0],verbose=False)
     dets=[]
@@ -345,6 +360,11 @@ def detect_pitch_homography(frame):
 # Clasificacion de equipos
 
 def _extract_torso_rgb(frame, x, y, w, h):
+    """
+    Extracts the dominant RGB color from the torso ROI.
+    Filters out the dominant cluster if it falls in the green (grass) HSV range.
+    Returns (r, g, b) tuple or None if the ROI is too small.
+    """
     x1=max(0,int(x-w*0.25)); x2=min(frame.shape[1],int(x+w*0.25))
     y1=max(0,int(y-h*0.3));  y2=min(frame.shape[0],int(y+h*0.1))
     roi=frame[y1:y2,x1:x2]
@@ -379,6 +399,7 @@ class TeamClassifierSigLIP:
         self._fitted=False; self.device=None
 
     def _load(self):
+        """Lazy-loads SigLIP + UMAP reducer + KMeans. Returns False if transformers/umap unavailable."""
         if self.model is not None: return True
         try:
             import torch
@@ -395,6 +416,7 @@ class TeamClassifierSigLIP:
             logger.warning(f"SigLIP no disponible: {e}"); return False
 
     def _embeddings(self,crops):
+        """Runs SigLIP in batches of 32 and returns mean-pooled embeddings (N, D)."""
         import torch
         from PIL import Image
         pils=[Image.fromarray(cv2.cvtColor(c,cv2.COLOR_BGR2RGB)) if isinstance(c,np.ndarray) else c for c in crops]
@@ -408,6 +430,7 @@ class TeamClassifierSigLIP:
         return np.concatenate(embs)
 
     def fit(self,crops):
+        """Fits UMAP + KMeans on player crops. Returns list of team labels (0/1) or [] on failure."""
         if not self._load() or len(crops)<4: return []
         embs=self._embeddings(crops)
         proj=self.reducer.fit_transform(embs)
@@ -416,6 +439,7 @@ class TeamClassifierSigLIP:
         return labels.tolist()
 
     def predict(self,crops):
+        """Returns team labels (0/1) for each crop using the fitted UMAP + KMeans."""
         if not self._fitted or not crops: return [0]*len(crops)
         embs=self._embeddings(crops)
         proj=self.reducer.transform(embs)
@@ -426,6 +450,7 @@ _siglip_classifier=TeamClassifierSigLIP()
 
 
 def _get_crop(frame,det):
+    """Slices the detection bounding box from the frame. Returns None if the crop is empty."""
     x,y,w,h=det["x"],det["y"],det["w"],det["h"]
     x1=max(0,x-w//2); y1=max(0,y-h//2)
     x2=min(frame.shape[1],x+w//2); y2=min(frame.shape[0],y+h//2)

@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Track:
+    """
+    Persistent state for a single tracked entity across frames.
+    Team assignment (equipo) is stabilized by majority vote over the last 8 predictions
+    to prevent a single misclassified frame from flipping the team for the whole sequence.
+    """
     track_id: int
     clase: str
     equipo: int          # 0=local, 1=visitante, 2=árbitro (calculado por votación)

@@ -23,13 +23,11 @@ Uso:
 
 import cv2
 import numpy as np
-from pathlib import Path
 from collections import defaultdict
 
 from modules.detector import detect_frame
 from modules.tracker import SimpleTracker
 from modules.team_classifier import TeamClassifier, Team
-from modules.identity_reader import IdentityReader
 from modules.event_spotter_tdeed import EventSpotterTDEED, AdvancedEventDetector
 from modules.calibration_pnl import PnLCalibrator
 try:
@@ -91,8 +89,6 @@ class VideoProcessor:
             self.tracker.initialize_with_seeds(self.manual_seeds)
 
         # ── Modulos SOTA ───────────────────────────────────────────────────
-        self.id_reader = IdentityReader()
-
         # Calibrador automatico (usa YOLO keypoints del campo)
         # Si no esta disponible, usa el calibrador manual PnLCalibrator
         if _HAS_AUTO_CAL:

@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 class EventDetectionTrainer:
     """Sistema de entrenamiento y validación para detección de eventos."""

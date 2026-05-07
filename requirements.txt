@@ -3,7 +3,6 @@
 # Core
 pydantic-settings
 loguru
-pathlib
 python-dotenv
 
 # Computer Vision & ML
@@ -19,10 +18,12 @@ pandas
 transformers
 scikit-learn
 umap-learn
+Pillow
 
 # UI
 streamlit
 plotly
+matplotlib
 
 # Utilities
 tqdm
