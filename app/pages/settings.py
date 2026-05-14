@@ -70,6 +70,13 @@ def render():
             ),
             help="ByteTrack es el estándar; UCMCTrack usa compensación de cámara (SOTA)"
         )
+        
+        analysis_mode = st.radio(
+            "Modo de análisis (para UCMCTrack)",
+            ["Rápido (tiempo real)", "Profundo (offline)"],
+            index=0 if saved.get("analysis_mode", "Rápido (tiempo real)") == "Rápido (tiempo real)" else 1,
+            help="Rápido usa solo el tracker base. Profundo aplica GTA-Link para corregir IDs (requiere post-procesado)."
+        )
 
         st.markdown(f"""
         <div style="background:rgba(17, 24, 39, 0.4);border:1px solid rgba(0, 212, 170, 0.15);
@@ -108,6 +115,7 @@ def render():
             cfg = {
                 "detection_mode": detection_mode.replace(" (local)", ""),
                 "tracker_mode": tracker_mode,
+                "analysis_mode": analysis_mode,
                 "confidence": confidence,
                 "sample_rate": sample_rate,
                 "clip_before": clip_before,

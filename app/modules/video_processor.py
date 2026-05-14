@@ -230,8 +230,9 @@ class VideoProcessor:
         _last_recalib_minute = 0.0   # control de re-calibración periódica
         _RECALIB_INTERVAL    = 5.0   # re-calibrar cada 5 minutos de partido
 
-        while frame_pos < total_frames:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
+        try:
+            while frame_pos < total_frames:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
             ret, frame = cap.read()
             if not ret:
                 break
@@ -479,8 +480,14 @@ class VideoProcessor:
             frame_count += 1
             frame_pos   += frame_interval
 
-        cap.release()
-        self._mot_file.close()
+        except Exception as e:
+            yield progreso, f"Error critico en analisis: {e}", {}
+            
+        finally:
+            if hasattr(self, '_mot_file') and not self._mot_file.closed:
+                self._mot_file.close()
+            if 'cap' in locals() and cap.isOpened():
+                cap.release()
 
         yield 91, "Calculando estadisticas de jugadores...", {}
         resultados = self._build_results(track_stats, detecciones_por_minuto, ball_events=ball_events)
