@@ -111,6 +111,12 @@ class VideoProcessor:
         self.last_ball_pos    = None
         self.last_ball_minute = -1
         self.ball_history     = []
+        
+        # MOT Export (offline)
+        import os
+        os.makedirs("output", exist_ok=True)
+        self.mot_file_path = "output/tracks_raw.txt"
+        self._mot_file = open(self.mot_file_path, "w")
 
     # ── Pipeline principal ─────────────────────────────────────────────────
 
@@ -275,6 +281,15 @@ class VideoProcessor:
                     minute=minute,
                     camera_offset=(dx, dy)
                 )
+                
+                # Exportar a MOT format: frame, id, x1, y1, w, h, conf, -1, -1, -1
+                for tid, track in tracks.items():
+                    if track.frames_lost == 0:
+                        cx, cy, tw, th = track.last_box
+                        x1, y1 = cx - tw/2, cy - th/2
+                        # Usamos frame_count+1 como ID de frame (1-indexed)
+                        line = f"{frame_count+1},{tid},{x1:.1f},{y1:.1f},{tw:.1f},{th:.1f},1,-1,-1,-1\n"
+                        self._mot_file.write(line)
 
                 # ── Re-calibración periódica del TeamClassifier ───────────
                 # Cada 5 minutos de partido, ajustamos los centroides de color
@@ -465,6 +480,7 @@ class VideoProcessor:
             frame_pos   += frame_interval
 
         cap.release()
+        self._mot_file.close()
 
         yield 91, "Calculando estadisticas de jugadores...", {}
         resultados = self._build_results(track_stats, detecciones_por_minuto, ball_events=ball_events)
