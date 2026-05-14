@@ -59,10 +59,10 @@ def _find_model(filename: str) -> Path:
             return candidate
     return _MODEL_SEARCH_PATHS[1] / filename
 
-PLAYER_MODEL_PATH = _find_model("detect_players.pt")
-BALL_MODEL_PATH   = _find_model("detect_ball.pt")
-PITCH_MODEL_PATH  = _find_model("pose_field.pt")
-YOLO_LEGACY_PATH  = _find_model("best_football_seg.pt")
+PLAYER_MODEL_PATH = _find_model("players.pt")
+BALL_MODEL_PATH   = _find_model("ball_specialist.pt")
+PITCH_MODEL_PATH  = _find_model("pitch.pt")
+YOLO_LEGACY_PATH  = _find_model("players_v6.pt")
 YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
 
 PLAYER_ID=2; GOALKEEPER_ID=1; REFEREE_ID=3; BALL_ID=0
@@ -213,7 +213,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
             import torch
             use_half = torch.cuda.is_available()
             p_imgsz = imgsz if imgsz else 640
-            r=pm.predict(frame,conf=0.40,verbose=False,imgsz=p_imgsz, half=use_half)[0]
+            r=pm.predict(frame,conf=confidence/100.0 if confidence > 1 else confidence,verbose=False,imgsz=p_imgsz, half=use_half)[0]
             import supervision as sv
             d=sv.Detections.from_ultralytics(r).with_nms(threshold=0.5,class_agnostic=True)
             for i,xyxy in enumerate(d.xyxy):

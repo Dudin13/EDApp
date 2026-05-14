@@ -9,15 +9,14 @@ sys.path.append(os.path.abspath("app"))
 
 from modules.video_processor import VideoProcessor
 
-def run_benchmark():
-    video_path = "app/videos/test_5min.mp4"
+def run_benchmark(video_path="app/videos/test_5min.mp4"):
     if not os.path.exists(video_path):
         print(f"Error: No se encuentra el video en {video_path}")
         return
 
     # Configuración para UCMCTrack
     config = {
-        "sample_rate": 2,
+        "sample_rate": 1,
         "detection_mode": "yolo",
         "tracker_mode": "ucmctrack",
         "confidence": 40,
@@ -62,4 +61,5 @@ def run_benchmark():
         print(f"ERROR: No se generó el archivo {mot_file}")
 
 if __name__ == "__main__":
-    run_benchmark()
+    v_path = sys.argv[1] if len(sys.argv) > 1 else "app/videos/test_5min.mp4"
+    run_benchmark(v_path)
