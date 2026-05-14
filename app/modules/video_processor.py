@@ -62,8 +62,11 @@ class VideoProcessor:
         self.config      = config
         self.manual_seeds = config.get("manual_seeds", [])
 
-        # FIX: pasar sample_rate correcto al tracker
-        self.tracker = SimpleTracker(sample_rate=self.sample_rate)
+        # FIX: pasar sample_rate y modo correcto al tracker
+        self.tracker = SimpleTracker(
+            sample_rate=self.sample_rate,
+            mode=config.get("tracker_mode", "bytetrack")
+        )
 
         # ── Capa 2: TeamClassifier ─────────────────────────────────────────
         # Si viene de player_identification.py ya tiene los colores del partido
@@ -633,11 +636,11 @@ class VideoProcessor:
         elif self.H is not None:
             pt          = np.array([[[float(x), float(y)]]], dtype=np.float32)
             transformed = cv2.perspectiveTransform(pt, self.H)
-            px, py      = transformed[0][0]
-            return float(px), float(py)
+            res         = transformed[0][0]
+            return float(res[0]), float(res[1])
         else:
-            px = np.clip(x / 1280 * self.pitch_width,  0, self.pitch_width)
-            py = np.clip(y / 720  * self.pitch_height, 0, self.pitch_height)
+            px = np.clip(float(x) / 1280 * self.pitch_width,  0, self.pitch_width)
+            py = np.clip(float(y) / 720  * self.pitch_height, 0, self.pitch_height)
             return float(px), float(py)
 
     def _classify_ball_action(self, ball_det, player_track):

@@ -60,6 +60,17 @@ def render():
         sample_rate = col2.slider("Intervalo entre frames analizados (segundos)", 1, 10,
                                   saved.get("sample_rate", 3))
 
+        st.markdown("---")
+        st.subheader("Motor de seguimiento (Tracker)")
+        tracker_mode = st.selectbox(
+            "Algoritmo de seguimiento",
+            ["bytetrack", "ucmctrack"],
+            index=["bytetrack", "ucmctrack"].index(
+                saved.get("tracker_mode", "bytetrack")
+            ),
+            help="ByteTrack es el estándar; UCMCTrack usa compensación de cámara (SOTA)"
+        )
+
         st.markdown(f"""
         <div style="background:rgba(17, 24, 39, 0.4);border:1px solid rgba(0, 212, 170, 0.15);
                     border-radius:12px;padding:20px;margin:20px 0;">
@@ -96,6 +107,7 @@ def render():
         if st.button("💾 Guardar configuración", type="primary"):
             cfg = {
                 "detection_mode": detection_mode.replace(" (local)", ""),
+                "tracker_mode": tracker_mode,
                 "confidence": confidence,
                 "sample_rate": sample_rate,
                 "clip_before": clip_before,

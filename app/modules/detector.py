@@ -25,6 +25,7 @@ import numpy as np
 import os
 import logging
 import threading
+import json
 from pathlib import Path
 from collections import Counter
 from sklearn.cluster import KMeans
@@ -152,22 +153,49 @@ def yolo_model_available():
 
 
 def _build_detection_dict(frame, x_abs, y_abs, w, h, clase, confidence,
-                           extract_dorsal=False):
+                           extract_dorsal=False, use_ucmc=False):
     """
-    Builds the standard detection dict consumed by the rest of the pipeline.
-    torso_color is left None — computed lazily by the team classifier on demand.
+    Builds the standard detection dict.
+    If use_ucmc is True, it also calculates 'y' (ground plane) and 'R' (covariance).
     """
-    return {
+    det = {
         "x":int(x_abs),"y":int(y_abs),"w":int(w),"h":int(h),
         "bbox": (int(x_abs - w/2), int(y_abs - h/2), int(x_abs + w/2), int(y_abs + h/2)),
         "clase":clase,"confianza":round(confidence,3),"conf":round(confidence,3),
-        "torso_color":None,  # Eval. Lazy: Solo calcula KMeans si un clasificador lo pide explicitamente
+        "torso_color":None,
         "pitch_coords":_calibrator.transform_point(int(x_abs),int(y_abs)),
         "dorsal":None,"mask":None,
     }
 
+    if use_ucmc:
+        # Lógica de proyección para UCMCTrack
+        # y: punto en el suelo (u, v) -> (x, y)
+        # R: matriz de covarianza de error 4x4
+        try:
+            # 1. Punto base (centro inferior de la caja)
+            uv = np.array([[x_abs], [y_abs + h/2], [1.0]])
+            # 2. Homografía (si existe)
+            H = getattr(_calibrator, 'homography_matrix', None)
+            if H is not None:
+                new_pt = np.dot(H, uv)
+                new_pt /= new_pt[2]
+                det["ucmc_y"] = np.array([[float(new_pt[0][0])], [float(new_pt[1][0])]], dtype=np.float32)
+            else:
+                # Fallback: píxeles como metros (escala arbitraria)
+                det["ucmc_y"] = np.array([[float(x_abs)], [float(y_abs)]], dtype=np.float32)
 
-def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
+            # 3. Covarianza R (Basada en getUVError de UCMC, debe ser 2x2 para dim_z=2)
+            u_err = max(2, min(13, 0.05 * h))
+            v_err = max(2, min(10, 0.05 * h))
+            det["R"] = np.array([[u_err**2, 0], [0, v_err**2]], dtype=np.float32)
+        except Exception:
+            det["ucmc_y"] = np.array([[float(x_abs)], [float(y_abs)]], dtype=np.float32)
+            det["R"] = np.eye(2, dtype=np.float32)
+            
+    return det
+
+
+def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
     """
     Deteccion con 3 modelos especializados del notebook Kaggle.
     PLAYER_MODEL: jugadores/porteros/arbitros a resolucion estandar.
@@ -197,7 +225,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
                 if clase=="ball": continue
                 if cy<h_frame*0.10 or w*h<40 or h<20: continue
                 if h>0 and (h/max(w,1))>7.5: continue
-                detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v))
+                detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v, use_ucmc=use_ucmc))
 
         except Exception as e:
             logger.error(f"Error modelo jugadores: {e}")
@@ -222,7 +250,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
                 # Specialized ball model ALWAYS detects balls, even if class_id is 0
                 if h>0 and (h/max(w,1))>3.0: continue
                 if w>int(w_frame*0.07) or cy<h_frame*0.15: continue
-                det=_build_detection_dict(frame,cx,cy,max(w,20),max(h,20),"ball",conf_v,extract_dorsal=False)
+                det=_build_detection_dict(frame,cx,cy,max(w,20),max(h,20),"ball",conf_v,extract_dorsal=False, use_ucmc=use_ucmc)
                 detecciones.append(det)
         except Exception as e:
             logger.error(f"Error modelo balon: {e}")
@@ -230,8 +258,8 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None):
     return detecciones
 
 
-def detect_frame_yolo(frame, confidence=0.45):
-    """Single-model detection path using the player model for all classes including ball."""
+def detect_frame_yolo(frame, confidence=0.45, **kwargs):
+    """Single-model detection path supporting additional options via kwargs."""
     model=_load_player_model()
     h_frame,w_frame=frame.shape[:2]
     results=model(frame,conf=0.10,verbose=False)
@@ -254,7 +282,7 @@ def detect_frame_yolo(frame, confidence=0.45):
                 if h>0 and (h/max(w,1))>6.5 or w*h<500: continue
             else:
                 if box_conf<confidence: continue
-            det=_build_detection_dict(frame,cx,cy,w,h,clase,float(box.conf[0]))
+            det=_build_detection_dict(frame,cx,cy,w,h,clase,float(box.conf[0]), use_ucmc=kwargs.get("use_ucmc", False))
             if masks is not None and i<len(masks.xy):
                 poly=masks.xy[i]
                 if len(poly)>0: det["mask"]=poly.astype(np.int32)
@@ -314,16 +342,26 @@ def detect_frame(frame, mode="auto", confidence=40, imgsz=None):
     Fachada principal. Orden de prioridad:
       kaggle/auto+modelos -> yolo -> roboflow -> coco
     """
+    # Detectar si UCMCTrack está activo para calcular mapeo
+    use_ucmc = False
+    try:
+        config_path = _APP_ROOT / "app_config.json"
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                use_ucmc = cfg.get("tracker_mode") == "ucmctrack"
+    except Exception: pass
+
     conf_float=confidence/100.0 if isinstance(confidence,int) and confidence>1 else float(confidence)
-    conf_int=int(conf_float*100)
     if mode=="kaggle" or (mode=="auto" and kaggle_models_available()):
-        return detect_frame_kaggle(frame,confidence=conf_float,imgsz=imgsz)
+        return detect_frame_kaggle(frame,confidence=conf_float,imgsz=imgsz, use_ucmc=use_ucmc)
     if mode=="yolo" or (mode=="auto" and yolo_model_available()):
-        return detect_frame_yolo(frame,confidence=conf_float)
+        return detect_frame_yolo(frame,confidence=conf_float, use_ucmc=use_ucmc)
     if mode in ("roboflow","auto"):
-        result=detect_frame_roboflow(frame,confidence=conf_int)
+        result=detect_frame_roboflow(frame,confidence=int(conf_float*100))
+        # Roboflow y COCO no tienen soporte directo de mapping por ahora,
+        # pero _build_detection_dict lo maneja si se llama con use_ucmc=True
         if result is not None: return result
-        return detect_frame_coco(frame,confidence=conf_float)
     return detect_frame_coco(frame,confidence=conf_float)
 
 
