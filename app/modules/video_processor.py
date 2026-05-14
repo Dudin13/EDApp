@@ -233,252 +233,249 @@ class VideoProcessor:
         try:
             while frame_pos < total_frames:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            minute   = frame_pos / fps / 60
-            progreso = 10 + int(80 * frame_count / max(frames_to_analyze, 1))
-            yield progreso, f"Analizando minuto {minute:.1f}... ({frame_count+1}/{frames_to_analyze})", {}
-
-            try:
-                # Compensacion de movimiento de camara (optical flow)
-                dx, dy = self.camera_estimator.compute_offset(frame)
-
-                # Deteccion YOLO — 4 clases: player, goalkeeper, referee, ball
-                dets = detect_frame(frame, mode=self.detection_mode, confidence=self.confidence)
-
-                # Separar balon del resto
-                ball_dets   = [d for d in dets if d.get("clase") == "ball"]
-                player_dets = [d for d in dets if d.get("clase") != "ball"]
-
-                # ── Capa 2: Clasificar equipo de cada jugador ──────────────
-                equipo_list = []
-                for det in player_dets:
-                    cls_name = det.get("clase", "player")
-
-                    # Arbitros van siempre a REFEREE sin pasar por TeamClassifier
-                    if cls_name == "referee":
-                        equipo_list.append(2)
-                        continue
-
-                    # Construir bbox para TeamClassifier
-                    bx, by, bw, bh = det["x"], det["y"], det["w"], det["h"]
-                    bbox = (bx - bw/2, by - bh/2, bx + bw/2, by + bh/2)
-
-                    if self._clf_fitted:
-                        team = self.team_classifier.predict(
-                            frame, bbox,
-                            is_referee=(cls_name == "referee")
-                        )
-                        equipo_list.append(0 if team == Team.A else 1)
-                    else:
-                        # Sin clasificador entrenado: asignar por orden de llegada
-                        equipo_list.append(0)
-
-                # Actualizar tracker con offset de camara
-                tracks = self.tracker.update(
-                    player_dets, equipo_list,
-                    minute=minute,
-                    camera_offset=(dx, dy)
-                )
-                
-                # Exportar a MOT format: frame, id, x1, y1, w, h, conf, -1, -1, -1
-                for tid, track in tracks.items():
-                    if track.frames_lost == 0:
-                        cx, cy, tw, th = track.last_box
-                        x1, y1 = cx - tw/2, cy - th/2
-                        # Usamos frame_count+1 como ID de frame (1-indexed)
-                        line = f"{frame_count+1},{tid},{x1:.1f},{y1:.1f},{tw:.1f},{th:.1f},1,-1,-1,-1\n"
-                        self._mot_file.write(line)
-
-                # ── Re-calibración periódica del TeamClassifier ───────────
-                # Cada 5 minutos de partido, ajustamos los centroides de color
-                # con los tracks activos para adaptarnos a cambios de iluminación.
-                if (self._clf_fitted
-                        and minute - _last_recalib_minute >= _RECALIB_INTERVAL
-                        and len(tracks) >= 6):
-                    adapt_dets = [
-                        {
-                            "bbox": (
-                                t.last_box[0] - t.last_box[2]/2,
-                                t.last_box[1] - t.last_box[3]/2,
-                                t.last_box[0] + t.last_box[2]/2,
-                                t.last_box[1] + t.last_box[3]/2,
-                            ),
-                            "equipo": t.equipo,
-                        }
-                        for t in tracks.values()
-                        if t.frames_lost == 0 and t.clase != "referee"
-                    ]
-                    if self.team_classifier.adapt(frame, adapt_dets):
-                        _last_recalib_minute = minute
-
-                # Guardar estadisticas por track — propagar clase correcta
-                for tid, track in tracks.items():
-                    if track.frames_lost == 0:
-                        px, py = self._pixel_to_pitch(
-                            track.history_x[-1], track.history_y[-1]
-                        )
-                        track_stats[tid]["positions_x"].append(px)
-                        track_stats[tid]["positions_y"].append(py)
-                        track_stats[tid]["minutes"].append(minute)
-                        track_stats[tid]["equipo"] = track.equipo
-                        track_stats[tid]["clase"]  = track.clase
-                        track_stats[tid]["count"]  += 1
-
-                # ── Deteccion de contacto balon-jugador ────────────────────
-                best_ball   = None
-                video_second = frame_pos / fps
-                bx = by = 0
-
-                if ball_dets:
-                    MAX_BALL_JUMP = 800 if self.sample_rate >= 1 else 400
-                    for bcand in sorted(ball_dets, key=lambda x: -x.get("confianza", 0)):
-                        bx_c, by_c = bcand["x"], bcand["y"]
-                        if self.last_ball_pos and self.last_ball_minute > 0:
-                            dt   = (minute - self.last_ball_minute) * 60
-                            dist = ((bx_c - self.last_ball_pos[0])**2 +
-                                    (by_c - self.last_ball_pos[1])**2) ** 0.5
-                            if dt > 0 and (dist / dt) > (MAX_BALL_JUMP / self.sample_rate):
-                                continue
-                        best_ball = bcand
-                        break
-
-                    if best_ball:
-                        bx, by = best_ball["x"], best_ball["y"]
-                        self.last_ball_pos    = (bx, by)
-                        self.last_ball_minute = minute
-                        self.ball_history.append((minute, bx, by))
-
-                else:
-                    # Interpolacion del balon cuando no se detecta
-                    if len(self.ball_history) >= 2:
-                        try:
-                            import pandas as pd
-                            hist   = self.ball_history[-10:]
-                            df_ball = pd.DataFrame(hist, columns=["m", "x", "y"])
-                            m_last  = df_ball["m"].iloc[-1]
-                            dt      = minute - m_last
-                            max_lost = 5.0 / 60.0
-
-                            if 0 < dt <= max_lost:
-                                df_ball.loc[len(df_ball)] = [minute, np.nan, np.nan]
-                                df_ball = df_ball.set_index("m")
-                                method  = "quadratic" if len(hist) >= 3 else "slinear"
-                                df_ball["x"] = df_ball["x"].interpolate(
-                                    method=method, fill_value="extrapolate", limit_direction="both"
-                                )
-                                df_ball["y"] = df_ball["y"].interpolate(
-                                    method=method, fill_value="extrapolate", limit_direction="both"
-                                )
-                                bx = float(df_ball.loc[minute, "x"]) + dx
-                                by = float(df_ball.loc[minute, "y"]) + dy
-                                best_ball = {
-                                    "x": bx, "y": by, "w": 25, "h": 25,
-                                    "clase": "ball", "confianza": 0.05,
-                                    "is_interpolated": True
-                                }
-                        except Exception:
-                            pass
-
-                # Detectar jugador mas cercano al balon
-                if best_ball:
-                    min_dist    = float("inf")
-                    closest_tid = None
+                ret, frame = cap.read()
+                if not ret:
+                    break
+    
+                minute   = frame_pos / fps / 60
+                progreso = 10 + int(80 * frame_count / max(frames_to_analyze, 1))
+                yield progreso, f"Analizando minuto {minute:.1f}... ({frame_count+1}/{frames_to_analyze})", {}
+    
+                try:
+                    # Compensacion de movimiento de camara (optical flow)
+                    dx, dy = self.camera_estimator.compute_offset(frame)
+    
+                    # Deteccion YOLO — 4 clases: player, goalkeeper, referee, ball
+                    dets = detect_frame(frame, mode=self.detection_mode, confidence=self.confidence)
+    
+                    # Separar balon del resto
+                    ball_dets   = [d for d in dets if d.get("clase") == "ball"]
+                    player_dets = [d for d in dets if d.get("clase") != "ball"]
+    
+                    # ── Capa 2: Clasificar equipo de cada jugador ──────────────
+                    all_dets_for_tracker = player_dets + ball_dets
+                    equipo_list = []
+                    for det in player_dets:
+                        cls_name = det.get("clase", "player")
+                        if cls_name == "referee":
+                            equipo_list.append(2)
+                            continue
+                        bx, by, bw, bh = det["x"], det["y"], det["w"], det["h"]
+                        bbox = (bx - bw/2, by - bh/2, bx + bw/2, by + bh/2)
+                        if self._clf_fitted:
+                            team = self.team_classifier.predict(frame, bbox, is_referee=False)
+                            equipo_list.append(0 if team == Team.A else 1)
+                        else:
+                            equipo_list.append(0)
+                    for _ in ball_dets:
+                        equipo_list.append(-1)
+    
+                    # Actualizar tracker con offset de camara
+                    tracks = self.tracker.update(
+                        all_dets_for_tracker, equipo_list,
+                        minute=minute,
+                        camera_offset=(dx, dy)
+                    )
+                    
+                    # Exportar a MOT format extendido: frame, id, x1, y1, w, h, conf, -1, -1, -1, clase, equipo
+                    class_map = {"player": 0, "goalkeeper": 1, "referee": 2, "ball": 3}
                     for tid, track in tracks.items():
-                        if track.frames_lost == 0 and track.clase != "referee":
-                            tx, ty = track.last_box[0], track.last_box[1]
-                            dist   = ((tx - bx)**2 + (ty - by)**2) ** 0.5
-                            if dist < min_dist:
-                                min_dist    = dist
-                                closest_tid = tid
-
-                    CONTACT_RADIUS  = 130
-                    MIN_GAP_SECONDS = 1.0
-
-                    if closest_tid is not None and min_dist < CONTACT_RADIUS:
-                        track_stats[closest_tid]["ball_contacts"] += 1
-                        last_event_second = next(
-                            (e["video_second"] for e in reversed(ball_events)
-                             if e["track_id"] == closest_tid), -999
-                        )
-                        if video_second - last_event_second > MIN_GAP_SECONDS:
-                            action_type = self._classify_ball_action(best_ball, tracks[closest_tid])
-                            bx_p, by_p  = self._pixel_to_pitch(bx, by)
-                            event_data  = {
-                                "track_id":      closest_tid,
-                                "video_second":  video_second,
-                                "minute":        minute,
-                                "equipo":        track_stats[closest_tid]["equipo"],
-                                "ball_pos":      (bx, by),
-                                "pitch_pos":     (bx_p, by_p),
-                                "action":        action_type,
-                                "conf":          best_ball.get("confianza", 0),
-                                "is_interpolated": best_ball.get("is_interpolated", False)
+                        if track.frames_lost == 0:
+                            cx, cy, tw, th = track.last_box
+                            x1, y1 = cx - tw/2, cy - th/2
+                            cls_id = class_map.get(track.clase, 0)
+                            team_id = getattr(track, "equipo", -1)
+                            # Usamos frame_count+1 como ID de frame (1-indexed)
+                            line = f"{frame_count+1},{tid},{x1:.1f},{y1:.1f},{tw:.1f},{th:.1f},1,-1,-1,-1,{cls_id},{team_id}\n"
+                            self._mot_file.write(line)
+    
+                    # ── Re-calibración periódica del TeamClassifier ───────────
+                    # Cada 5 minutos de partido, ajustamos los centroides de color
+                    # con los tracks activos para adaptarnos a cambios de iluminación.
+                    if (self._clf_fitted
+                            and minute - _last_recalib_minute >= _RECALIB_INTERVAL
+                            and len(tracks) >= 6):
+                        adapt_dets = [
+                            {
+                                "bbox": (
+                                    t.last_box[0] - t.last_box[2]/2,
+                                    t.last_box[1] - t.last_box[3]/2,
+                                    t.last_box[0] + t.last_box[2]/2,
+                                    t.last_box[1] + t.last_box[3]/2,
+                                ),
+                                "equipo": t.equipo,
                             }
-                            if self.event_spotter.validate_geometrical(event_data, (bx_p, by_p)):
-                                ball_events.append(event_data)
-
-                # ── EventSpotter: detectar posesion y pases ───────────────
-                ball_pos_px = (bx, by) if best_ball else None
-                bx_p, by_p  = self._pixel_to_pitch(bx, by) if best_ball else (0, 0)
-                ball_conf   = best_ball.get("confianza", 0) if best_ball else 0.0
-
-                new_events = self.event_spotter.update(
-                    frame_second = video_second,
-                    minute       = minute,
-                    tracks       = tracks,
-                    ball_pos     = ball_pos_px,
-                    pitch_pos    = (bx_p, by_p),
-                    ball_conf    = ball_conf,
-                )
-                for ev in new_events:
-                    ball_events.append({
-                        "track_id":     ev.track_id,
-                        "video_second": ev.timestamp,
-                        "minute":       ev.minute,
-                        "equipo":       ev.team,
-                        "ball_pos":     ev.ball_pos,
-                        "pitch_pos":    ev.pitch_pos,
-                        "action":       ev.action,
-                        "conf":         ev.confidence,
-                        "is_interpolated": False,
-                    })
-
-                # DETECCIÓN AVANZADA DE EVENTOS
-                advanced_events = self.advanced_detector.detect_advanced_events(
-                    ball_pos=ball_pos_px,
-                    pitch_pos=(bx_p, by_p),
-                    tracks=tracks,
-                    frame_second=video_second
-                )
-                for ev in advanced_events:
-                    ball_events.append({
-                        "track_id":     ev.track_id,
-                        "video_second": ev.timestamp,
-                        "minute":       ev.minute,
-                        "equipo":       ev.team,
-                        "ball_pos":     ev.ball_pos,
-                        "pitch_pos":    ev.pitch_pos,
-                        "action":       ev.action,
-                        "conf":         ev.confidence,
-                        "is_interpolated": False,
-                        "advanced_detection": True,  # Marcar como detección avanzada
-                    })
-
-                # Guardar detecciones del minuto
-                minuto_key = int(minute)
-                detecciones_por_minuto[minuto_key].extend([
-                    {**det, "equipo": eq}
-                    for det, eq in zip(player_dets, equipo_list)
-                ])
-
-            except Exception as e:
-                yield progreso, f"Error en frame {frame_count}: {e}", {}
-
-            frame_count += 1
-            frame_pos   += frame_interval
+                            for t in tracks.values()
+                            if t.frames_lost == 0 and t.clase != "referee"
+                        ]
+                        if self.team_classifier.adapt(frame, adapt_dets):
+                            _last_recalib_minute = minute
+    
+                    # Guardar estadisticas por track — propagar clase correcta
+                    for tid, track in tracks.items():
+                        if track.frames_lost == 0:
+                            px, py = self._pixel_to_pitch(
+                                track.history_x[-1], track.history_y[-1]
+                            )
+                            track_stats[tid]["positions_x"].append(px)
+                            track_stats[tid]["positions_y"].append(py)
+                            track_stats[tid]["minutes"].append(minute)
+                            track_stats[tid]["equipo"] = track.equipo
+                            track_stats[tid]["clase"]  = track.clase
+                            track_stats[tid]["count"]  += 1
+    
+                    # ── Deteccion de contacto balon-jugador ────────────────────
+                    best_ball   = None
+                    video_second = frame_pos / fps
+                    bx = by = 0
+    
+                    if ball_dets:
+                        MAX_BALL_JUMP = 800 if self.sample_rate >= 1 else 400
+                        for bcand in sorted(ball_dets, key=lambda x: -x.get("confianza", 0)):
+                            bx_c, by_c = bcand["x"], bcand["y"]
+                            if self.last_ball_pos and self.last_ball_minute > 0:
+                                dt   = (minute - self.last_ball_minute) * 60
+                                dist = ((bx_c - self.last_ball_pos[0])**2 +
+                                        (by_c - self.last_ball_pos[1])**2) ** 0.5
+                                if dt > 0 and (dist / dt) > (MAX_BALL_JUMP / self.sample_rate):
+                                    continue
+                            best_ball = bcand
+                            break
+    
+                        if best_ball:
+                            bx, by = best_ball["x"], best_ball["y"]
+                            self.last_ball_pos    = (bx, by)
+                            self.last_ball_minute = minute
+                            self.ball_history.append((minute, bx, by))
+    
+                    else:
+                        # Interpolacion del balon cuando no se detecta
+                        if len(self.ball_history) >= 2:
+                            try:
+                                import pandas as pd
+                                hist   = self.ball_history[-10:]
+                                df_ball = pd.DataFrame(hist, columns=["m", "x", "y"])
+                                m_last  = df_ball["m"].iloc[-1]
+                                dt      = minute - m_last
+                                max_lost = 5.0 / 60.0
+    
+                                if 0 < dt <= max_lost:
+                                    df_ball.loc[len(df_ball)] = [minute, np.nan, np.nan]
+                                    df_ball = df_ball.set_index("m")
+                                    method  = "quadratic" if len(hist) >= 3 else "slinear"
+                                    df_ball["x"] = df_ball["x"].interpolate(
+                                        method=method, fill_value="extrapolate", limit_direction="both"
+                                    )
+                                    df_ball["y"] = df_ball["y"].interpolate(
+                                        method=method, fill_value="extrapolate", limit_direction="both"
+                                    )
+                                    bx = float(df_ball.loc[minute, "x"]) + dx
+                                    by = float(df_ball.loc[minute, "y"]) + dy
+                                    best_ball = {
+                                        "x": bx, "y": by, "w": 25, "h": 25,
+                                        "clase": "ball", "confianza": 0.05,
+                                        "is_interpolated": True
+                                    }
+                            except Exception:
+                                pass
+    
+                    # Detectar jugador mas cercano al balon
+                    if best_ball:
+                        min_dist    = float("inf")
+                        closest_tid = None
+                        for tid, track in tracks.items():
+                            if track.frames_lost == 0 and track.clase != "referee":
+                                tx, ty = track.last_box[0], track.last_box[1]
+                                dist   = ((tx - bx)**2 + (ty - by)**2) ** 0.5
+                                if dist < min_dist:
+                                    min_dist    = dist
+                                    closest_tid = tid
+    
+                        CONTACT_RADIUS  = 130
+                        MIN_GAP_SECONDS = 1.0
+    
+                        if closest_tid is not None and min_dist < CONTACT_RADIUS:
+                            track_stats[closest_tid]["ball_contacts"] += 1
+                            last_event_second = next(
+                                (e["video_second"] for e in reversed(ball_events)
+                                 if e["track_id"] == closest_tid), -999
+                            )
+                            if video_second - last_event_second > MIN_GAP_SECONDS:
+                                action_type = self._classify_ball_action(best_ball, tracks[closest_tid])
+                                bx_p, by_p  = self._pixel_to_pitch(bx, by)
+                                event_data  = {
+                                    "track_id":      closest_tid,
+                                    "video_second":  video_second,
+                                    "minute":        minute,
+                                    "equipo":        track_stats[closest_tid]["equipo"],
+                                    "ball_pos":      (bx, by),
+                                    "pitch_pos":     (bx_p, by_p),
+                                    "action":        action_type,
+                                    "conf":          best_ball.get("confianza", 0),
+                                    "is_interpolated": best_ball.get("is_interpolated", False)
+                                }
+                                if self.event_spotter.validate_geometrical(event_data, (bx_p, by_p)):
+                                    ball_events.append(event_data)
+    
+                    # ── EventSpotter: detectar posesion y pases ───────────────
+                    ball_pos_px = (bx, by) if best_ball else None
+                    bx_p, by_p  = self._pixel_to_pitch(bx, by) if best_ball else (0, 0)
+                    ball_conf   = best_ball.get("confianza", 0) if best_ball else 0.0
+    
+                    new_events = self.event_spotter.update(
+                        frame_second = video_second,
+                        minute       = minute,
+                        tracks       = tracks,
+                        ball_pos     = ball_pos_px,
+                        pitch_pos    = (bx_p, by_p),
+                        ball_conf    = ball_conf,
+                    )
+                    for ev in new_events:
+                        ball_events.append({
+                            "track_id":     ev.track_id,
+                            "video_second": ev.timestamp,
+                            "minute":       ev.minute,
+                            "equipo":       ev.team,
+                            "ball_pos":     ev.ball_pos,
+                            "pitch_pos":    ev.pitch_pos,
+                            "action":       ev.action,
+                            "conf":         ev.confidence,
+                            "is_interpolated": False,
+                        })
+    
+                    # DETECCIÓN AVANZADA DE EVENTOS
+                    advanced_events = self.advanced_detector.detect_advanced_events(
+                        ball_pos=ball_pos_px,
+                        pitch_pos=(bx_p, by_p),
+                        tracks=tracks,
+                        frame_second=video_second
+                    )
+                    for ev in advanced_events:
+                        ball_events.append({
+                            "track_id":     ev.track_id,
+                            "video_second": ev.timestamp,
+                            "minute":       ev.minute,
+                            "equipo":       ev.team,
+                            "ball_pos":     ev.ball_pos,
+                            "pitch_pos":    ev.pitch_pos,
+                            "action":       ev.action,
+                            "conf":         ev.confidence,
+                            "is_interpolated": False,
+                            "advanced_detection": True,  # Marcar como detección avanzada
+                        })
+    
+                    # Guardar detecciones del minuto
+                    minuto_key = int(minute)
+                    detecciones_por_minuto[minuto_key].extend([
+                        {**det, "equipo": eq}
+                        for det, eq in zip(player_dets, equipo_list)
+                    ])
+    
+                except Exception as e:
+                    yield progreso, f"Error en frame {frame_count}: {e}", {}
+    
+                frame_count += 1
+                frame_pos   += frame_interval
 
         except Exception as e:
             yield progreso, f"Error critico en analisis: {e}", {}

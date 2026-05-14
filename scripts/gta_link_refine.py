@@ -162,16 +162,33 @@ def main():
         final_groups.append(current_lines)
 
     # Save refined tracks
+    from collections import Counter
     refined_all_lines = []
+    
     for g in final_groups:
-        refined_all_lines.extend(g)
+        # Calcular la moda de la clase y el equipo para todo el track fusionado
+        # asumiendo que los índices 10 (clase) y 11 (equipo) existen. Si no, default a 0 y -1
+        clases = [int(line[10]) if len(line) > 10 else 0 for line in g]
+        equipos = [int(line[11]) if len(line) > 11 else -1 for line in g]
+        
+        mode_clase = Counter(clases).most_common(1)[0][0] if clases else 0
+        mode_equipo = Counter(equipos).most_common(1)[0][0] if equipos else -1
+        
+        for line in g:
+            # Añadimos los campos a la línea si no existen para estandarizar
+            line_out = list(line)
+            while len(line_out) < 12:
+                line_out.append(0)
+            line_out[10] = mode_clase
+            line_out[11] = mode_equipo
+            refined_all_lines.append(line_out)
     
     # Sort by frame, then id
     refined_all_lines.sort(key=lambda x: (x[0], x[1]))
     
     with open(output_refined, "w") as f:
         for line in refined_all_lines:
-            f.write(f"{int(line[0])},{int(line[1])},{line[2]:.1f},{line[3]:.1f},{line[4]:.1f},{line[5]:.1f},{line[6]:.1f},-1,-1,-1\n")
+            f.write(f"{int(line[0])},{int(line[1])},{line[2]:.1f},{line[3]:.1f},{line[4]:.1f},{line[5]:.1f},{line[6]:.1f},-1,-1,-1,{int(line[10])},{int(line[11])}\n")
             
     print(f"Refined tracks saved to {output_refined}.")
 
