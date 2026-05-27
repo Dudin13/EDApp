@@ -19,7 +19,7 @@ def run_benchmark(video_path="app/videos/test_5min.mp4"):
         "sample_rate": 1,
         "detection_mode": "yolo",
         "tracker_mode": "ucmctrack",
-        "confidence": 40,
+        "confidence": 25,
         "pitch_width": 105,
         "pitch_height": 68
     }

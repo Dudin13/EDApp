@@ -220,7 +220,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
                 x1,y1,x2,y2=map(int,xyxy)
                 w=x2-x1; h=y2-y1; cx=(x1+x2)//2; cy=(y1+y2)//2
                 cls_id=int(d.class_id[i]) if d.class_id is not None else PLAYER_ID
-                conf_v=float(d.confidence[i]) if d.confidence is not None else 0.40
+                conf_v=float(d.confidence[i]) if d.confidence is not None else 0.25
                 clase=id_to_name.get(cls_id,"player")
                 if clase=="ball": continue
                 if cy<h_frame*0.10 or w*h<40 or h<20: continue
@@ -258,7 +258,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
     return detecciones
 
 
-def detect_frame_yolo(frame, confidence=0.45, **kwargs):
+def detect_frame_yolo(frame, confidence=0.25, **kwargs):
     """Single-model detection path supporting additional options via kwargs."""
     model=_load_player_model()
     h_frame,w_frame=frame.shape[:2]
@@ -337,7 +337,7 @@ def detect_frame_coco(frame, confidence=0.35):
     return dets
 
 
-def detect_frame(frame, mode="auto", confidence=40, imgsz=None):
+def detect_frame(frame, mode="auto", confidence=25, imgsz=None):
     """
     Fachada principal. Orden de prioridad:
       kaggle/auto+modelos -> yolo -> roboflow -> coco
