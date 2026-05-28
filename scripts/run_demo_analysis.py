@@ -34,6 +34,40 @@ from modules.calibration_auto import AutoCalibrator
 
 # El resto se cargará después
 
+def get_player_color(track_id, team):
+    if team == 2:  # Referee
+        return (50, 255, 50)  # Green
+    
+    # Seed generator with track_id to have consistent color
+    np.random.seed(int(track_id) & 0xffffffff)
+    
+    if team == 0:  # Team A: Blue tones
+        b = np.random.randint(160, 256)
+        g = np.random.randint(60, 151)
+        r = np.random.randint(0, 81)
+        return (b, g, r)
+    elif team == 1:  # Team B: Yellow/Orange tones
+        r = np.random.randint(200, 256)
+        g = np.random.randint(100, 211)
+        b = np.random.randint(0, 61)
+        return (b, g, r)
+    else:
+        return (180, 180, 180)
+
+def draw_dotted_line(img, pt1, pt2, color, thickness=1, gap=5):
+    dist = np.hypot(pt2[0]-pt1[0], pt2[1]-pt1[1])
+    if dist == 0:
+        return
+    n = int(dist / gap)
+    if n == 0:
+        cv2.circle(img, pt1, thickness, color, -1, cv2.LINE_AA)
+        return
+    for i in range(n + 1):
+        t = i / n
+        x = int(pt1[0] * (1 - t) + pt2[0] * t)
+        y = int(pt1[1] * (1 - t) + pt2[1] * t)
+        cv2.circle(img, (x, y), thickness, color, -1, cv2.LINE_AA)
+
 # ── Configuración ──────────────────────────────────────────────────────────
 MODEL_PLAYERS = str(ROOT / "models/players.pt")
 MODEL_PITCH   = str(ROOT / "models/pitch.pt")
@@ -111,6 +145,7 @@ minimap_points   = 0
 captures_at      = [30, 90, 150] # segundos
 
 captures_made    = 0
+ball_pitch_history = []
 
 # Colores base (se actualizarán dinámicamente para los equipos)
 colors = {
@@ -205,6 +240,10 @@ while True:
         total_ball_frames += 1
         if calib_done:
             pitch_pos = calibrator.pixel_to_pitch(b["x"], b["y"])
+            if 0 < pitch_pos[0] < 105 and 0 < pitch_pos[1] < 68:
+                ball_pitch_history.append(pitch_pos)
+                if len(ball_pitch_history) > 30:
+                    ball_pitch_history.pop(0)
 
 
     # ── 8. Eventos ────────────────────────────────────────────────────────
@@ -232,16 +271,8 @@ while True:
         x2 = int(cx + tw/2); y2 = int(cy + th/2)
 
 
-        team_val = Team.A.value if track.equipo == 0 else \
-                   Team.B.value if track.equipo == 1 else Team.REFEREE.value
+        color = get_player_color(tid, track.equipo)
         
-        # Usar color real si el equipo está fiteado
-        if team_clf_fitted and track.equipo in (0, 1):
-            t_enum = Team.A if track.equipo == 0 else Team.B
-            color = team_clf.get_team_color_bgr(t_enum)
-        else:
-            color = colors.get(team_val, (180, 180, 180))
-
         cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
         label = f"#{tid} {track.clase[:3].upper()}"
         cv2.putText(vis, label, (x1, max(y1-6, 10)),
@@ -255,31 +286,75 @@ while True:
 
     # Minimap
     if calib_done:
-        det_list = []
+        minimap = np.zeros((MINIMAP_H, MINIMAP_W, 3), dtype=np.uint8)
+        minimap[:] = (40, 65, 35)  # Verde oscuro estético para tema premium
+        
+        # Dibujar líneas del campo
+        calibrator._draw_field_lines(minimap, MINIMAP_W, MINIMAP_H)
+        
+        # 1. Dibujar trayectorias de jugadores y sus círculos actuales
         for tid, track in tracks.items():
-            if track.frames_lost > 0: continue
+            if track.frames_lost > 0:
+                continue
+            
+            # Obtener posición actual en el campo
             px, py = calibrator.pixel_to_pitch(track.last_box[0], track.last_box[1])
-            # Solo pintar si está dentro de los límites
+            
+            if not hasattr(track, 'history_pitch_x'):
+                track.history_pitch_x = []
+                track.history_pitch_y = []
+            
+            # Solo añadir si está en límites razonables
             if 0 < px < 105 and 0 < py < 68:
-                det_list.append({"pitch_pos": (px, py), "team": track.equipo})
-
-        
-        # Preparar colores dinámicos para el minimap
-        m_colors = {}
-        if team_clf_fitted:
-            m_colors[0] = team_clf.get_team_color_bgr(Team.A)
-            m_colors[1] = team_clf.get_team_color_bgr(Team.B)
-        
-        # Inyectar balon al minimap
+                track.history_pitch_x.append(px)
+                track.history_pitch_y.append(py)
+                
+            if len(track.history_pitch_x) > 30:
+                track.history_pitch_x.pop(0)
+                track.history_pitch_y.pop(0)
+                
+            color = get_player_color(tid, track.equipo)
+            
+            # Transformar a píxeles del minimapa
+            def to_map(mx, my):
+                x_map = int(mx / 105.0 * MINIMAP_W)
+                y_map = int(my / 68.0 * MINIMAP_H)
+                return np.clip(x_map, 2, MINIMAP_W - 3), np.clip(y_map, 2, MINIMAP_H - 3)
+            
+            # Dibujar la línea de trayectoria (últimas 30 posiciones)
+            if len(track.history_pitch_x) > 1:
+                pts = [to_map(hx, hy) for hx, hy in zip(track.history_pitch_x, track.history_pitch_y)]
+                for idx in range(len(pts) - 1):
+                    cv2.line(minimap, pts[idx], pts[idx+1], color, 1, cv2.LINE_AA)
+            
+            # Dibujar posición actual
+            if track.history_pitch_x:
+                cx_map, cy_map = to_map(track.history_pitch_x[-1], track.history_pitch_y[-1])
+                cv2.circle(minimap, (cx_map, cy_map), 5, color, -1, cv2.LINE_AA)
+                cv2.circle(minimap, (cx_map, cy_map), 5, (255, 255, 255), 1, cv2.LINE_AA)
+                
+        # 2. Dibujar trayectoria del balón
+        if len(ball_pitch_history) > 1:
+            def to_map(mx, my):
+                x_map = int(mx / 105.0 * MINIMAP_W)
+                y_map = int(my / 68.0 * MINIMAP_H)
+                return np.clip(x_map, 2, MINIMAP_W - 3), np.clip(y_map, 2, MINIMAP_H - 3)
+                
+            pts_ball = [to_map(bx, by) for bx, by in ball_pitch_history]
+            for idx in range(len(pts_ball) - 1):
+                draw_dotted_line(minimap, pts_ball[idx], pts_ball[idx+1], (255, 255, 255), thickness=1, gap=4)
+                
+        # Dibujar posición actual del balón
         if ball_pos and calib_done:
             if 0 < pitch_pos[0] < 105 and 0 < pitch_pos[1] < 68:
-                det_list.append({"pitch_pos": pitch_pos, "team": 3})
-
-        
-        if det_list:
-            minimap_points += len(det_list)
-
-        minimap = calibrator.draw_pitch_minimap(det_list, MINIMAP_W, MINIMAP_H, custom_colors=m_colors)
+                def to_map(mx, my):
+                    x_map = int(mx / 105.0 * MINIMAP_W)
+                    y_map = int(my / 68.0 * MINIMAP_H)
+                    return np.clip(x_map, 2, MINIMAP_W - 3), np.clip(y_map, 2, MINIMAP_H - 3)
+                bx_map, by_map = to_map(pitch_pos[0], pitch_pos[1])
+                cv2.circle(minimap, (bx_map, by_map), 4, (255, 255, 255), -1, cv2.LINE_AA)
+                cv2.circle(minimap, (bx_map, by_map), 4, (0, 0, 0), 1, cv2.LINE_AA)
+                
         vis[MINIMAP_Y:MINIMAP_Y+MINIMAP_H, MINIMAP_X:MINIMAP_X+MINIMAP_W] = minimap
 
     # Keypoints de calibración
@@ -332,12 +407,29 @@ print(f"Frames procesados: {processed}")
 print("-" * 60)
 print(f"POSESIÓN:  Equipo A: {possession['team_0']}% | Equipo B: {possession['team_1']}%")
 print("-" * 60)
+
+# Calcular estadísticas de xG y Duelos
+total_xg_a = sum(getattr(e, 'xg', 0.0) or 0.0 for e in events if e.team == 0 and e.action in ["Tiro", "Tiro a puerta"])
+total_xg_b = sum(getattr(e, 'xg', 0.0) or 0.0 for e in events if e.team == 1 and e.action in ["Tiro", "Tiro a puerta"])
+total_duels = len([e for e in events if e.action == "Duelo"])
+
+print(f"xG ACUMULADO:   Equipo A: {total_xg_a:.3f} | Equipo B: {total_xg_b:.3f}")
+print(f"TOTAL DUELOS:   {total_duels}")
+print("-" * 60)
+
 print("EVENTOS DETECTADOS:")
 counts = {}
 for e in events:
     counts[e.action] = counts.get(e.action, 0) + 1
-    # Imprimir solo los más importantes para no saturar la consola
-    if e.action in ["Tiro", "Centro", "Gol", "Recuperacion"]:
+    if e.action in ["Tiro", "Tiro a puerta"]:
+        xg_val = getattr(e, 'xg', None)
+        xg_str = f" [xG: {xg_val:.3f}]" if xg_val is not None else ""
+        print(f"  [{e.minute:.1f}'] Tiro (Equipo {'A' if e.team==0 else 'B'}){xg_str}")
+    elif e.action == "Duelo":
+        players_str = ", ".join([f"#{p['tid']} (Eq {'A' if p['team']==0 else 'B'})" for p in getattr(e, 'duel_players', []) or []])
+        poss_before = f"#{e.possessor_before}" if getattr(e, 'possessor_before', None) is not None else "Ninguno"
+        print(f"  [{e.minute:.1f}'] Duelo entre [{players_str}] | Posesión previa: {poss_before} -> Ganador: #{e.winner}")
+    elif e.action in ["Centro", "Gol", "Recuperacion"]:
         print(f"  [{e.minute:.1f}'] {e.action} (Equipo {'A' if e.team==0 else 'B'})")
 
 print("\nRESUMEN DE ACCIONES:")

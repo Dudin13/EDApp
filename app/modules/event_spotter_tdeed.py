@@ -40,6 +40,10 @@ class BallEvent:
     pitch_pos:    tuple        # (x, y) en coordenadas de campo (0-105, 0-68)
     confidence:   float        # 0.0 - 1.0
     is_validated: bool = True  # paso la validacion geometrica
+    xg:           Optional[float] = None
+    duel_players: Optional[list] = None
+    possessor_before: Optional[int] = None
+    winner:       Optional[int] = None
 
 
 class EventSpotterTDEED:
@@ -100,6 +104,13 @@ class EventSpotterTDEED:
         self._last_global_event_ts: float      = -999.0
         self._frame_count: int                 = 0
 
+        # Detección de duelos en vivo
+        self._in_duel = False
+        self._duel_players = set()
+        self._duel_frames = []
+        self._duel_possessor_before = None
+        self._last_possessor = None
+
 
         # Estadisticas acumuladas
         self._team_possession_counts = {0: 0, 1: 0}
@@ -139,6 +150,8 @@ class EventSpotterTDEED:
         new_events = []
 
         if ball_pos is None or ball_conf < 0.15:
+            if self._in_duel:
+                self._end_duel(frame_second, minute, tracks, new_events)
             self._possession_history.append(None)
             return new_events
 
@@ -150,6 +163,8 @@ class EventSpotterTDEED:
             dist = np.hypot(bx - self._last_ball_pos[0], by - self._last_ball_pos[1])
             if (dist / dt) > self.MAX_BALL_SPEED_PX_S:
                 # Balon se movio demasiado rapido -> probable falsa deteccion
+                if self._in_duel:
+                    self._end_duel(frame_second, minute, tracks, new_events)
                 self._possession_history.append(None)
                 return new_events
 
@@ -165,6 +180,47 @@ class EventSpotterTDEED:
             ball_speed_ms = dist_m / dt
         
         self._last_ball_pitch_pos = pitch_pos
+
+        # Detección de duelos en tiempo real
+        players_close = []
+        if pitch_pos and len(pitch_pos) == 2:
+            bx_m, by_m = pitch_pos
+            for tid, track in tracks.items():
+                if track.frames_lost > 0 or track.clase == "referee":
+                    continue
+                tx, ty = track.last_box[0], track.last_box[1]
+                if calibrator is not None:
+                    px, py = calibrator.pixel_to_pitch(tx, ty)
+                else:
+                    px = np.clip(float(tx) / 1280.0 * 105.0, 0, 105)
+                    py = np.clip(float(ty) / 720.0 * 68.0, 0, 68)
+                
+                p_dist = np.hypot(px - bx_m, py - by_m)
+                if p_dist < 0.75:  # BALL_PROXIMITY
+                    players_close.append({
+                        "tid": tid,
+                        "team": track.equipo,
+                        "dist": p_dist
+                    })
+
+        if len(players_close) >= 2:
+            if not self._in_duel:
+                self._in_duel = True
+                self._duel_possessor_before = self._last_possessor
+                self._duel_players = set()
+                self._duel_frames = []
+            for p in players_close:
+                self._duel_players.add((p["tid"], p["team"]))
+            self._duel_frames.append({
+                "minute": minute,
+                "second": frame_second,
+                "players": players_close,
+                "pitch_pos": pitch_pos,
+                "ball_pos": ball_pos
+            })
+        else:
+            if self._in_duel:
+                self._end_duel(frame_second, minute, tracks, new_events)
 
 
         # ── Encontrar poseedor: jugador mas cercano al balon ───────────────
@@ -242,6 +298,11 @@ class EventSpotterTDEED:
                 )
 
                 if can_generate:
+                    xg_val = None
+                    if action in ["Tiro", "Tiro a puerta"]:
+                        team_str = 'A' if team == 0 else 'B'
+                        from modules.event_engine import calculate_xg
+                        xg_val = calculate_xg(pitch_pos[0], pitch_pos[1], team_str)
 
                     event = BallEvent(
                         timestamp   = frame_second,
@@ -253,6 +314,7 @@ class EventSpotterTDEED:
                         pitch_pos   = pitch_pos,
                         confidence  = min(ball_conf, 0.95),
                         is_validated= True,
+                        xg          = xg_val
                     )
                     if self.validate_geometrical({"action": action}, pitch_pos):
                         self._events.append(event)
@@ -266,7 +328,47 @@ class EventSpotterTDEED:
             if smoothed_possessor is not None:
                 self._possessor_frames += 1
 
+        if self._current_possessor is not None:
+            self._last_possessor = self._current_possessor
+
         return new_events
+
+    def _end_duel(self, frame_second: float, minute: float, tracks: dict, new_events: list):
+        if not self._in_duel or not self._duel_frames:
+            self._in_duel = False
+            return
+        
+        # Determine winner
+        winner = self._current_possessor
+        if winner is None:
+            # Fallback to closest player in last frame of the duel
+            last_df = self._duel_frames[-1]
+            if last_df["players"]:
+                last_df["players"].sort(key=lambda x: x["dist"])
+                winner = last_df["players"][0]["tid"]
+        
+        if winner is not None:
+            winner_team = tracks[winner].equipo if winner in tracks else -1
+            event = BallEvent(
+                timestamp=self._duel_frames[0]["second"],
+                minute=self._duel_frames[0]["minute"],
+                action="Duelo",
+                track_id=winner,
+                team=winner_team,
+                ball_pos=self._duel_frames[0]["ball_pos"],
+                pitch_pos=self._duel_frames[0]["pitch_pos"],
+                confidence=0.95,
+                is_validated=True,
+                xg=None,
+                duel_players=[{"tid": p[0], "team": p[1]} for p in self._duel_players],
+                possessor_before=self._duel_possessor_before,
+                winner=winner
+            )
+            self._events.append(event)
+            self._event_positions.append(self._duel_frames[0]["pitch_pos"])
+            new_events.append(event)
+            
+        self._in_duel = False
 
     def _smooth_possessor(self) -> Optional[int]:
         """
@@ -381,6 +483,10 @@ class EventSpotterTDEED:
                 "pitch_pos":   e.pitch_pos,
                 "confidence":  e.confidence,
                 "is_validated": e.is_validated,
+                "xg":          e.xg,
+                "duel_players": e.duel_players,
+                "possessor_before": e.possessor_before,
+                "winner":      e.winner
             }
             for e in self._events
         ]
@@ -488,15 +594,20 @@ class AdvancedEventDetector(EventSpotterTDEED):
 
         # 3. DETECCIÓN DE TIROS A PUERTA
         if self._is_shot_on_goal(pitch_pos, ball_pos):
+            team_val = self._get_team_from_track(tracks, self._current_possessor)
+            team_str = 'A' if team_val == 0 else 'B'
+            from modules.event_engine import calculate_xg
+            xg_val = calculate_xg(pitch_pos[0], pitch_pos[1], team_str)
             events.append(BallEvent(
                 timestamp=frame_second,
                 minute=frame_second/60,
                 action="Tiro a puerta",
                 track_id=self._current_possessor,
-                team=self._get_team_from_track(tracks, self._current_possessor),
+                team=team_val,
                 ball_pos=ball_pos,
                 pitch_pos=pitch_pos,
-                confidence=0.80
+                confidence=0.80,
+                xg=xg_val
             ))
 
         return events

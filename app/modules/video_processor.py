@@ -441,6 +441,10 @@ class VideoProcessor:
                             "action":       ev.action,
                             "conf":         ev.confidence,
                             "is_interpolated": False,
+                            "xg":           ev.xg,
+                            "duel_players": getattr(ev, 'duel_players', None),
+                            "possessor_before": getattr(ev, 'possessor_before', None),
+                            "winner":      getattr(ev, 'winner', None),
                         })
     
                     # DETECCIÓN AVANZADA DE EVENTOS
@@ -462,6 +466,10 @@ class VideoProcessor:
                             "conf":         ev.confidence,
                             "is_interpolated": False,
                             "advanced_detection": True,  # Marcar como detección avanzada
+                            "xg":           ev.xg,
+                            "duel_players": getattr(ev, 'duel_players', None),
+                            "possessor_before": getattr(ev, 'possessor_before', None),
+                            "winner":      getattr(ev, 'winner', None),
                         })
     
                     # Guardar detecciones del minuto
