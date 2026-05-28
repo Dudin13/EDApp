@@ -70,6 +70,8 @@ class EventEngine:
         duel_frames = []
         possessor_before = None
         last_possessor = None
+        
+        last_shot_minute = -999.0
 
         for idx_f, ball_frame in enumerate(interpolated_ball):
             m = ball_frame["minute"]
@@ -114,6 +116,39 @@ class EventEngine:
                 })
                 if not in_duel:
                     last_possessor = closest_tid
+
+            # Detección de Tiro si supera 4 m/s hacia portería
+            speed = 0.0
+            heading_goal = False
+            if idx_f > 0:
+                prev_frame = interpolated_ball[idx_f - 1]
+                dt = (m - prev_frame["minute"]) * 60.0  # en segundos
+                if dt > 0:
+                    dist = np.sqrt((bx - prev_frame["pitch_x"])**2 + (by - prev_frame["pitch_y"])**2)
+                    speed = dist / dt
+                    
+                    # Determinar si va hacia la portería
+                    if closest_team == 0:  # Equipo A (0) ataca portería B (x=105)
+                        if bx > 90 and bx > prev_frame["pitch_x"]:
+                            heading_goal = True
+                    elif closest_team == 1:  # Equipo B (1) ataca portería A (x=0)
+                        if bx < 15 and bx < prev_frame["pitch_x"]:
+                            heading_goal = True
+
+            if speed > 4.0 and heading_goal and (m - last_shot_minute > 5.0 / 60.0):
+                team_str = 'A' if closest_team == 0 else 'B'
+                xg_val = calculate_xg(bx, by, team_str)
+                duels.append({
+                    "minute": m,
+                    "from_tid": closest_tid,
+                    "to_tid": None,
+                    "team": closest_team,
+                    "action": "Tiro",
+                    "pitch_pos": (bx, by),
+                    "xg": xg_val,
+                    "footpass_class": "Shot"
+                })
+                last_shot_minute = m
 
             # Detección de duelos (2 o más jugadores a < 0.75m del balón)
             if len(players_close) >= 2:
@@ -179,7 +214,8 @@ class EventEngine:
                             "pitch_pos": duel_pos,
                             "duel_players": [{"tid": p[0], "team": p[1]} for p in duel_players],
                             "possessor_before": possessor_before,
-                            "winner": winner
+                            "winner": winner,
+                            "footpass_class": "Duel"
                         })
                     in_duel = False
 
@@ -207,14 +243,40 @@ class EventEngine:
                 if candidate_count >= self.change_threshold:
                     # Cambio de posesión detectado
                     event_type = "pass" if team == current_team else "turnover"
+                    action_name = "Pase" if event_type == "pass" else "Recuperación"
+                    
+                    # Encontrar el inicio del pase en possession_log
+                    start_pos = None
+                    for prev_entry in reversed(possession_log[:possession_log.index(entry)]):
+                        if prev_entry["tid"] == current_possessor:
+                            start_pos = prev_entry["pos"]
+                            break
+                    if start_pos is None:
+                        start_pos = entry["pos"]
+                    
+                    start_x, start_y = start_pos
+                    dest_x, dest_y = entry["pos"]
+                    
+                    footpass_class = "Pass"
+                    if event_type == "pass":
+                        # Centro (CROSS): pitch_pos x > 80 o x < 25 e Y de destino en central (30<y<38)
+                        if (start_x > 80 or start_x < 25) and (30 < dest_y < 38):
+                            footpass_class = "Cross"
+                        # Saque de banda (THROW_IN): start_y < 5 o start_y > 63
+                        elif start_y < 5 or start_y > 63:
+                            action_name = "Saque_banda"
+                            footpass_class = "Throw-in"
+                    else:
+                        footpass_class = "Recovery"
                     
                     events.append({
                         "minute": entry["minute"],
                         "from_tid": current_possessor,
                         "to_tid": tid,
                         "team": team,
-                        "action": "Pase" if event_type == "pass" else "Recuperación",
-                        "pitch_pos": entry["pos"]
+                        "action": action_name,
+                        "pitch_pos": entry["pos"],
+                        "footpass_class": footpass_class
                     })
                     
                     current_possessor = tid

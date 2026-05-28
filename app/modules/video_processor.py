@@ -445,6 +445,7 @@ class VideoProcessor:
                             "duel_players": getattr(ev, 'duel_players', None),
                             "possessor_before": getattr(ev, 'possessor_before', None),
                             "winner":      getattr(ev, 'winner', None),
+                            "footpass_class": getattr(ev, 'footpass_class', None),
                         })
     
                     # DETECCIÓN AVANZADA DE EVENTOS
@@ -470,6 +471,7 @@ class VideoProcessor:
                             "duel_players": getattr(ev, 'duel_players', None),
                             "possessor_before": getattr(ev, 'possessor_before', None),
                             "winner":      getattr(ev, 'winner', None),
+                            "footpass_class": getattr(ev, 'footpass_class', None),
                         })
     
                     # Guardar detecciones del minuto

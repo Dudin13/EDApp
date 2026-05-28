@@ -44,6 +44,7 @@ class BallEvent:
     duel_players: Optional[list] = None
     possessor_before: Optional[int] = None
     winner:       Optional[int] = None
+    footpass_class: Optional[str] = None
 
 
 class EventSpotterTDEED:
@@ -90,7 +91,7 @@ class EventSpotterTDEED:
 
         # Clases de eventos (compatibilidad con codigo anterior)
         self.classes = [
-            "Pase", "Recepcion", "Tiro", "Corner", "Saque de banda",
+            "Pase", "Recepcion", "Tiro", "Corner", "Saque_banda",
             "Conduccion", "Despeje", "Recuperacion", "Penalty"
         ]
 
@@ -173,11 +174,13 @@ class EventSpotterTDEED:
 
         # Calcular velocidad en m/s usando coordenadas de campo
         ball_speed_ms = 0.0
+        prev_x = None
         if self._last_ball_pitch_pos and pitch_pos:
             dt = max(frame_second - self._last_ball_second, 0.001)
             dist_m = np.hypot(pitch_pos[0] - self._last_ball_pitch_pos[0],
                               pitch_pos[1] - self._last_ball_pitch_pos[1])
             ball_speed_ms = dist_m / dt
+            prev_x = self._last_ball_pitch_pos[0]
         
         self._last_ball_pitch_pos = pitch_pos
 
@@ -283,7 +286,9 @@ class EventSpotterTDEED:
                     ball_pos=ball_pos,
                     pitch_pos=pitch_pos,
                     frame_second=frame_second,
-                    calibrator=calibrator
+                    calibrator=calibrator,
+                    ball_speed_ms=ball_speed_ms,
+                    prev_x=prev_x
                 )
 
 
@@ -304,6 +309,26 @@ class EventSpotterTDEED:
                         from modules.event_engine import calculate_xg
                         xg_val = calculate_xg(pitch_pos[0], pitch_pos[1], team_str)
 
+                    # Determinar footpass_class
+                    footpass_class = "Pass"
+                    if action in ["Tiro", "Tiro a puerta"]:
+                        footpass_class = "Shot"
+                    elif action == "Centro":
+                        footpass_class = "Cross"
+                        action = "Pase"
+                    elif action == "Saque_banda":
+                        footpass_class = "Throw-in"
+                    elif action == "Recuperacion" or action == "Recuperación":
+                        footpass_class = "Recovery"
+                    elif action == "Duelo":
+                        footpass_class = "Duel"
+                    elif action == "Conduccion" or action == "Conducción":
+                        footpass_class = "Drive"
+                    elif action == "Despeje":
+                        footpass_class = "Clearance"
+                    elif action == "Gol":
+                        footpass_class = "Goal"
+
                     event = BallEvent(
                         timestamp   = frame_second,
                         minute      = minute,
@@ -314,7 +339,8 @@ class EventSpotterTDEED:
                         pitch_pos   = pitch_pos,
                         confidence  = min(ball_conf, 0.95),
                         is_validated= True,
-                        xg          = xg_val
+                        xg          = xg_val,
+                        footpass_class = footpass_class
                     )
                     if self.validate_geometrical({"action": action}, pitch_pos):
                         self._events.append(event)
@@ -362,7 +388,8 @@ class EventSpotterTDEED:
                 xg=None,
                 duel_players=[{"tid": p[0], "team": p[1]} for p in self._duel_players],
                 possessor_before=self._duel_possessor_before,
-                winner=winner
+                winner=winner,
+                footpass_class="Duel"
             )
             self._events.append(event)
             self._event_positions.append(self._duel_frames[0]["pitch_pos"])
@@ -390,7 +417,8 @@ class EventSpotterTDEED:
     def _classify_action(self, prev_possessor: int, new_possessor: int,
                          tracks: dict, ball_pos: tuple,
                          pitch_pos: tuple, frame_second: float,
-                         calibrator = None) -> str:
+                         calibrator = None, ball_speed_ms: float = 0.0,
+                         prev_x: Optional[float] = None) -> str:
 
         """
         Clasifica la accion basandose en el cambio de posesion y contexto geometrico.
@@ -408,21 +436,39 @@ class EventSpotterTDEED:
 
         # 2. Tiro (en zona de ataque y sin receptor inmediato)
         if new_possessor is None or new_team != prev_team:
+            heading_goal = False
+            if prev_x is not None:
+                if prev_team == 0 and x > prev_x:
+                    heading_goal = True
+                elif prev_team == 1 and x < prev_x:
+                    heading_goal = True
+
+            if ball_speed_ms > 4.0 and heading_goal:
+                if prev_team == 0 and x > 90:
+                    return "Tiro"
+                elif prev_team == 1 and x < 15:
+                    return "Tiro"
+
+            # Fallback a la regla existente
             if x > 88 or x < 17:  # zona de finalizacion
                 if 20 < y < 48:   # frente a porteria
                     return "Tiro"
 
         # 3. Centro (desde bandas al area)
-        if prev_team == new_team and new_team >= 0 and calibrator is not None:
+        if prev_team == new_team and new_team >= 0:
             nx, ny = 0, 0
             if new_possessor in tracks:
-                pt = calibrator.pixel_to_pitch(tracks[new_possessor].last_box[0], tracks[new_possessor].last_box[1])
-                nx, ny = pt
+                if calibrator is not None:
+                    pt = calibrator.pixel_to_pitch(tracks[new_possessor].last_box[0], tracks[new_possessor].last_box[1])
+                    nx, ny = pt
+                else:
+                    tx, ty = tracks[new_possessor].last_box[0], tracks[new_possessor].last_box[1]
+                    nx = np.clip(float(tx) / 1280.0 * 105.0, 0, 105)
+                    ny = np.clip(float(ty) / 720.0 * 68.0, 0, 68)
 
-            # Viene de banda y va al centro
-            if (y < 12 or y > 56) and (20 < ny < 48):
-                if (x > 70 or x < 35):
-                    return "Centro"
+            # Regla de Centro: pitch_pos x > 80 o x < 25 e Y de destino en central (30<y<38)
+            if (x > 80 or x < 25) and (30 < ny < 38):
+                return "Centro"
 
         # 4. Cambio de equipo -> Recuperacion
         if prev_team != new_team and prev_team >= 0 and new_team >= 0:
@@ -433,7 +479,7 @@ class EventSpotterTDEED:
             if x < 10 or x > 95:
                 return "Saque de puerta"
             if y < 5 or y > 63:
-                return "Saque de banda"
+                return "Saque_banda"
             return "Pase"
 
         return "Pase"
@@ -459,7 +505,7 @@ class EventSpotterTDEED:
             # Debe venir desde zona de ataque
             return x > 70 or x < 35
 
-        if action == "Saque de banda":
+        if action == "Saque de banda" or action == "Saque_banda":
             return y < 8 or y > 60
 
         return True
@@ -486,7 +532,8 @@ class EventSpotterTDEED:
                 "xg":          e.xg,
                 "duel_players": e.duel_players,
                 "possessor_before": e.possessor_before,
-                "winner":      e.winner
+                "winner":      e.winner,
+                "footpass_class": e.footpass_class
             }
             for e in self._events
         ]
@@ -576,7 +623,8 @@ class AdvancedEventDetector(EventSpotterTDEED):
                 team=self._get_team_from_track(tracks, self._current_possessor),
                 ball_pos=ball_pos,
                 pitch_pos=pitch_pos,
-                confidence=0.95
+                confidence=0.95,
+                footpass_class="Goal"
             ))
 
         # 2. DETECCIÓN DE CORNERS
@@ -589,7 +637,8 @@ class AdvancedEventDetector(EventSpotterTDEED):
                 team=self._get_team_from_track(tracks, self._current_possessor),
                 ball_pos=ball_pos,
                 pitch_pos=pitch_pos,
-                confidence=0.85
+                confidence=0.85,
+                footpass_class="Corner"
             ))
 
         # 3. DETECCIÓN DE TIROS A PUERTA
@@ -607,7 +656,8 @@ class AdvancedEventDetector(EventSpotterTDEED):
                 ball_pos=ball_pos,
                 pitch_pos=pitch_pos,
                 confidence=0.80,
-                xg=xg_val
+                xg=xg_val,
+                footpass_class="Shot"
             ))
 
         return events

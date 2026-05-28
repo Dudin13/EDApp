@@ -38,7 +38,9 @@ def render():
             "Pases progresivos",
             "Zonas de recuperación",
             "Zonas de pérdida",
-            "Tiros"
+            "Tiros",
+            "Centro",
+            "Tiro"
         ], label_visibility="collapsed")
 
         st.markdown('<div class="ws-section-header">Opciones</div>', unsafe_allow_html=True)
@@ -53,6 +55,8 @@ def render():
             "Zonas de recuperación": "#00d4aa",
             "Zonas de pérdida": "#ff4d6d",
             "Tiros": "#ff4d6d",
+            "Centro": "#00ff99",
+            "Tiro": "#ff4d6d",
         }
         accent = color_map.get(viz_type, "#00d4aa")
         st.markdown(f"""
@@ -101,7 +105,7 @@ def render():
             )
             ax.set_title(f"Heatmap de posiciones · {data_src}", color='#8899aa', fontsize=11, pad=12)
 
-        elif viz_type in ["Mapa de pases", "Pases progresivos", "Tiros", "Zonas de recuperación", "Zonas de pérdida"]:
+        elif viz_type in ["Mapa de pases", "Pases progresivos", "Tiros", "Zonas de recuperación", "Zonas de pérdida", "Centro", "Tiro"]:
             events = st.session_state.get("ball_events", [])
             
             # Mapeo de tipos de visualización a acciones del modelo
@@ -112,10 +116,15 @@ def render():
                 "Zonas de recuperación": "Recuperación",
                 "Zonas de pérdida": "Pérdida"
             }
-            target_action = action_map.get(viz_type)
             
             # Filtrar eventos que tengan 'pitch_pos' (nueva versión)
-            real_events = [e for e in events if e.get("action") == target_action and "pitch_pos" in e]
+            if viz_type == "Centro":
+                real_events = [e for e in events if (e.get("footpass_class") == "Cross" or e.get("action") == "Centro") and "pitch_pos" in e]
+            elif viz_type == "Tiro":
+                real_events = [e for e in events if (e.get("footpass_class") == "Shot" or e.get("action") == "Tiro") and "pitch_pos" in e]
+            else:
+                target_action = action_map.get(viz_type)
+                real_events = [e for e in events if e.get("action") == target_action and "pitch_pos" in e]
             
             if real_events:
                 for ev in real_events:
@@ -127,8 +136,12 @@ def render():
                     elif eq_idx == 1: ev_color = "#ffffff" # Blanco base
                     else: ev_color = accent
                     
-                    if viz_type == "Tiros":
+                    if viz_type in ("Tiros", "Tiro"):
                         pitch.scatter(px, py, ax=ax, color='#ff4d6d', s=200, zorder=5, marker='*', edgecolors='white', linewidths=0.5)
+                    elif viz_type == "Centro":
+                        pitch.arrows(px, py, px+5, py, width=1.8,
+                                    headwidth=4, headlength=4, color=ev_color, ax=ax, zorder=2, alpha=0.8)
+                        pitch.scatter(px, py, color='white', s=30, zorder=5, alpha=1.0, ax=ax, edgecolors=ev_color)
                     elif "Zonas" in viz_type:
                         col = '#00d4aa' if "recuperación" in viz_type.lower() else '#ff4d6d'
                         pitch.scatter(px, py, ax=ax, color=col, s=160, zorder=5, edgecolors='white', linewidths=0.8, alpha=0.85)

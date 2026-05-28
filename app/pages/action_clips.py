@@ -41,6 +41,9 @@ ACTION_COLORS = {
     "Córner": "#FFD700",
     "Falta": "#8899aa",
     "Acción con balón": "#00d4aa",
+    "Centro": "#00ff99",
+    "Saque_banda": "#a78bfa",
+    "Duelo": "#f59e0b",
 }
 
 CLIP_ANTES = 3
@@ -356,10 +359,43 @@ def render():
 
     # ── Filtros ────────────────────────────────────────────────────────────────
     st.markdown('<div class="ws-section-header">Filtros</div>', unsafe_allow_html=True)
+    
+    # Enriquecer eventos con categoría legible
+    eventos_enriquecidos = []
+    for e in ball_events:
+        fc = e.get("footpass_class")
+        if fc == "Cross":
+            cat = "Centro"
+        elif fc == "Shot":
+            cat = "Tiro"
+        elif fc == "Throw-in":
+            cat = "Saque_banda"
+        elif fc == "Duel":
+            cat = "Duelo"
+        elif fc == "Recovery":
+            cat = "Recuperación"
+        elif fc == "Pass":
+            cat = "Pase"
+        else:
+            act = e.get("action", "")
+            if act == "Saque de banda" or act == "Saque_banda":
+                cat = "Saque_banda"
+            else:
+                cat = act
+        
+        e_copy = e.copy()
+        e_copy["display_category"] = cat
+        eventos_enriquecidos.append(e_copy)
+
     jugadores_en_eventos = sorted(set(
-        e.get("nombre_jugador", f"T{e.get('track_id', '?')}") for e in ball_events
+        e.get("nombre_jugador", f"T{e.get('track_id', '?')}") for e in eventos_enriquecidos
     ))
+    categorias_disponibles = sorted(list(set(
+        e["display_category"] for e in eventos_enriquecidos if e.get("display_category")
+    )))
+    
     col_f1, col_f2 = st.columns(2)
+    categoria_filtro = col_f1.multiselect("Categoría", categorias_disponibles)
     jugador_filtro = col_f2.multiselect("Jugador", jugadores_en_eventos)
 
     st.markdown('<div class="ws-section-header">Opciones de Clip</div>', unsafe_allow_html=True)
@@ -369,7 +405,12 @@ def render():
         help="Desactiva para que la IA dibuje jugadores sobre el clip (puede tardar ~30s)"
     )
 
-    eventos_filtrados = ball_events.copy()
+    eventos_filtrados = eventos_enriquecidos.copy()
+    if categoria_filtro:
+        eventos_filtrados = [
+            e for e in eventos_filtrados
+            if e.get("display_category") in categoria_filtro
+        ]
     if jugador_filtro:
         eventos_filtrados = [
             e for e in eventos_filtrados
@@ -392,13 +433,14 @@ def render():
         minuto = evento.get("minute", 0)
         seg = evento.get("video_second", 0)
         clip_key = f"{evento.get('track_id', i)}_{int(seg)}"
+        cat_color = ACTION_COLORS.get(evento.get("display_category"), "#00d4aa")
         eq_color = "#00d4aa" if equipo == team_local else "#4d9fff"
 
-        with st.expander(f"⚽  Min {minuto:.1f}'  ·  {nombre}  ·  {equipo}", expanded=False):
+        with st.expander(f"⚽  Min {minuto:.1f}'  ·  {nombre}  ·  {evento.get('display_category')}  ·  {equipo}", expanded=False):
             st.markdown(f"""
             <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:20px;
                         background:rgba(13,18,32,0.6);backdrop-filter:blur(10px);border-radius:12px;
-                        border:1px solid rgba(255,255,255,0.05);border-left:5px solid {eq_color};">
+                        border:1px solid rgba(255,255,255,0.05);border-left:5px solid {cat_color};">
                 <div style="font-size:28px;font-weight:900;color:{eq_color};min-width:60px;
                             text-shadow:0 0 10px {eq_color}55;">{int(minuto)}'</div>
                 <div style="flex:1;">
@@ -407,9 +449,9 @@ def render():
                         STAMP: {seg:.1f}s · {equipo}
                     </div>
                 </div>
-                <div style="background:{eq_color}22;border:1px solid {eq_color}44;color:{eq_color};
+                <div style="background:{cat_color}22;border:1px solid {cat_color}44;color:{cat_color};
                             padding:6px 14px;border-radius:20px;font-size:10px;font-weight:800;
-                            text-transform:uppercase;letter-spacing:1px;">EVENTO</div>
+                            text-transform:uppercase;letter-spacing:1px;">{evento.get('display_category')}</div>
             </div>
             """, unsafe_allow_html=True)
 
