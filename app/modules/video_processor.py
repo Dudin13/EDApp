@@ -243,7 +243,10 @@ class VideoProcessor:
     
                 try:
                     # Compensacion de movimiento de camara (optical flow)
-                    dx, dy = self.camera_estimator.compute_offset(frame)
+                    custom_points = None
+                    if getattr(self, "auto_calibrator", None) and getattr(self.auto_calibrator, "is_calibrated", False):
+                        custom_points = self.auto_calibrator.last_keypoints_px
+                    dx, dy = self.camera_estimator.compute_offset(frame, custom_points=custom_points)
     
                     # Deteccion YOLO — 4 clases: player, goalkeeper, referee, ball
                     dets = detect_frame(frame, mode=self.detection_mode, confidence=self.confidence)

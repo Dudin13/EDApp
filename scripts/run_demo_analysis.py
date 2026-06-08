@@ -18,7 +18,7 @@ from pathlib import Path
 
 # ── Rutas del proyecto ─────────────────────────────────────────────────────
 ROOT       = Path("c:/apped")
-VIDEO_PATH = ROOT / "data/samples/test_5min.mp4"
+VIDEO_PATH = ROOT / "data/samples/tactical_10min.mp4"
 OUTPUT_DIR = ROOT / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 OUTPUT_PATH = OUTPUT_DIR / "demo_final_filtered.mp4"

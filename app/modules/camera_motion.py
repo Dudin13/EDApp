@@ -4,8 +4,9 @@ import numpy as np
 class CameraMotionEstimator:
     """
     Estima el movimiento global de la cámara usando Optical Flow (Lucas-Kanade).
-    Rastrea puntos característicos del fondo (como las líneas del campo o publicidad)
-    para deducir cómo se ha movido el plano entre dos frames consecutivos.
+    Puede recibir keypoints del campo fijos (ej. de pitch.pt) para un tracking perfecto
+    del entorno sin contaminación de jugadores. Como fallback, usa puntos característicos
+    sobre una máscara verde de césped para no enganchar jugadores.
     """
     def __init__(self):
         self.prev_gray = None
@@ -24,7 +25,15 @@ class CameraMotionEstimator:
             blockSize=3
         )
 
-    def compute_offset(self, frame: np.ndarray) -> tuple[float, float]:
+    def _get_green_mask(self, frame: np.ndarray) -> np.ndarray:
+        """Crea una máscara que solo incluye los píxeles verdes (césped)."""
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        lower_green = np.array([35, 40, 40])
+        upper_green = np.array([85, 255, 255])
+        mask = cv2.inRange(hsv, lower_green, upper_green)
+        return mask
+
+    def compute_offset(self, frame: np.ndarray, custom_points: list = None) -> tuple[float, float]:
         """
         Calcula el desplazamiento (dx, dy) de la imagen actual respecto al frame anterior.
         Devuelve (dx, dy) = cuánto se ha movido el entorno. (Valores positivos/negativos).
@@ -32,16 +41,25 @@ class CameraMotionEstimator:
         # 1. Convertir a grises
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # 2. Inicialización en el primer frame
+        # 2. Inicialización
         if self.prev_gray is None:
             self.prev_gray = gray
-            # Encontrar puntos interesantes para trackear (idealmente fondo estático)
-            self.prev_points = cv2.goodFeaturesToTrack(gray, mask=None, **self.feature_params)
+            if custom_points and len(custom_points) > 0:
+                self.prev_points = np.array(custom_points, dtype=np.float32).reshape(-1, 1, 2)
+            else:
+                mask = self._get_green_mask(frame)
+                self.prev_points = cv2.goodFeaturesToTrack(gray, mask=mask, **self.feature_params)
             return (0.0, 0.0)
 
-        if self.prev_points is None or len(self.prev_points) < 10:
-            # Si nos quedamos sin puntos, buscar nuevos
-            self.prev_points = cv2.goodFeaturesToTrack(self.prev_gray, mask=None, **self.feature_params)
+        # Si nos quedamos con muy pocos puntos (e.g. por paneo de la cámara)
+        if self.prev_points is None or len(self.prev_points) < 5:
+            if custom_points and len(custom_points) > 0:
+                self.prev_points = np.array(custom_points, dtype=np.float32).reshape(-1, 1, 2)
+            else:
+                # Buscamos nuevos puntos de control pero SOLO en el césped (máscara verde)
+                mask = self._get_green_mask(frame)
+                self.prev_points = cv2.goodFeaturesToTrack(self.prev_gray, mask=mask, **self.feature_params)
+            
             if self.prev_points is None:
                 self.prev_gray = gray
                 return (0.0, 0.0)
@@ -60,25 +78,25 @@ class CameraMotionEstimator:
         good_new = next_points[status == 1]
         good_old = self.prev_points[status == 1]
 
-        # 5. Si hay muy pocos puntos buenos o falló demasiado, reiniciar
+        # 5. Si hay muy pocos puntos buenos, abortar este frame (el siguiente re-inicializará)
         if len(good_new) < 5:
             self.prev_gray = gray
             self.prev_points = None
             return (0.0, 0.0)
 
         # 6. Calcular el desplazamiento promedio en X y en Y
-        # d_point = P_nuevo - P_viejo (cuánto se movió el píxel)
-        # Una panorámica a la derecha hace que los objetos se muevan a la izquierda (dx < 0)
-        # Queremos compensar el tracker, así que pasaremos cuánto se movió el "fondo".
         diff = good_new - good_old
-        dx = np.median(diff[:, 0])
-        dy = np.median(diff[:, 1])
+        if len(diff) > 0:
+            dx = np.median(diff[:, 0])
+            dy = np.median(diff[:, 1])
+        else:
+            dx, dy = 0.0, 0.0
 
         # 7. Actualizar referencias para el siguiente ciclo
         self.prev_gray = gray.copy()
-        # Refrescar los puntos de control en cada frame para no perderlos si salen del encuadre
-        # (Mejora: se podría hacer solo si le quedan pocos puntos a trackear, por rendimiento)
-        self.prev_points = cv2.goodFeaturesToTrack(gray, mask=None, **self.feature_params)
+        
+        # Guardamos los puntos trackeados como prev_points para continuar persiguiendo LOS MISMOS PUNTOS
+        # (ya sean los custom_points inyectados, o los buenos filtrados sobre el césped)
+        self.prev_points = good_new.reshape(-1, 1, 2)
 
         return (float(dx), float(dy))
-
