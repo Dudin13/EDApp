@@ -9,7 +9,7 @@ python ml\training\prepare_v7_splits.py
 echo [V7 GENERAL] Starting YOLO training...
 echo Model base: models/players.pt
 echo Config: Epochs=30, imgsz=1024, batch=1, workers=0
-yolo detect train model=models/players.pt data=data/datasets/v7_general.yaml epochs=30 imgsz=1024 batch=1 workers=0 project=runs/v7_general name=train
+yolo detect train model=models/players.pt data=data/datasets/v7_general.yaml epochs=30 imgsz=1024 batch=1 workers=0 project=runs/v7_general name=train %*
 
 if exist runs\v7_general\train\weights\best.pt (
     echo [V7 GENERAL] Success! Copying weights to models/players_v7.pt
@@ -28,4 +28,3 @@ if exist runs\v7_general\train\weights\best.pt (
 )
 
 echo [V7 GENERAL] Process complete.
-pause
