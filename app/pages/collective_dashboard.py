@@ -151,11 +151,10 @@ def render():
     # COLUMNA IZQUIERDA — MÉTRICAS COLECTIVAS
     # ══════════════════════════════════════════════════════════════════════════
     with col_left:
-        tab_kpis, tab_mapa, tab_form, tab_reporte = st.tabs([
+        tab_kpis, tab_mapa, tab_form = st.tabs([
             "  📊  KPIs Colectivos  ",
             "  🗺️  Mapa Táctico  ",
             "  👥  Formación  ",
-            "  🤖  Reporte IA  ",
         ])
 
         # ── TAB KPIs ──────────────────────────────────────────────────────────
@@ -375,36 +374,6 @@ def render():
             plt.savefig(buf_f, format='png', dpi=150, bbox_inches='tight', facecolor='#0e1420')
             buf_f.seek(0); plt.close()
             st.image(buf_f, use_container_width=True)
-
-        # ── TAB REPORTE IA ────────────────────────────────────────────────────
-        with tab_reporte:
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("Genera un informe táctico utilizando LLaMA 3.3 70B basado en los eventos y estadísticas físicas calculadas.")
-            if st.button("Generar Informe Táctico", use_container_width=True, type="primary"):
-                with st.spinner("Generando análisis táctico con LLaMA 3.3..."):
-                    try:
-                        import sys
-                        from pathlib import Path
-                        root_path = Path(__file__).parent.parent.parent.absolute()
-                        if str(root_path) not in sys.path:
-                            sys.path.append(str(root_path))
-                        
-                        from src.graph.match_graph import build_match_graph
-                        
-                        graph = build_match_graph()
-                        events_path = root_path / "output" / "events.json"
-                        
-                        if not events_path.exists():
-                            st.warning("No se encontró el archivo events.json. Analiza un video primero.")
-                        else:
-                            initial_state = {"events_file": str(events_path)}
-                            result = graph.invoke(initial_state)
-                            
-                            st.success("Informe generado con éxito.")
-                            st.markdown("---")
-                            st.markdown(result["report"])
-                    except Exception as e:
-                        st.error(f"Error generando el reporte: {e}")
 
     # ══════════════════════════════════════════════════════════════════════════
     # COLUMNA DERECHA — VÍDEO + CLIPS

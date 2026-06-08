@@ -15,7 +15,7 @@ def reporting_node(state: MatchAnalysisState):
 def build_match_graph():
     """
     Build and compile a simplified match analysis graph.
-    START → video_processor → reporting → END
+    START -> video_processor -> reporting -> END
     """
     graph = StateGraph(MatchAnalysisState)
 
@@ -31,3 +31,19 @@ def build_match_graph():
     print("[MatchGraph] Compiled: START -> video_processor -> reporting -> END")
 
     return compiled
+
+if __name__ == "__main__":
+    import os
+    from pathlib import Path
+    
+    root_path = Path(__file__).parent.parent.parent.absolute()
+    events_path = root_path / "output" / "events.json"
+    
+    if not events_path.exists():
+        print(f"Error: {events_path} no existe.")
+    else:
+        graph = build_match_graph()
+        initial_state = {"events_file": str(events_path)}
+        result = graph.invoke(initial_state)
+        print("\n=== REPORTE GENERADO ===")
+        print(result["report"])
