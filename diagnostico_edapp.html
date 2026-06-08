@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Diagnostico EDApp</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0 }
+  body { font-family: system-ui, sans-serif; background:#f3f4f6; color:#111827; padding:24px }
+  .card { background:#fff; border-radius:12px; padding:24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.08) }
+  h1 { font-size:22px; font-weight:700; margin-bottom:4px }
+  h2 { font-size:16px; font-weight:600; margin-bottom:16px; padding-bottom:8px; border-bottom:2px solid #f3f4f6 }
+  table { width:100%; border-collapse:collapse; font-size:13px }
+  th { text-align:left; padding:6px 8px; color:#6b7280; border-bottom:1px solid #e5e7eb; font-weight:500 }
+  code { background:#f3f4f6; padding:1px 6px; border-radius:4px; font-size:12px }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
+  @media(max-width:700px) { .grid2,.grid3 { grid-template-columns:1fr } }
+</style>
+</head><body>
+
+<div class="card">
+  <h1>Diagnostico EDApp</h1>
+  <p style="color:#6b7280;font-size:13px;margin-top:4px">Generado el 2026-05-30 15:41 &mdash; Club de Cantera</p>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>Dataset</h2>
+    
+    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin:16px 0;color:#92400e;font-size:14px">
+      <b>Sin split de validacion</b> &mdash; ejecuta <code>create_val_split.py</code> antes de entrenar o las metricas de mAP seran falsas.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:#eff6ff;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:#3b82f6">249</div>
+        <div style="font-size:12px;color:#6b7280">imagenes train</div>
+      </div>
+      <div style="background:#fef2f2;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:#ef4444">0</div>
+        <div style="font-size:12px;color:#6b7280">imagenes val</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Clase</th><th style="text-align:right">Train</th><th style="text-align:right">Val</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody><tr>
+          <td style="padding:6px 8px"><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Goalkeeper</td>
+          <td style="padding:6px 8px;text-align:right">10,512</td>
+          <td style="padding:6px 8px;text-align:right">1,649</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:600">12,161</td>
+        </tr><tr>
+          <td style="padding:6px 8px"><span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;margin-right:6px;vertical-align:middle"></span>Player</td>
+          <td style="padding:6px 8px;text-align:right">607</td>
+          <td style="padding:6px 8px;text-align:right">105</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:600">712</td>
+        </tr><tr>
+          <td style="padding:6px 8px"><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin-right:6px;vertical-align:middle"></span>ball</td>
+          <td style="padding:6px 8px;text-align:right">1,023</td>
+          <td style="padding:6px 8px;text-align:right">189</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:600">1,212</td>
+        </tr><tr>
+          <td style="padding:6px 8px"><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:6px;vertical-align:middle"></span>referee</td>
+          <td style="padding:6px 8px;text-align:right">1,991</td>
+          <td style="padding:6px 8px;text-align:right">330</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:600">2,321</td>
+        </tr></tbody>
+    </table>
+    <div style="margin-top:12px;font-size:12px;color:#6b7280">
+      Labels vacias train: 0 &nbsp;|&nbsp; Corruptas: 240
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Modelos encontrados</h2>
+    <p style="color:#ef4444">No se encontro ningun best.pt en train_yolo/runs/</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Metricas del mejor modelo (validacion real)</h2>
+  <p style="color:#9ca3af;font-size:14px">No se pudo ejecutar la validacion.</p>
+</div>
+
+<div class="card">
+  <h2>Predicciones de muestra (conf > 0.20)</h2>
+  <div class="grid3"><p style="color:#9ca3af">Sin imagenes de muestra.</p></div>
+  <div style="margin-top:12px;font-size:12px;color:#6b7280">
+    <span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Goalkeeper
+    <span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;margin:0 4px 0 12px;vertical-align:middle"></span>Player
+    <span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin:0 4px 0 12px;vertical-align:middle"></span>Ball
+    <span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin:0 4px 0 12px;vertical-align:middle"></span>Referee
+  </div>
+</div>
+
+</body></html>

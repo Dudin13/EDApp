@@ -204,7 +204,8 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
     import supervision as sv
     h_frame,w_frame=frame.shape[:2]
     detecciones=[]
-    id_to_name={BALL_ID:"ball",GOALKEEPER_ID:"goalkeeper",PLAYER_ID:"player",REFEREE_ID:"referee"}
+    pm=_load_player_model()
+    id_to_name=pm.names if pm is not None else {BALL_ID:"ball",GOALKEEPER_ID:"goalkeeper",PLAYER_ID:"player",REFEREE_ID:"referee"}
 
     # 1. Jugadores / porteros / arbitros
     pm=_load_player_model()

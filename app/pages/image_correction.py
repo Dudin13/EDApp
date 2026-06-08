@@ -106,11 +106,11 @@ def main():
     ]
 
     for model_path in model_paths:
-        if model_path and model_path.exists():
+        if model_path and Path(model_path).exists():
             try:
                 from ultralytics import YOLO
                 model = YOLO(str(model_path))
-                st.success(f"✅ Modelo cargado: {model_path.name}")
+                st.success(f"✅ Modelo cargado: {Path(model_path).name}")
                 break
             except Exception as e:
                 st.warning(f"⚠️ Error cargando {model_path.name}: {e}")
@@ -281,7 +281,7 @@ def save_correction(img_path, decision, canvas_data, target_class, display_width
             y_center = top + (height / 2)
 
             # Formato YOLO: class x_center y_center width height
-            yolo_label = "04d"
+            yolo_label = f"{target_class} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
             yolo_labels.append(yolo_label)
 
         # Guardar archivo de etiquetas
@@ -302,156 +302,5 @@ def save_correction(img_path, decision, canvas_data, target_class, display_width
 
 
 # Ejecutar solo si se llama directamente
-if __name__ == "__main__":
-    main()
-        st.info("Añade nuevas imágenes a esa carpeta para continuar con la criba.")
-        return
-
-    col_info, col_page = st.columns([2, 1])
-    with col_info:
-        st.markdown(f"**Imágenes pendientes:** `{total_imgs}` | Carpeta: `master_dataset/01_para_entrenar`")
-    
-    with col_page:
-        page = st.number_input(f"Página (1-{total_imgs})", min_value=1, max_value=total_imgs, value=1)
-        
-    img_path = all_images[page-1]
-    st.write(f"### Revisando: `{img_path.name}`")
-
-    # 2. Cargar mejor modelo local
-    model = None
-    try:
-        # Importamos PLAYER_MODEL_PATH, que ya usamos globalmente y sabemos que funciona (Fix 5 aplicado)
-        from modules.detector import PLAYER_MODEL_PATH
-        from ultralytics import YOLO
-        
-        if Path(PLAYER_MODEL_PATH).exists():
-            model = YOLO(PLAYER_MODEL_PATH)
-        else:
-            st.error(f"Modelo no encontrado en la ruta esperada: {PLAYER_MODEL_PATH}")
-    except Exception as e:
-        st.error(f"No se pudo cargar el modelo de IA: {e}")
-
-    # Layout: Dividir en dos para comparación
-    col_ai, col_manual = st.columns(2)
-    
-    # Pre-cálculo para el backend y canvas
-    original_image = Image.open(img_path).convert("RGB")
-    img_w, img_h = original_image.size
-    display_width = 600
-    display_height = int(img_h * (display_width / img_w))
-    
-    results = None
-
-    with col_ai:
-        st.markdown("##### 🤖 Predicción Modelo IA")
-        if model:
-            # Ejecutamos la predicción con confianza baja para ver qué capta el modelo
-            with st.spinner("Analizando frame..."):
-                results = model.predict(source=str(img_path), conf=0.15, verbose=False)
-                
-            if len(results) > 0:
-                img_pred = results[0].plot(boxes=True, masks=True)
-                st.image(img_pred, use_container_width=True, caption=f"YOLOv8 Local - {Path(PLAYER_MODEL_PATH).name}")
-        else:
-            st.info("IA no disponible")
-
-    with col_manual:
-        st.markdown("##### ✏️ Dibuja Bounding Boxes para Corregir")
-        
-        from streamlit_drawable_canvas import st_canvas
-        canvas_result = st_canvas(
-            fill_color="rgba(0, 212, 170, 0.3)",
-            stroke_width=2,
-            stroke_color="#00d4aa",
-            background_image=original_image,
-            update_streamlit=True,
-            height=display_height,
-            width=display_width,
-            drawing_mode="rect",
-            key=f"canvas_{img_path.stem}",
-        )
-
-    # --- Acciones (Botones de Guardado) ---
-    st.markdown("---")
-    c_btn1, c_btn2, c_btn3 = st.columns(3)
-    
-    with c_btn1:
-        if st.button("✅ IA es Correcta (Aceptar y Mover)", type="primary", use_container_width=True):
-            if results:
-                try:
-                    # 1. Generar tags automáticos del modelo
-                    txt_labels = generate_yolo_labels_from_predictions(results, img_w, img_h)
-                    
-                    # 2. Rutas de destino
-                    dest_img = dirs["bien_detectadas_img"] / img_path.name
-                    dest_lbl = dirs["bien_detectadas_lbl"] / f"{img_path.stem}.txt"
-                    
-                    # 3. Mover y guardar
-                    shutil.move(str(img_path), str(dest_img))
-                    with open(dest_lbl, "w") as f:
-                        f.write(txt_labels)
-                    
-                    st.success(f"Movido a bien detectadas: {img_path.name}")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error al mover/guardar: {e}")
-            else:
-                st.warning("No hay predicción de IA generada todavía.")
-
-    with c_btn2:
-        target_cls = st.selectbox(
-            "🖌️ Clase para las nuevas formas dibujadas:", 
-            [0, 1, 2, 3, 4, 5], 
-            format_func=lambda x: ["Team 1 (0)", "Team 2 (1)", "Portero (2)", "Arbitro (3)", "Balón (4)", "Portero 2 (5)"][x],
-            label_visibility="collapsed"
-        )
-        if st.button("💾 Guardar las Correcciones del Canvas", use_container_width=True):
-            if canvas_result.json_data and len(canvas_result.json_data["objects"]) > 0:
-                try:
-                    dest_img = dirs["manuales_img"] / img_path.name
-                    dest_lbl = dirs["manuales_lbl"] / f"{img_path.stem}.txt"
-                    
-                    new_labels = []
-                    for obj in canvas_result.json_data["objects"]:
-                        if obj["type"] == "rect":
-                            # Escalar coordenadas dibujadas al aspecto original de la imagen
-                            left = obj["left"] / display_width
-                            top = obj["top"] / display_height
-                            width = obj["width"] / display_width
-                            height = obj["height"] / display_height
-                            
-                            x_center = left + (width / 2)
-                            y_center = top + (height / 2)
-                            
-                            new_labels.append(f"{target_cls} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}")
-                    
-                    # 3. Mover y Guardar
-                    shutil.move(str(img_path), str(dest_img))
-                    with open(dest_lbl, "w") as f:
-                        f.write("\n".join(new_labels))
-                    
-                    st.success(f"Guardado como clasificación manual: {img_path.name} con {len(new_labels)} cajas.")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error al guardar correcciones: {e}")
-            else:
-                st.warning("No has dibujado ninguna caja rectangular en la imagen de la derecha.")
-                
-    with c_btn3:
-        if st.button("🗑️ Descartar/Borrar Imagen", use_container_width=True):
-            try:
-                os.remove(img_path)
-                st.toast(f"🗑️ Eliminada: {img_path.name}")
-                time.sleep(0.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error borrando imagen: {e}")
-
-    st.markdown("---")
-    if st.button("📂 Abrir Carpeta Master Dataset", type="secondary"):
-        os.startfile(str(base_dir))
-
 if __name__ == "__main__":
     main()

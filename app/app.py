@@ -162,6 +162,7 @@ with st.sidebar:
     nav_btn("Panel de Scout", "scout", "📋")
     nav_btn("Calibrar Cámara", "calibration", "📐")
     nav_btn("Comprobar Detección", "dataset_audit", "🔬")
+    nav_btn("Corregir Imágenes", "image_correction", "✏️")
 
     # Footer Sidebar
     st.markdown("""

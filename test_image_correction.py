@@ -86,7 +86,7 @@ def test_models():
 
     available_models = []
     for model_path in model_paths:
-        if model_path and model_path.exists():
+        if model_path and Path(model_path).exists():
             print(f"✅ Modelo encontrado: {model_path}")
             available_models.append(str(model_path))
         else:

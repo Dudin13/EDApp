@@ -14,12 +14,23 @@ app = Flask(__name__)
 # ✅ CORS habilitado
 CORS(app)
 
-# ✅ Rutas raíz (RELATIVAS para versión portable)
+# ✅ Rutas raíz (Con fallback a la raíz del proyecto para desarrollo local)
 BASE = Path(__file__).parent.absolute()
+
 DATASET_ROOT = (BASE / "data/datasets").absolute()
+PROJECT_DATASET_ROOT = (BASE.parent.parent / "data/datasets").absolute()
+if not any(DATASET_ROOT.glob("**/images/*.jpg")) and PROJECT_DATASET_ROOT.exists():
+    DATASET_ROOT = PROJECT_DATASET_ROOT
+
 MODEL_DIR = BASE / "models"
 MODEL_PLAYERS = MODEL_DIR / "players.pt"
+PROJECT_MODEL_DIR = (BASE.parent.parent / "models").absolute()
+if not MODEL_PLAYERS.exists() and (PROJECT_MODEL_DIR / "players.pt").exists():
+    MODEL_PLAYERS = PROJECT_MODEL_DIR / "players.pt"
+
 MODEL_SAM = MODEL_DIR / "sam2_t.pt"
+if not MODEL_SAM.exists() and (PROJECT_MODEL_DIR / "sam2_t.pt").exists():
+    MODEL_SAM = PROJECT_MODEL_DIR / "sam2_t.pt"
 
 # ✅ Subsets válidos (Simplificado por petición del usuario)
 VALID_SUBSETS = {"veo_frames_raw"}
