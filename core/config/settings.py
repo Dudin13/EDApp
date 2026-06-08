@@ -41,6 +41,7 @@ class Settings(BaseSettings):
 
     # Hardware
     DEVICE: str = "cuda" # 'cpu', 'cuda', 'mps'
+    TEAM_CLASSIFIER: str = "siglip" # 'kmeans', 'siglip'
 
     # External APIs & Tools
     ROBOFLOW_API_KEY: Optional[str] = None

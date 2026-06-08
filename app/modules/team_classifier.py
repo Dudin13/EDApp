@@ -74,6 +74,16 @@ class TeamClassifier:
         """
         self.torso_ratio = torso_ratio
         self.colors      = TeamColors()
+        self.mode        = getattr(settings, "TEAM_CLASSIFIER", "kmeans").lower()
+        
+        self._siglip_classifier = None
+        if self.mode == "siglip":
+            try:
+                from modules.detector import TeamClassifierSigLIP
+                self._siglip_classifier = TeamClassifierSigLIP()
+            except ImportError as e:
+                logger.warning(f"Error importando SigLIP, fallback a kmeans: {e}")
+                self.mode = "kmeans"
 
     # ── Extraccion de color de camiseta ────────────────────────────────────
 
@@ -156,6 +166,20 @@ class TeamClassifier:
         """
         if len(player_bboxes) < 4:
             return False
+
+        if self.mode == "siglip" and self._siglip_classifier:
+            crops = []
+            for bbox in player_bboxes:
+                crop = self._extract_torso_crop(frame, bbox)
+                if crop is not None:
+                    crops.append(crop)
+            if len(crops) >= 6:
+                labels = self._siglip_classifier.fit(crops)
+                if len(labels) > 0:
+                    self.colors.fitted = True
+                    self.colors.name_a = name_a
+                    self.colors.name_b = name_b
+                    return True
 
         colors_hsv = []
         for bbox in player_bboxes:
@@ -251,6 +275,11 @@ class TeamClassifier:
         crop = self._extract_torso_crop(frame, bbox)
         if crop is None:
             return Team.UNKNOWN
+
+        if self.mode == "siglip" and self._siglip_classifier and self._siglip_classifier._fitted:
+            labels = self._siglip_classifier.predict([crop])
+            if len(labels) == 1:
+                return Team.A if labels[0] == 0 else Team.B
 
         color = self._dominant_color_hsv(crop)
 
