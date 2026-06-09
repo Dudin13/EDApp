@@ -28,14 +28,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Intentar importar settings de forma robusta
-try:
-    from core.config.settings import settings
-except ImportError:
-    import sys
-    _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-    if str(_REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(_REPO_ROOT))
-    from core.config.settings import settings
+import sys
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from core.config_loader import config
 
 
 class Team(str, Enum):
@@ -74,7 +71,7 @@ class TeamClassifier:
         """
         self.torso_ratio = torso_ratio
         self.colors      = TeamColors()
-        self.mode        = getattr(settings, "TEAM_CLASSIFIER", "kmeans").lower()
+        self.mode        = config.team_classifier.engine.lower()
         
         self._siglip_classifier = None
         if self.mode == "siglip":
@@ -196,7 +193,7 @@ class TeamClassifier:
         data     = np.array(colors_hsv, dtype=np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 1.0)
         _, labels, centers = cv2.kmeans(
-            data, 3, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS
+            data, config.team_classifier.k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS
         )
 
         centers = centers.astype(np.float32)
@@ -207,7 +204,7 @@ class TeamClassifier:
         team_candidates = []
         for c in centers_hsv:
             h = c[0]
-            if not (38 <= h <= 85):
+            if not (config.team_classifier.grass_hue[0] <= h <= config.team_classifier.grass_hue[1]):
                 team_candidates.append(c)
 
         # Fallback si el filtrado por Hue falla (ej: camisetas verdes)
