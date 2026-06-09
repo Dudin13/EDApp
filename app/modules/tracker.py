@@ -11,6 +11,12 @@ import sys
 import os
 import numpy as np
 import supervision as sv
+
+from pathlib import Path
+_repo_root = str(Path(__file__).resolve().parent.parent.parent)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+from core.config_loader import config
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -101,17 +107,16 @@ class ProfessionalTracker:
     Tracker híbrido (ByteTrack / UCMCTrack).
     """
     _DEFAULT_TRACK_ACTIVATION = 0.20
-    _DEFAULT_LOST_BUFFER      = 10
     _DEFAULT_MATCH_THRESHOLD  = 0.8
 
-    def __init__(self, sample_rate: float = 0.5, mode: str = "bytetrack"):
+    def __init__(self, sample_rate: float = 0.5, mode: str = None):
         self.sample_rate = sample_rate
-        self.mode = mode
+        self.mode = mode if mode else config.tracking.engine
         self._frame_rate = max(1, round(1.0 / sample_rate))
 
         self._bt_params = dict(
             track_activation_threshold=self._DEFAULT_TRACK_ACTIVATION,
-            lost_track_buffer=self._DEFAULT_LOST_BUFFER,
+            lost_track_buffer=config.tracking.lost_track_buffer,
             minimum_matching_threshold=self._DEFAULT_MATCH_THRESHOLD,
             frame_rate=self._frame_rate,
         )
