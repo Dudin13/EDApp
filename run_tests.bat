@@ -1,0 +1,3 @@
+@echo off
+echo Ejecutando la suite de tests...
+.\venv_cuda\Scripts\python.exe -m pytest tests/ -v
