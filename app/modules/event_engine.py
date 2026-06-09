@@ -5,8 +5,15 @@ Posesión, Pases, Recuperaciones e Intercepciones.
 
 import numpy as np
 import logging
+import sys
+from pathlib import Path
 from dataclasses import dataclass
 from math import sqrt, degrees, atan2
+
+_repo_root = str(Path(__file__).resolve().parent.parent.parent)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+from core.config_loader import config
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +66,7 @@ class EventEngine:
         if not interpolated_ball:
             return []
 
-        BALL_PROXIMITY = 0.75  # metros
+        BALL_PROXIMITY = config.events.ball_proximity_duel  # metros
 
         # 1. Registro de posesión frame a frame y detección de duelos
         possession_log = []
@@ -135,7 +142,7 @@ class EventEngine:
                         if bx < 15 and bx < prev_frame["pitch_x"]:
                             heading_goal = True
 
-            if speed > 4.0 and heading_goal and (m - last_shot_minute > 5.0 / 60.0):
+            if speed > config.events.shot_speed and heading_goal and (m - last_shot_minute > config.events.event_cooldown / 60.0):
                 team_str = 'A' if closest_team == 0 else 'B'
                 xg_val = calculate_xg(bx, by, team_str)
                 duels.append({
