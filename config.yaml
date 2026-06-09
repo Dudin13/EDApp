@@ -1,0 +1,29 @@
+detection:
+  conf_threshold: 0.25
+  min_height_px: 20
+  imgsz_players: 1280
+  imgsz_ball: 1280
+  models:
+    players: models/players.pt
+    ball: models/ball_specialist.pt
+    pitch: models/pitch.pt
+
+tracking:
+  engine: ucmctrack  # bytetrack | ucmctrack
+  lost_track_buffer: 10
+  gta_link: true
+
+team_classifier:
+  engine: siglip  # kmeans | siglip
+  k: 3
+  grass_hue: [35, 85]
+
+events:
+  ball_proximity_duel: 0.75
+  min_ball_speed: 2.0
+  event_cooldown: 3.0
+  shot_speed: 4.0
+
+reporting:
+  llm_provider: groq
+  model: llama-3.3-70b-versatile
