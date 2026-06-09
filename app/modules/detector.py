@@ -31,6 +31,11 @@ from collections import Counter
 from sklearn.cluster import KMeans
 
 from modules.calibration_pnl import PnLCalibrator
+import sys
+_repo_root = str(Path(__file__).resolve().parent.parent.parent)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+from core.config_loader import config
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +64,9 @@ def _find_model(filename: str) -> Path:
             return candidate
     return _MODEL_SEARCH_PATHS[1] / filename
 
-PLAYER_MODEL_PATH = _find_model("players.pt")
-BALL_MODEL_PATH   = _find_model("ball_specialist.pt")
-PITCH_MODEL_PATH  = _find_model("pitch.pt")
+PLAYER_MODEL_PATH = _find_model(Path(config.detection.models.players).name)
+BALL_MODEL_PATH   = _find_model(Path(config.detection.models.ball).name)
+PITCH_MODEL_PATH  = _find_model(Path(config.detection.models.pitch).name)
 YOLO_LEGACY_PATH  = _find_model("players_v6.pt")
 YOLO_COCO_MODEL   = str(_find_model("yolov8n.pt"))
 
@@ -195,12 +200,14 @@ def _build_detection_dict(frame, x_abs, y_abs, w, h, clase, confidence,
     return det
 
 
-def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
+def detect_frame_kaggle(frame, confidence=None, imgsz=None, use_ucmc=False):
     """
     Deteccion con 3 modelos especializados del notebook Kaggle.
     PLAYER_MODEL: jugadores/porteros/arbitros a resolucion estandar.
     BALL_MODEL:   balon a 1280px — detecta balones de ~8px en VEO panoramica.
     """
+    if confidence is None:
+        confidence = config.detection.conf_threshold
     import supervision as sv
     h_frame,w_frame=frame.shape[:2]
     detecciones=[]
@@ -213,7 +220,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
         try:
             import torch
             use_half = torch.cuda.is_available()
-            p_imgsz = imgsz if imgsz else 640
+            p_imgsz = imgsz if imgsz else config.detection.imgsz_players
             r=pm.predict(frame,conf=confidence/100.0 if confidence > 1 else confidence,verbose=False,imgsz=p_imgsz, half=use_half)[0]
             import supervision as sv
             d=sv.Detections.from_ultralytics(r).with_nms(threshold=0.5,class_agnostic=True)
@@ -224,7 +231,7 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
                 conf_v=float(d.confidence[i]) if d.confidence is not None else 0.25
                 clase=id_to_name.get(cls_id,"player")
                 if clase=="ball": continue
-                if cy<h_frame*0.10 or w*h<40 or h<20: continue
+                if cy<h_frame*0.10 or w*h<40 or h<config.detection.min_height_px: continue
                 if h>0 and (h/max(w,1))>7.5: continue
                 detecciones.append(_build_detection_dict(frame,cx,cy,w,h,clase,conf_v, use_ucmc=use_ucmc))
 
@@ -237,9 +244,9 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
         try:
             import torch
             use_half = torch.cuda.is_available()
-            scale=1280/w_frame
-            fhd=cv2.resize(frame,(1280,int(h_frame*scale)))
-            rb=bm.predict(fhd,conf=0.1,verbose=False,imgsz=1280, half=use_half)[0]
+            scale=config.detection.imgsz_ball/w_frame
+            fhd=cv2.resize(frame,(config.detection.imgsz_ball,int(h_frame*scale)))
+            rb=bm.predict(fhd,conf=0.1,verbose=False,imgsz=config.detection.imgsz_ball, half=use_half)[0]
             db=sv.Detections.from_ultralytics(rb).with_nms(threshold=0.3,class_agnostic=True)
             for i,xyxy in enumerate(db.xyxy):
                 x1,y1,x2,y2=map(int,xyxy)
@@ -259,8 +266,10 @@ def detect_frame_kaggle(frame, confidence=0.3, imgsz=None, use_ucmc=False):
     return detecciones
 
 
-def detect_frame_yolo(frame, confidence=0.25, **kwargs):
+def detect_frame_yolo(frame, confidence=None, **kwargs):
     """Single-model detection path supporting additional options via kwargs."""
+    if confidence is None:
+        confidence = config.detection.conf_threshold
     model=_load_player_model()
     h_frame,w_frame=frame.shape[:2]
     results=model(frame,conf=0.10,verbose=False)
@@ -338,11 +347,13 @@ def detect_frame_coco(frame, confidence=0.35):
     return dets
 
 
-def detect_frame(frame, mode="auto", confidence=25, imgsz=None):
+def detect_frame(frame, mode="auto", confidence=None, imgsz=None):
     """
     Fachada principal. Orden de prioridad:
       kaggle/auto+modelos -> yolo -> roboflow -> coco
     """
+    if confidence is None:
+        confidence = config.detection.conf_threshold * 100
     # Detectar si UCMCTrack está activo para calcular mapeo
     use_ucmc = False
     try:
