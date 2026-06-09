@@ -23,9 +23,16 @@ Ventajas sobre T-DEED:
 
 import torch
 import numpy as np
+import sys
+from pathlib import Path
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Optional
+
+_repo_root = str(Path(__file__).resolve().parent.parent.parent)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+from core.config_loader import config
 
 
 @dataclass
@@ -80,9 +87,9 @@ class EventSpotterTDEED:
     # Velocidad maxima del balon en px/s (para filtrar detecciones falsas)
     MAX_BALL_SPEED_PX_S = 900
     # Minima velocidad del balon en m/s (para ignorar balon parado/balones lentos)
-    MIN_BALL_SPEED_MS   = 2.0
+    MIN_BALL_SPEED_MS   = config.events.min_ball_speed
     # Separacion minima global entre eventos (segundos)
-    GLOBAL_EVENT_GAP_S  = 3.0
+    GLOBAL_EVENT_GAP_S  = config.events.event_cooldown
 
 
     def __init__(self, weights_path: str = None):
@@ -199,7 +206,7 @@ class EventSpotterTDEED:
                     py = np.clip(float(ty) / 720.0 * 68.0, 0, 68)
                 
                 p_dist = np.hypot(px - bx_m, py - by_m)
-                if p_dist < 0.75:  # BALL_PROXIMITY
+                if p_dist < config.events.ball_proximity_duel:  # BALL_PROXIMITY
                     players_close.append({
                         "tid": tid,
                         "team": track.equipo,
@@ -443,7 +450,7 @@ class EventSpotterTDEED:
                 elif prev_team == 1 and x < prev_x:
                     heading_goal = True
 
-            if ball_speed_ms > 4.0 and heading_goal:
+            if ball_speed_ms > config.events.shot_speed and heading_goal:
                 if prev_team == 0 and x > 90:
                     return "Tiro"
                 elif prev_team == 1 and x < 15:
